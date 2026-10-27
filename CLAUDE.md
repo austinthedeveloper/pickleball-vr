@@ -32,7 +32,7 @@ plugin-free). Godot's version and SHA-512s are pinned in
 
 `design/ROADMAP.md` is the milestone sheet: keep it current with each
 branch. `design/KNOWN_ISSUES.md` lists the defects, and
-`decisions/README.md` the ADRs (next: ADR-013). `design/QUEST_SETUP.md`
+`decisions/README.md` the ADRs (next: ADR-014). `design/QUEST_SETUP.md`
 covers the headset build.
 
 **The canon bible** is `../pickleball/docs/PICKLEBALL_94_BIBLE.md`. The VR

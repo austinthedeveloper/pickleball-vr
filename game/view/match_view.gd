@@ -49,6 +49,7 @@ var partner_avatar: Avatar
 var lesson_label: Label3D
 var zone_mesh: MeshInstance3D
 var paused := false                  ## the sim isn't stepped while a pause menu is up
+var focus := 0.0                     ## FOCUS (ADR-013): how dim the world is now
 var _placed := false                 ## XR: turned to the court and moved to the start, once tracked
 var _inherited := false              ## XR: the play space came over from the last view
 var _stay := false                   ## ...and you're on the same spot (the lobby, rebuilt)
@@ -159,7 +160,9 @@ func _practice_court() -> void:
 		var kd := K.KITCHEN_DEPTH / float(K.M)
 		var r := Rect2(-hw, -hl, hw * 2, hl - kd)
 		match d.zone:
-			Drill.ZONE_KITCHEN: r = Rect2(-hw, -kd, hw * 2, kd)
+			Drill.ZONE_KITCHEN:
+				var dz := Drill.DINK_ZONE / float(K.M)
+				r = Rect2(-hw, -dz, hw * 2, dz)
 			Drill.ZONE_DEEP: r = Rect2(-hw, -hl, hw * 2, hl / 3)
 			Drill.ZONE_LEFT: r = Rect2(-hw, -hl, hw, hl)
 			Drill.ZONE_RIGHT: r = Rect2(0, -hl, hw, hl)
@@ -526,6 +529,7 @@ func _draw(delta: float) -> void:
 	if xr:
 		xr.show_held_ball(held_by_you)
 		ball_mesh.visible = not held_by_you
+	_focus(delta)
 	ball_mesh.global_position = b
 	ball_mesh.rotation += Vector3(sim.ball.wx, sim.ball.wy, sim.ball.wz) / float(K.URAD) * delta * K.TICK_HZ
 	_trail_draw(b, delta)
@@ -619,3 +623,14 @@ func _where(l: Array[int]) -> String:
 	if not K.in_court(l[1], l[2]):
 		return "OUT %.1f m" % d
 	return "IN %.1f m" % d
+
+
+## FOCUS (ADR-013): ease toward the rally's darkness; not in the lobby.
+func _focus(delta: float) -> void:
+	var want := 0.0 if spectate else Focus.amount(Focus.shots_of(sim))
+	var rate := Focus.EASE_IN if want > focus else Focus.EASE_OUT
+	var was := focus
+	focus = move_toward(focus, want, rate * delta * Focus.MAX)
+	if not is_equal_approx(focus, was):
+		world.set_focus(focus)
+		crowd.set_focus(focus)

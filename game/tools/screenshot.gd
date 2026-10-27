@@ -1,10 +1,12 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number] [venue=NAME] [cam=x,y,z look=x,y,z]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number] [venue=NAME] [cam=x,y,z look=x,y,z] [focus=0..0.62]
 extends SceneTree
 
 var frames := 240
 var out := "shot.png"
 var n := 0
+var _focus := -1.0
+var _view: MatchView
 
 
 func _initialize() -> void:
@@ -40,6 +42,10 @@ func _initialize() -> void:
 	if mode == "lesson":
 		var l := Lessons.lesson(int(args[3]) if args.size() > 3 else 0)
 		view.show_lesson(String(l["title"]), l["lines"])
+	for a in args:
+		if a.begins_with("focus="):
+			_focus = float(a.trim_prefix("focus="))
+	_view = view
 	var cam = _vec(args, "cam")
 	if cam != null and view.flat:
 		view.flat.pin(cam, _vec(args, "look") if _vec(args, "look") != null else Vector3.ZERO)
@@ -56,6 +62,9 @@ static func _vec(args: PackedStringArray, key: String) -> Variant:
 
 func _process(_delta: float) -> bool:
 	n += 1
+	if n == 5 and _focus >= 0.0 and _view:
+		_view.world.set_focus(_focus)       # once the scene is built
+		_view.crowd.set_focus(_focus)
 	if n == frames:
 		var img := root.get_viewport().get_texture().get_image()
 		img.save_png(out)

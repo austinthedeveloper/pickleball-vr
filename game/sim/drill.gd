@@ -45,11 +45,14 @@ const VOLLEY_Y := 1000000
 
 ## Where a return must land to count, on the machine's side.
 const ZONE_ANY := 0
-const ZONE_KITCHEN := 1
+const ZONE_KITCHEN := 1             ## the dink zone: their kitchen and a foot past its line
 const ZONE_DEEP := 2                 ## the back third
 const ZONE_LEFT := 3                 ## your left as you face the net (-x)
 const ZONE_RIGHT := 4
 const ZONE_NAMES := ["ANY", "KITCHEN", "DEEP", "LEFT", "RIGHT"]
+## A dink that lands just past the kitchen line is still a good dink
+## (ADR-010 amended): the zone runs 30 cm (a foot) past it.
+const DINK_ZONE := K.KITCHEN_DEPTH + 300000
 
 ## Lesson rules.
 const RULE_NO_VOLLEY := 1            ## let it bounce first
@@ -385,7 +388,7 @@ func _topspin(b: Ball) -> bool:
 
 func in_zone(x: int, z: int) -> bool:
 	match zone:
-		ZONE_KITCHEN: return -z <= K.KITCHEN_DEPTH
+		ZONE_KITCHEN: return -z <= DINK_ZONE
 		ZONE_DEEP: return -z >= K.COURT_HALF_LENGTH * 2 / 3
 		ZONE_LEFT: return x <= 0
 		ZONE_RIGHT: return x >= 0
@@ -605,7 +608,7 @@ func _new_target(sim: Sim) -> void:
 	match z2:
 		ZONE_KITCHEN:
 			lo = 500000
-			hi = K.KITCHEN_DEPTH - 400000
+			hi = DINK_ZONE - 450000
 		ZONE_DEEP:
 			lo = K.COURT_HALF_LENGTH * 2 / 3 + 400000
 		ZONE_LEFT:

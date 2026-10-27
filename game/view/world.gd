@@ -31,6 +31,15 @@ const FENCE := Color(0.10, 0.16, 0.12, 0.18)
 
 var venue := Venues.PARK
 var line_color := Color(0.96, 0.96, 0.94)
+## FOCUS (ADR-013): the surroundings' materials and their own colours, so
+## they can dim; the court, its lines and the net aren't among them.
+var _scenery := true
+var _dim: Array = []                 ## [material, base colour]
+var _env: Environment
+var _sky_mat: ProceduralSkyMaterial
+var _sky_base: Array[Color] = []
+var _bg_base := Color.BLACK
+var _ambient_base := 1.0
 
 
 ## um to metres, in Godot's axes (the sim's are the same).
@@ -60,6 +69,7 @@ func _ready() -> void:
 	line_color = c8(LINES[d["lines"]])
 	_box(Vector3(0, -0.05, 0), Vector3(80, 0.1, 80), c8(d["ground"]))
 	_box(Vector3(0, 0.0, 0), Vector3(hw * 2 + 6, 0.02, hl * 2 + 8), c8(SURROUNDS[d["surround"]]))
+	_scenery = false                     # the court stays bright under FOCUS
 	_box(Vector3(0, 0.012, 0), Vector3(hw * 2, 0.004, hl * 2), c8(SURFACES[d["surface"]]))
 	for s in [-1, 1]:
 		_box(Vector3(0, 0.014, s * kd / 2), Vector3(hw * 2, 0.004, kd), c8(SURFACES[d["kitchen"]]))
@@ -71,6 +81,7 @@ func _ready() -> void:
 		_box(Vector3(0, y, s * (kd - lw / 2)), Vector3(hw * 2, 0.003, lw), line_color)
 		_box(Vector3(0, y, s * (kd + hl) / 2), Vector3(lw, 0.003, hl - kd), line_color)
 	_net()
+	_scenery = true
 	match venue:
 		Venues.LAKESIDE:
 			_fences(hw + 3, hl + 4, FENCE)
@@ -140,10 +151,21 @@ func _sky(kind: String) -> void:
 		sky.sky_material = mat
 		e.background_mode = Environment.BG_SKY
 		e.sky = sky
-		e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-		e.ambient_light_energy = 0.45
+		# Ambient from a fixed colour (the sky's own, averaged), not the sky
+		# itself: FOCUS darkens the sky without dimming the lit court, the
+		# players or your paddle (ADR-013).
+		e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		e.ambient_light_color = (mat.sky_top_color + mat.sky_horizon_color * 2.0 + mat.ground_horizon_color) / 4.0
+		e.ambient_light_energy = 0.55
 	env.environment = e
 	add_child(env)
+	_env = e
+	_bg_base = e.background_color
+	_ambient_base = e.ambient_light_energy
+	if e.sky:
+		_sky_mat = e.sky.sky_material as ProceduralSkyMaterial
+		_sky_base = [_sky_mat.sky_top_color, _sky_mat.sky_horizon_color, _sky_mat.ground_horizon_color,
+			_sky_mat.ground_bottom_color]
 	add_child(sun)
 
 
@@ -161,7 +183,7 @@ func _box(at: Vector3, size: Vector3, c: Color) -> MeshInstance3D:
 	var bm := BoxMesh.new()
 	bm.size = size
 	mi.mesh = bm
-	mi.material_override = material(c)
+	mi.material_override = _track(material(c))
 	mi.position = at
 	add_child(mi)
 	return mi
@@ -174,7 +196,7 @@ func _cylinder(at: Vector3, r: float, h: float, c: Color) -> MeshInstance3D:
 	cm.bottom_radius = r
 	cm.height = h
 	mi.mesh = cm
-	mi.material_override = material(c)
+	mi.material_override = _track(material(c))
 	mi.position = at + Vector3(0, h / 2, 0)
 	add_child(mi)
 	return mi
@@ -186,10 +208,32 @@ func _sphere(at: Vector3, r: float, squash: float, c: Color) -> MeshInstance3D:
 	sm.radius = r
 	sm.height = r * 2 * squash
 	mi.mesh = sm
-	mi.material_override = material(c)
+	mi.material_override = _track(material(c))
 	mi.position = at
 	add_child(mi)
 	return mi
+
+
+func _track(m: StandardMaterial3D) -> StandardMaterial3D:
+	if _scenery:
+		_dim.append([m, m.albedo_color])
+	return m
+
+
+## FOCUS: dim everything but the court by `a` (0 .. Focus.MAX). The sky
+## darkens too; the ambient light it gives the court is held level.
+func set_focus(a: float) -> void:
+	var k := 1.0 - a
+	for pair in _dim:
+		var c: Color = pair[1]
+		(pair[0] as StandardMaterial3D).albedo_color = Color(c.r * k, c.g * k, c.b * k, c.a)
+	if _sky_mat:
+		_sky_mat.sky_top_color = _sky_base[0] * k
+		_sky_mat.sky_horizon_color = _sky_base[1] * k
+		_sky_mat.ground_horizon_color = _sky_base[2] * k
+		_sky_mat.ground_bottom_color = _sky_base[3] * k
+	else:
+		_env.background_color = _bg_base * k
 
 
 func _net() -> void:

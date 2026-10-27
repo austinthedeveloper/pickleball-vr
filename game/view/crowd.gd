@@ -61,6 +61,13 @@ func _ready() -> void:
 	_place(0.0)
 
 
+## FOCUS: the crowd dims with the rest (ADR-013).
+func set_focus(a: float) -> void:
+	var k := 1.0 - a
+	for mi in [bodies, heads]:
+		((mi as MultiMeshInstance3D).multimesh.mesh.surface_get_material(0) as StandardMaterial3D).albedo_color = Color(k, k, k)
+
+
 func _multi(mesh: PrimitiveMesh) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D

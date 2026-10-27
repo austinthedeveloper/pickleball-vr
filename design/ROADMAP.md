@@ -59,6 +59,9 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-22 | Releases: version.py, release.py, CHANGELOG (ADR-011) | `main` | Done |
 | VR-23 | CI: tests on every push and pull request (ADR-011) | `feature/cld-vr-ci` | Done (green on GitHub) |
 | VR-24 | Style: the person, the machine, the paddle, the ball (ADR-012) | `feature/cld-vr-style` | Done (played; 72 fps, 9.5 ms GPU) |
+| VR-25 | Paddle tuned on logged swings: grip, restitution, swing curve (ADR-003) | `feature/cld-vr-partner-2` | Done (played: "so much better, feeling really good") |
+| VR-26 | FOCUS: long rallies dim the world (ADR-013) | `feature/cld-vr-focus` | Ready to test |
+| VR-27 | The dink zone: a foot past the kitchen line (ADR-010) | `feature/cld-vr-focus` | Ready to test |
 
 ## Phase 1: singles
 
@@ -121,6 +124,10 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-26 / VR-27, ready to test.** DINK PARTNER: string 8 dinks together
+and the world starts to darken, deeper every couple of dinks, back when
+the streak breaks. A dink landing just past their kitchen line now counts.
 
 **VR-24, played and approved** (72 fps, GPU 9.2-9.8 ms of 13.9). DINK PARTNER: watch the partner split-step,
 shuffle, and swing through your ball. BALL MACHINE: the head turns to

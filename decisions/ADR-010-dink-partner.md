@@ -84,6 +84,13 @@ goes to your forehand or backhand by a reach that SPREAD sets: TIGHT
 comes straight at you. It still aims along the line to you, so the reach
 holds cross court.
 
+## Amended: the dink zone runs a foot past the kitchen line
+
+"It's ok for the ball to land past the kitchen line, as long as it's near
+it." RETURN TO KITCHEN and DINK PARTNER's count now take a ball up to
+30 cm past the line (`Drill.DINK_ZONE`). The highlight on the court and
+the partner's targets follow it.
+
 ## Consequences
 
 - The partner is pure sim like everything else: seeded, deterministic,

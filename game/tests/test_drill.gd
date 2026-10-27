@@ -87,6 +87,8 @@ func test_zones() -> void:
 	var d := Drill.new()
 	d.zone = Drill.ZONE_KITCHEN
 	check(d.in_zone(0, -1 * K.M) and not d.in_zone(0, -4 * K.M), "kitchen")
+	check(d.in_zone(0, -(K.KITCHEN_DEPTH + 250000)), "a dink just past the kitchen line counts")
+	check(not d.in_zone(0, -(K.KITCHEN_DEPTH + 400000)), "40 cm past it doesn't")
 	d.zone = Drill.ZONE_DEEP
 	check(d.in_zone(0, -6 * K.M) and not d.in_zone(0, -3 * K.M), "deep")
 	d.zone = Drill.ZONE_LEFT
