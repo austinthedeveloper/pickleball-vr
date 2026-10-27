@@ -1,0 +1,116 @@
+## Practice (ADR-007): the machine feeds, returns count, lessons finish.
+extends TestSuite
+
+
+func _drill(shot := Drill.SHOT_DRIVE, target := Drill.TARGET_AT_YOU, rules := 0, goal := 0,
+		zone := Drill.ZONE_ANY) -> Array:
+	var d := Drill.new()
+	d.shot = shot
+	d.target = target
+	d.rules = rules
+	d.goal = goal
+	d.zone = zone
+	if shot == Drill.SHOT_SERVE:
+		var sp := d.serve_spot()
+		d.spot_x = sp[0]
+		d.spot_z = sp[1]
+	var cfg := SimTypes.MatchConfig.new()
+	cfg.drill = d
+	var sim := Sim.new(cfg)
+	return [sim, Bot.new(sim, 0)]
+
+
+func _results(sim: Sim, bot: Bot, ticks: int) -> Array:
+	var out := []
+	for i in ticks:
+		sim.step([bot.input() if bot else null])
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_DRILL:
+				out.append(e[1])
+	return out
+
+
+func test_machine_feeds_and_the_bot_returns() -> void:
+	var m := _drill()
+	var sim: Sim = m[0]
+	eq(sim.active_slots(), [0] as Array[int], "you alone")
+	var r := _results(sim, m[1], 4000)
+	check(r.size() >= 12, "fed and resolved: %d" % r.size())
+	var good := r.count(Drill.RESULT_GOOD)
+	check(good * 10 >= r.size() * 6, "most returns good: %s" % str(r))
+	eq(sim.drill.feeds, r.size() + (1 if sim.drill.stage != Drill.WAIT else 0), "one result a feed")
+	check(sim.drill.best >= 2, "a streak")
+
+
+func test_every_shot_and_target_feeds_in() -> void:
+	for shot in [Drill.SHOT_DRIVE, Drill.SHOT_DINK, Drill.SHOT_LOB, Drill.SHOT_MIX]:
+		for target in Drill.TARGET_NAMES.size():
+			var m := _drill(shot, target)
+			var sim: Sim = m[0]
+			var landed := false
+			for i in 600:
+				sim.step([null])
+				for e in sim.drain_events():
+					if e[0] == K.EVENT_BOUNCE and not landed:
+						landed = true
+						check(e[2] > 0 and K.in_court(e[1], e[2]),
+							"%s to %s lands in on your side: %d, %d" % [Drill.SHOT_NAMES[shot], Drill.TARGET_NAMES[target], e[1], e[2]])
+				if landed:
+					break
+			check(landed, "%s %s fed" % [shot, target])
+
+
+func test_unreturned_feed_is_missed() -> void:
+	var m := _drill()
+	var r := _results(m[0], null, 900)
+	check(r.size() >= 2 and r.count(Drill.RESULT_MISSED) == r.size(), "nobody home: %s" % str(r))
+	eq((m[0] as Sim).drill.streak, 0, "no streak")
+
+
+func test_no_volley_lesson_lets_it_bounce() -> void:
+	var m := _drill(Drill.SHOT_DRIVE, Drill.TARGET_AT_YOU, Drill.RULE_NO_VOLLEY, 3)
+	var r := _results(m[0], m[1], 6000)
+	check(not r.has(Drill.RESULT_VOLLEY), "the bot let it bounce: %s" % str(r))
+	eq((m[0] as Sim).drill.stage, Drill.DONE, "three good: the lesson's done")
+
+
+func test_serve_lesson() -> void:
+	var m := _drill(Drill.SHOT_SERVE, 0, 0, 3)
+	var sim: Sim = m[0]
+	eq(sim.phase, K.PHASE_SERVE, "the ball in your hand")
+	var r := _results(sim, m[1], 6000)
+	check(r.count(Drill.RESULT_GOOD) >= 3, "three serves in the box: %s" % str(r))
+	eq(sim.drill.stage, Drill.DONE, "done")
+
+
+func test_zones() -> void:
+	var d := Drill.new()
+	d.zone = Drill.ZONE_KITCHEN
+	check(d.in_zone(0, -1 * K.M) and not d.in_zone(0, -4 * K.M), "kitchen")
+	d.zone = Drill.ZONE_DEEP
+	check(d.in_zone(0, -6 * K.M) and not d.in_zone(0, -3 * K.M), "deep")
+	d.zone = Drill.ZONE_LEFT
+	check(d.in_zone(-1, -3 * K.M) and not d.in_zone(500000, -3 * K.M), "left")
+
+
+func test_drill_deterministic() -> void:
+	var a := _drill(Drill.SHOT_MIX, Drill.TARGET_RANDOM)
+	var b := _drill(Drill.SHOT_MIX, Drill.TARGET_RANDOM)
+	for i in 3000:
+		(a[0] as Sim).step([(a[1] as Bot).input()])
+		(b[0] as Sim).step([(b[1] as Bot).input()])
+	eq((a[0] as Sim).snapshot(), (b[0] as Sim).snapshot(), "same drill")
+
+
+func test_every_lesson_can_be_passed() -> void:
+	for i in Lessons.count():
+		var cfg := SimTypes.MatchConfig.new()
+		cfg.drill = Lessons.drill(i)
+		var sim := Sim.new(cfg)
+		var bot := Bot.new(sim, 0)
+		var t := 0
+		while t < 15000 and sim.drill.stage != Drill.DONE:
+			sim.step([bot.input()])
+			t += 1
+		eq(sim.drill.stage, Drill.DONE, "the bot passes %s (%d good of %d fed)" % [
+			Lessons.lesson(i)["id"], sim.drill.good, sim.drill.feeds])

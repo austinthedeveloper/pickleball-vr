@@ -1,0 +1,26 @@
+{
+ "comment": "HOW TO PLAY (ADR-007): each lesson is a ball-machine drill with rules and a goal. Lines are caps (the house style). Spots are metres on your side (x right, z from the net); \"serve\" puts you on the serve spot.",
+ "lessons": [
+  {"id": "rally", "title": "FIRST HITS",
+   "lines": ["THE MACHINE FEEDS YOU THE BALL.", "SWING THROUGH IT AND SEND IT", "BACK OVER THE NET."],
+   "shot": "DRIVE", "target": "AT YOU", "rate": "SLOW", "zone": "ANY", "rules": [], "goal": 5, "spot": [0, 6.2]},
+  {"id": "serve", "title": "THE SERVE",
+   "lines": ["HOLD THE BALL OUT AND PULL THE TRIGGER", "TO LET IT GO. HIT IT UNDERHAND INTO", "THE BOX DIAGONALLY ACROSS."],
+   "shot": "SERVE", "target": "AT YOU", "rate": "SLOW", "zone": "ANY", "rules": [], "goal": 3, "spot": "serve"},
+  {"id": "bounce", "title": "LET IT BOUNCE",
+   "lines": ["THE TWO-BOUNCE RULE: THE SERVE AND ITS", "RETURN MUST EACH BOUNCE BEFORE ANYONE", "VOLLEYS. LET IT BOUNCE, THEN HIT."],
+   "shot": "DRIVE", "target": "DEEP", "rate": "SLOW", "zone": "ANY", "rules": ["NO_VOLLEY"], "goal": 4, "spot": [0, 6.4]},
+  {"id": "dink", "title": "THE DINK",
+   "lines": ["AT THE KITCHEN LINE, PUSH THE BALL", "SOFTLY OVER THE NET SO IT LANDS", "IN THEIR KITCHEN."],
+   "shot": "DINK", "target": "KITCHEN", "rate": "SLOW", "zone": "KITCHEN", "rules": [], "goal": 3, "spot": [0, 2.5]},
+  {"id": "kitchen", "title": "THE KITCHEN",
+   "lines": ["VOLLEY THE BALL OUT OF THE AIR, BUT", "KEEP YOUR FEET OUT OF THE KITCHEN", "WHEN YOU DO: NO VOLLEYS IN THERE."],
+   "shot": "DRIVE", "target": "AT YOU", "rate": "SLOW", "zone": "ANY", "rules": ["VOLLEY", "KITCHEN"], "goal": 3, "spot": [0, 2.6]},
+  {"id": "deep", "title": "GO DEEP",
+   "lines": ["A DEEP BALL KEEPS THEM BACK.", "LAND YOUR RETURNS IN THE BACK", "THIRD OF THEIR COURT."],
+   "shot": "DRIVE", "target": "AT YOU", "rate": "SLOW", "zone": "DEEP", "rules": [], "goal": 3, "spot": [0, 6.2]},
+  {"id": "topspin", "title": "TOPSPIN",
+   "lines": ["BRUSH UP THE BACK OF THE BALL", "AS YOU HIT IT. TOPSPIN DIPS IT", "DOWN AND KICKS IT ON."],
+   "shot": "DRIVE", "target": "AT YOU", "rate": "SLOW", "zone": "ANY", "rules": ["TOPSPIN"], "goal": 3, "spot": [0, 6.2]}
+ ]
+}

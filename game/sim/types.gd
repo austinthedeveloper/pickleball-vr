@@ -90,6 +90,10 @@ class MatchConfig:
 	var styles: Array = []
 	## The ladder team on the far side, for the view (the sim reads `styles`).
 	var opponent := -1
+	## Practice (ADR-007): a Drill's settings; null plays a match.
+	var drill: Drill = null
+	## The venue, for the view only (ADR-008).
+	var venue := 0
 
 
 class Player:

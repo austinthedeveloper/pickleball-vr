@@ -12,5 +12,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [004](ADR-004-doubles.md) | Doubles: rally-scoring rotation, a CPU partner, lanes |
 | [005](ADR-005-setup-and-ladder.md) | MATCH SETUP in the world, and the port kit's ladder |
 | [006](ADR-006-spin-and-feel.md) | Spin, the sweet spot, and how a point sounds |
+| [007](ADR-007-practice.md) | The ball machine and HOW TO PLAY |
 
-Next: ADR-007.
+Next: ADR-008.

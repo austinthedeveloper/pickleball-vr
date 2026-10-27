@@ -20,6 +20,14 @@ var points := 0                      ## index into POINTS
 var win_by_2 := false
 var left_handed := false
 var paddle_angle := 1                ## index into ANGLES
+var venue := 0                       ## 0 is HOME (the team's); then Venues.NAMES
+## BALL MACHINE (ADR-007)
+var machine_shot := Drill.SHOT_DRIVE
+var machine_target := Drill.TARGET_AT_YOU
+var machine_rate := 1
+var machine_zone := Drill.ZONE_ANY
+var machine_best := 0
+var lessons_done: Array = []         ## lesson ids
 
 
 func load_settings() -> void:
@@ -34,6 +42,13 @@ func load_settings() -> void:
 	win_by_2 = c.get_value("match", "win_by_2", win_by_2)
 	left_handed = c.get_value("player", "left_handed", left_handed)
 	paddle_angle = c.get_value("player", "paddle_angle", paddle_angle)
+	venue = c.get_value("match", "venue", venue)
+	machine_shot = c.get_value("machine", "shot", machine_shot)
+	machine_target = c.get_value("machine", "target", machine_target)
+	machine_rate = c.get_value("machine", "rate", machine_rate)
+	machine_zone = c.get_value("machine", "zone", machine_zone)
+	machine_best = c.get_value("machine", "best", machine_best)
+	lessons_done = c.get_value("lessons", "done", lessons_done)
 
 
 func save() -> void:
@@ -47,6 +62,13 @@ func save() -> void:
 	c.set_value("match", "win_by_2", win_by_2)
 	c.set_value("player", "left_handed", left_handed)
 	c.set_value("player", "paddle_angle", paddle_angle)
+	c.set_value("match", "venue", venue)
+	c.set_value("machine", "shot", machine_shot)
+	c.set_value("machine", "target", machine_target)
+	c.set_value("machine", "rate", machine_rate)
+	c.set_value("machine", "zone", machine_zone)
+	c.set_value("machine", "best", machine_best)
+	c.set_value("lessons", "done", lessons_done)
 	c.save(path)
 
 
@@ -63,4 +85,27 @@ func match_config() -> SimTypes.MatchConfig:
 	cfg.win_by_2 = win_by_2
 	cfg.seed = int(Time.get_unix_time_from_system()) & 0x7fffffff
 	Opponents.apply(cfg, opponent)
+	cfg.venue = Venues.resolve(venue, opponent)
+	return cfg
+
+
+## The BALL MACHINE's drill, as set.
+func machine_config() -> SimTypes.MatchConfig:
+	var cfg := match_config()
+	var d := Drill.new()
+	d.shot = machine_shot
+	d.target = machine_target
+	d.rate = machine_rate
+	d.zone = machine_zone
+	if d.shot == Drill.SHOT_SERVE:
+		var sp := d.serve_spot()
+		d.spot_x = sp[0]
+		d.spot_z = sp[1]
+	cfg.drill = d
+	return cfg
+
+
+func lesson_config(i: int) -> SimTypes.MatchConfig:
+	var cfg := match_config()
+	cfg.drill = Lessons.drill(i)
 	return cfg

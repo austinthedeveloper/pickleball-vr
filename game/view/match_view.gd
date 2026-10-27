@@ -11,6 +11,8 @@ const MAX_TICKS_PER_FRAME := 8
 const SPECTATE := Vector3(-3.0, 0, 9.4)
 
 signal match_over(winner: int)
+signal drill_done
+signal pause_requested
 
 var sim: Sim
 var bot: Bot
@@ -34,6 +36,10 @@ var _acc := 0.0
 var _commands: Array = []
 var _last_phase := -1
 var _quip := RandomNumberGenerator.new()     # display only: which quip
+var machine: Machine
+var lesson_label: Label3D
+var zone_mesh: MeshInstance3D
+var paused := false                  ## the sim isn't stepped while a pause menu is up
 
 
 func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectating := false) -> void:
@@ -61,7 +67,7 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		bot.rest_forward = 600000
 	const SHIRTS := [Color(0.85, 0.15, 0.2), Color(0.95, 0.85, 0.2), Color(0.95, 0.55, 0.12), Color(0.55, 0.25, 0.75)]
 	for s in sim.active_slots():
-		if sim.players[s].cpu or spectate:
+		if (sim.players[s].cpu or spectate) and not sim.drill:
 			var a := Avatar.new()
 			a.slot = s
 			a.shirt = SHIRTS[s]
@@ -100,13 +106,64 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	add_child(crowd)
 	announcer = Announcer.new()
 	add_child(announcer)
+	if sim.drill:
+		_practice_court()
 	if spectate:
 		if flat:
 			flat.recenter(SPECTATE)
 	elif flat:
-		flat.recenter(_spot(0))
+		flat.recenter(_start_spot())
 	if cfg.opponent >= 0 and not spectate:
 		board.announce(String(Opponents.team(cfg.opponent)["intro"]), Color(1, 0.9, 0.5), 3.5)
+
+
+## Practice: the machine, the return zone, no crowd.
+func _practice_court() -> void:
+	machine = Machine.new()
+	add_child(machine)
+	crowd.visible = false
+	crowd.process_mode = Node.PROCESS_MODE_DISABLED
+	board.drill = true
+	var d := sim.drill
+	if d.zone != Drill.ZONE_ANY:
+		var hw := K.COURT_HALF_WIDTH / float(K.M)
+		var hl := K.COURT_HALF_LENGTH / float(K.M)
+		var kd := K.KITCHEN_DEPTH / float(K.M)
+		var r := Rect2(-hw, -hl, hw * 2, hl - kd)
+		match d.zone:
+			Drill.ZONE_KITCHEN: r = Rect2(-hw, -kd, hw * 2, kd)
+			Drill.ZONE_DEEP: r = Rect2(-hw, -hl, hw * 2, hl / 3)
+			Drill.ZONE_LEFT: r = Rect2(-hw, -hl, hw, hl)
+			Drill.ZONE_RIGHT: r = Rect2(0, -hl, hw, hl)
+		zone_mesh = MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(r.size.x, 0.004, r.size.y)
+		zone_mesh.mesh = bm
+		var mat := World.material(Color(1.0, 0.85, 0.2, 0.35))
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		zone_mesh.material_override = mat
+		zone_mesh.position = Vector3(r.get_center().x, 0.022, r.get_center().y)
+		add_child(zone_mesh)
+
+
+## A lesson's title and instructions, standing over the far court.
+func show_lesson(title: String, lines: Array) -> void:
+	if lesson_label == null:
+		lesson_label = Label3D.new()
+		lesson_label.font_size = 64
+		lesson_label.pixel_size = 0.0035
+		lesson_label.outline_size = 14
+		lesson_label.modulate = Color(1, 0.95, 0.8)
+		lesson_label.position = Vector3(0, 3.0, -4.0)
+		lesson_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		add_child(lesson_label)
+	lesson_label.text = title + "\n\n" + "\n".join(lines)
+
+
+func _start_spot() -> Vector3:
+	if sim.drill:
+		return World.m(sim.drill.spot_x, 0, sim.drill.spot_z)
+	return _spot(0)
 
 
 ## Show a menu panel in front of you, pointed at with the laser or mouse.
@@ -210,7 +267,13 @@ func _process(delta: float) -> void:
 		flat.begin_frame(delta)
 		if flat.serve_pressed and not (menu and menu.visible):
 			bot.serve_now = true
+	var pause := xr.pause_pressed if xr else flat.pause_pressed
+	if pause and not spectate and not paused:
+		pause_requested.emit()
 	_drive_menu()
+	if paused:
+		_draw(0.0)
+		return
 	_acc = minf(_acc + delta, DT * MAX_TICKS_PER_FRAME)
 	var n := int(_acc / DT)
 	_acc -= n * DT
@@ -224,6 +287,8 @@ func _drive_menu() -> void:
 	if xr:
 		xr.show_laser(on)
 	if not on:
+		return
+	if menu.locked():
 		return
 	var ray: Array[Vector3] = xr.pointer() if xr else flat.pointer()
 	var click := xr.click if xr else flat.click
@@ -254,6 +319,10 @@ func _tick(alpha: float, first: bool) -> void:
 	input_log.append(h.to_array())
 	sim.step([h], _commands)
 	_commands = []
+	if sim.drill and sim.tick == 1 and not spectate:
+		if xr:
+			xr.face_court()
+			xr.recenter(_start_spot())
 	if sim.phase != _last_phase:
 		_on_phase(sim.phase)
 		_last_phase = sim.phase
@@ -262,7 +331,7 @@ func _tick(alpha: float, first: bool) -> void:
 
 
 func _on_phase(p: int) -> void:
-	if p == K.PHASE_SERVE and not spectate:
+	if p == K.PHASE_SERVE and not spectate and not sim.drill:
 		if sim.score[0] + sim.score[1] == 0 and announcer.said.is_empty():
 			announcer.say(["match_begin", "match_doubles" if sim.config.doubles else "match_singles"], Announcer.TOP)
 		else:
@@ -284,6 +353,23 @@ func _on_phase(p: int) -> void:
 func _on_event(e: Array) -> void:
 	var at := World.m(sim.ball.x, sim.ball.y, sim.ball.z)
 	match int(e[0]):
+		K.EVENT_FEED:
+			machine.kick()
+			_play("0_hit_soft", machine.global_position + Vector3(0, 0.9, 0), 0.8, -3.0)
+		K.EVENT_DRILL:
+			var r: int = e[1]
+			board.announce(Drill.RESULT_TEXT[r], Color(0.5, 1, 0.5) if r == Drill.RESULT_GOOD else Color(1, 0.5, 0.35), 1.2)
+			const CALLS := {Drill.RESULT_OUT: "out", Drill.RESULT_NET: "net", Drill.RESULT_KITCHEN: "kitchen",
+				Drill.RESULT_VOLLEY: "early_volley"}
+			if CALLS.has(r):
+				announcer.say([CALLS[r]], Announcer.MID)
+			if e[3] == 1:
+				_play("4_applause", Vector3(0, 2, 0))
+				announcer.say(["winner"], Announcer.TOP)
+				board.announce("LESSON COMPLETE!", Color(1, 0.9, 0.2), 4.0)
+				drill_done.emit()
+			elif r == Drill.RESULT_GOOD and e[2] > 0 and e[2] % 10 == 0:
+				announcer.say(["rally_%d" % mini(e[2], 30)] if e[2] in [10, 20, 30] else ["winner"], Announcer.HIGH)
 		K.EVENT_HIT:
 			var speed: int = e[2]
 			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf())
@@ -347,6 +433,8 @@ func _draw(delta: float) -> void:
 	shadow.scale = Vector3(s * 1.4, 1, s * 1.4)
 	for a in avatars:
 		a.show_from(sim, delta)
+	if machine:
+		machine.show_from(sim, delta)
 	board.show_from(sim, delta)
 	if flat and demo and not spectate:
 		flat.head = World.m(bot.head_x, 0, bot.head_z) + Vector3(0, FlatRig.EYE, 0)

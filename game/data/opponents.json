@@ -3,6 +3,7 @@
  "opponents": [
   {
    "team": "HENDERSON",
+   "venue": "PARK",
    "intro": "DAD JOKES INCOMING, SPORT!",
    "taunt": "THAT'S HOW IT'S DONE, SPORT!",
    "concede": "GOOD GAME! WHO WANTS PIZZA?",
@@ -71,6 +72,7 @@
   },
   {
    "team": "SNOWBIRDS",
+   "venue": "LAKESIDE",
    "intro": "WE'VE PLAYED SINCE 1962.",
    "taunt": "AGE BEFORE BEAUTY, DEAR.",
    "concede": "WELL PLAYED, YOUNGSTER!",
@@ -139,6 +141,7 @@
   },
   {
    "team": "GYM BROS",
+   "venue": "DINOSAUR",
    "intro": "DO YOU EVEN DINK, BRO?",
    "taunt": "NEW PERSONAL BEST, BRO!",
    "concede": "BRO... THAT WAS SICK.",
@@ -207,6 +210,7 @@
   },
   {
    "team": "PIRATES",
+   "venue": "LAKESIDE",
    "intro": "ARR! PREPARE TO BE BOARDED!",
    "taunt": "YE WALK THE PLANK, MATEY!",
    "concede": "ARR... KEEP THE TREASURE.",
@@ -275,6 +279,7 @@
   },
   {
    "team": "GOTH CLUB",
+   "venue": "SPACE",
    "intro": "THE KITCHEN IS OUR CRYPT.",
    "taunt": "DARKNESS ALWAYS WINS.",
    "concede": "HOW... DELIGHTFULLY GRIM.",
@@ -343,6 +348,7 @@
   },
   {
    "team": "SURF CREW",
+   "venue": "UNDERSEA",
    "intro": "COWABUNGA, DUDE!",
    "taunt": "TOTALLY TUBULAR, BRAH!",
    "concede": "GNARLY GAME, DUDE. RESPECT.",
@@ -411,6 +417,7 @@
   },
   {
    "team": "TWINS",
+   "venue": "SUNSET",
    "intro": "DOUBLE TROUBLE. READY?",
    "taunt": "TWINS WIN! TWINS WIN!",
    "concede": "WAIT... THAT WASN'T PLANNED.",
@@ -479,6 +486,7 @@
   },
   {
    "team": "CHAMPS",
+   "venue": "SUNSET",
    "intro": "THE TITLE STAYS WITH US.",
    "taunt": "THAT'S WHY WE'RE CHAMPS.",
    "concede": "THE CROWN IS YOURS. EARNED.",

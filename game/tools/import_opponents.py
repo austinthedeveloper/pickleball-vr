@@ -38,6 +38,7 @@ def main():
     for rung, t in enumerate(src["opponents"]):
         teams.append({
             "team": t["team"],
+            "venue": t.get("venue", "PARK"),
             "intro": t["intro"],
             "taunt": t["taunt"],
             "concede": t["concede"],

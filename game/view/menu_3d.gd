@@ -9,6 +9,9 @@ const ROW_H := 0.13
 const WIDTH := 1.5
 const PANEL := Color(0.07, 0.09, 0.16)
 const HILITE := Color(0.95, 0.75, 0.15)
+## A new page ignores pointing and the sticks this long: the click that
+## opened it mustn't press a row too (port kit playbook rule 9).
+const SWITCH_LOCK := 0.3
 
 signal pressed(id: String)
 signal changed(id: String, index: int)
@@ -16,6 +19,7 @@ signal changed(id: String, index: int)
 var title := ""
 var rows: Array = []                 ## {id, label, values: Array[String], index}
 var selected := 0
+var lock := SWITCH_LOCK
 var _labels: Array[Label3D] = []
 var _values: Array[Label3D] = []
 var _bar: MeshInstance3D
@@ -141,8 +145,18 @@ func row_at(origin: Vector3, dir: Vector3) -> int:
 	return i if i >= 0 and i < rows.size() else -1
 
 
+func _process(delta: float) -> void:
+	lock = maxf(lock - delta, 0.0)
+
+
+func locked() -> bool:
+	return lock > 0.0
+
+
 ## Pointing: hover selects; a click presses.
 func point(origin: Vector3, dir: Vector3, click: bool) -> void:
+	if locked():
+		return
 	var i := row_at(origin, dir)
 	if i < 0:
 		return

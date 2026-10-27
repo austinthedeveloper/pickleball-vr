@@ -30,10 +30,14 @@ var shots := 0                       ## hits this rally
 var last_offset := 0
 var rng := 1
 var events: Array = []
+var drill: Drill                     ## practice (ADR-007); null in a match
 
 
 func _init(cfg: SimTypes.MatchConfig = null) -> void:
 	config = cfg if cfg else SimTypes.MatchConfig.new()
+	if config.drill:
+		drill = Drill.new()
+		drill.copy_settings_from(config.drill)
 	for i in K.MAX_PLAYERS:
 		var p := SimTypes.Player.new()
 		p.slot = i
@@ -44,12 +48,16 @@ func _init(cfg: SimTypes.MatchConfig = null) -> void:
 
 ## The active slots: singles plays 0 and 2, doubles all four.
 func active_slots() -> Array[int]:
+	if drill:
+		return [0]
 	if config.doubles:
 		return [0, 1, 2, 3]
 	return [0, 2]
 
 
 func is_active(slot: int) -> bool:
+	if drill:
+		return slot == 0
 	return config.doubles or slot == 0 or slot == 2
 
 
@@ -73,6 +81,9 @@ func new_match() -> void:
 		p.cooldown = 0
 		p.plan_tick = -1
 		p.swing_tick = -1
+	if drill:
+		drill.reset(self)
+		return
 	_serve_setup()
 
 
@@ -666,6 +677,9 @@ func step(human: Array = [], commands: Array = []) -> void:
 			tossed = tossed or (h != null and h.toss and s == server_slot)
 		if p.cooldown > 0:
 			p.cooldown -= 1
+	if drill:
+		drill.update(self, tossed)
+		return
 	match phase:
 		K.PHASE_SERVE_SETUP:
 			if phase_timer >= K.SETUP_TICKS:
@@ -782,6 +796,8 @@ func snapshot() -> Array:
 		var p := players[s]
 		a.append_array([p.x, p.z, p.px, p.py, p.pz, p.cooldown, p.goal_x, p.goal_z, p.plan_tick,
 			1 if p.court_right else 0, 1 if p.let_go else 0])
+	if drill:
+		a.append_array(drill.snapshot())
 	return a
 
 

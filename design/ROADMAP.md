@@ -42,6 +42,9 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-10 | Spin and the sweet spot (ADR-006) | `feature/cld-vr-feel` | Ready to test |
 | VR-11 | Hit sounds, haptics, PADDLE ANGLE (ADR-006) | `feature/cld-vr-feel` | Ready to test |
 | VR-12 | The crowd and the announcer (ADR-006) | `feature/cld-vr-feel` | Ready to test |
+| VR-13 | The ball machine (ADR-007) | `feature/cld-vr-practice` | Ready to test |
+| VR-14 | HOW TO PLAY: seven lessons (ADR-007) | `feature/cld-vr-practice` | Ready to test |
+| VR-15 | Menu pages and pause (ADR-007) | `feature/cld-vr-practice` | Ready to test |
 
 ## Phase 1: singles
 
@@ -91,6 +94,19 @@ real paddle.
 **VR-12, ready to test.** Listen to a match: the start, a fault call,
 then the score before the serve ("four two", "three all"), match point,
 the result. The crowd stands for long rallies. Check the volumes.
+
+## Phase 5: modes
+
+**VR-13, ready to test.** MAIN > BALL MACHINE: pick a shot, a target and a
+zone, then START. Try DINK to the KITCHEN with RETURN TO KITCHEN. Does the
+streak feel fair? Is the machine's pace right?
+
+**VR-14, ready to test.** MAIN > HOW TO PLAY: play the seven lessons in
+order. Do the instructions read well over the court, and is each goal
+reachable for a beginner in the headset? (The bot passes all seven.)
+
+**VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
+that the click that opens a page never presses a row on it.
 
 ## For you
 

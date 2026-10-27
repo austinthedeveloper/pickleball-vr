@@ -10,6 +10,7 @@ const SWING_TICKS := 14
 const FOLLOW_TICKS := 8
 const SERVE_WAIT := 45
 const MIN_LEAD := 10
+const DRILL_ROAM := 1500000
 
 var sim: Sim
 var slot := 0
@@ -57,6 +58,8 @@ func _init(s: Sim, which := 0) -> void:
 	sim = s
 	slot = which
 	var spot := sim.serve_spot(slot)
+	if sim.drill:
+		spot = [sim.drill.spot_x, sim.drill.spot_z]
 	head_x = spot[0]
 	head_z = spot[1]
 
@@ -133,6 +136,9 @@ func _move() -> void:
 	var side := K.side_sign(team)
 	var gx := _lane_x()
 	var gz := side * (K.COURT_HALF_LENGTH - 300000)
+	if sim.drill:
+		gx = sim.drill.spot_x               # practice: back to your spot
+		gz = sim.drill.spot_z
 	if _incoming() and sim.phase == K.PHASE_LIVE:
 		# Replan now and then, as the CPUs do (the plan costs a flight's prediction).
 		var key := sim.shots * 4 + sim.bounce_count
@@ -152,8 +158,17 @@ func _move() -> void:
 		gz = _goal_z
 	elif sim.phase != K.PHASE_LIVE:
 		return
-	elif sim.required_bounce == K.REQUIRED_BOUNCE_NONE and sim.shots >= 3:
+	elif sim.required_bounce == K.REQUIRED_BOUNCE_NONE and sim.shots >= 3 and not sim.drill:
 		gz = side * (K.KITCHEN_DEPTH + 400000)
+	if sim.drill:
+		# Practice: step to the ball, but stay near your spot (a learner
+		# doesn't charge the net to volley the machine).
+		var ox := gx - sim.drill.spot_x
+		var oz := gz - sim.drill.spot_z
+		var od := Fx.length(ox, 0, oz)
+		if od > DRILL_ROAM:
+			gx = sim.drill.spot_x + ox * DRILL_ROAM / od
+			gz = sim.drill.spot_z + oz * DRILL_ROAM / od
 	var dx := gx - head_x
 	var dz := gz - head_z
 	var d := Fx.length(dx, 0, dz)
@@ -246,6 +261,13 @@ func _target(b: Ball) -> Array[int]:
 		return [box * K.COURT_HALF_WIDTH / 2, os * (K.COURT_HALF_LENGTH - 1500000), 95000]
 	if has_aim:
 		return [aim_x, aim_z, pace]
+	if sim.drill:
+		# Practice: to the zone the drill asks for (nobody over there).
+		match sim.drill.zone:
+			Drill.ZONE_KITCHEN: return [0, os * K.KITCHEN_DEPTH * 6 / 10, 40000]
+			Drill.ZONE_LEFT: return [-K.COURT_HALF_WIDTH / 2, os * (K.COURT_HALF_LENGTH - 1500000), pace]
+			Drill.ZONE_RIGHT: return [K.COURT_HALF_WIDTH / 2, os * (K.COURT_HALF_LENGTH - 1500000), pace]
+		return [0, os * (K.COURT_HALF_LENGTH - 1100000), pace]
 	var o := sim.players[opp * 2]
 	var tx := -signi(o.x) * (K.COURT_HALF_WIDTH - 1000000) if o.x != 0 else 0
 	if absi(o.z) < K.KITCHEN_DEPTH + 900000 and b.y < 900000:

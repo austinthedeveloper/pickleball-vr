@@ -19,6 +19,7 @@ var menu_pressed := false
 var demo := false                    ## the camera rides with the bot
 var spectate := false                ## fixed camera, the mouse free for menus
 var click := false
+var pause_pressed := false
 var nav := Vector2i.ZERO
 var _click_was := false
 var _keys_was := {}
@@ -43,7 +44,7 @@ func _ready() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	var help := Label.new()
-	help.text = "WASD MOVE   MOUSE AIM   SPACE SERVE   SHIFT SOFT   ENTER NEW MATCH   ESC QUIT"
+	help.text = "WASD MOVE   MOUSE AIM   SPACE SERVE   SHIFT SOFT   ESC PAUSE"
 	help.position = Vector2(16, 12)
 	help.add_theme_font_size_override("font_size", 18)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -59,6 +60,7 @@ func begin_frame(delta: float) -> void:
 	nav = Vector2i(int(_edge(KEY_RIGHT)) - int(_edge(KEY_LEFT)), int(_edge(KEY_DOWN)) - int(_edge(KEY_UP)))
 	if _edge(KEY_ENTER):
 		click = true
+	pause_pressed = _edge(KEY_ESCAPE)
 	if not demo and not spectate:
 		var move := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 		var keys := Vector2(

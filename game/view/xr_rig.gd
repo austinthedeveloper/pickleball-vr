@@ -32,6 +32,8 @@ var _trigger_was := false
 var _turned := false
 var _menu_was := false
 var menu_pressed := false            ## A/X this frame: the match's button
+var pause_pressed := false           ## the menu button (or B/Y) this frame
+var _pause_was := false
 ## Menus: the laser's click and the stick's steps this frame.
 var click := false
 var nav := Vector2i.ZERO
@@ -110,6 +112,10 @@ func begin_frame(delta: float) -> void:
 	var menu := paddle_hand.is_button_pressed("ax_button") or free_hand.is_button_pressed("ax_button")
 	menu_pressed = menu and not _menu_was
 	_menu_was = menu
+	var pz := free_hand.is_button_pressed("menu_button") or paddle_hand.is_button_pressed("by_button") \
+		or free_hand.is_button_pressed("by_button")
+	pause_pressed = pz and not _pause_was
+	_pause_was = pz
 	var c := trig or paddle_hand.get_float("trigger") > 0.6
 	click = c and not _click_was
 	_click_was = c

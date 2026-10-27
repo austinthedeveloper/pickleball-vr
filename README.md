@@ -28,6 +28,7 @@ game/tools/test.sh                # all tests, headless (must pass)
 | Turn | right stick (45 deg snaps) | |
 | Serve | the ball is in your left hand: pull its trigger to let go, then hit it | Space |
 | Soft shot | swing gently | hold Shift |
+| Pause | the menu button (or B/Y) | Esc |
 | Menus | point the free hand's laser, pull a trigger; or the sticks | point and click the mouse; or the arrows and Enter |
 
 The **shot assist** (ADR-003) pulls a miss toward a good shot, 65% by

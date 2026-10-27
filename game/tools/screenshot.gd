@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play> <frames> <out.png> [doubles]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson> <frames> <out.png> [doubles | lesson number]
 extends SceneTree
 
 var frames := 240
@@ -22,7 +22,16 @@ func _initialize() -> void:
 	root.add_child(view)
 	var cfg := SimTypes.MatchConfig.new()
 	cfg.doubles = args.has("doubles")
-	view.setup(cfg, false, demo)
+	var mode: String = args[0] if args.size() > 0 else "demo"
+	if mode == "machine":
+		cfg.drill = Drill.new()
+		cfg.drill.zone = Drill.ZONE_DEEP
+	elif mode == "lesson":
+		cfg.drill = Lessons.drill(int(args[3]) if args.size() > 3 else 0)
+	view.setup(cfg, false, demo or mode == "machine" or mode == "lesson")
+	if mode == "lesson":
+		var l := Lessons.lesson(int(args[3]) if args.size() > 3 else 0)
+		view.show_lesson(String(l["title"]), l["lines"])
 
 
 func _process(_delta: float) -> bool:
