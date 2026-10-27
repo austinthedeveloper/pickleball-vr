@@ -157,3 +157,57 @@ func test_announcer_says_the_number() -> void:
 	a.say(["rally_15_1"], Announcer.HIGH)
 	eq(a.said, ["rally_15_1"] as Array[String], "the clip that says FIFTEEN, exactly")
 	a.queue_free()
+
+
+## How far to the side each of the partner's fresh dinks passes you, in um
+## (you standing still on your spot, never hitting).
+func _passes(cross: bool) -> Array:
+	var s := Settings.new()
+	s.partner_cross = cross
+	var sim := Sim.new(s.partner_config())
+	var h := SimTypes.HumanInput.new()
+	h.head_x = sim.players[0].x
+	h.head_z = sim.players[0].z
+	h.paddle_z = 9 * K.M
+	var out := []
+	var fed := false
+	for i in 6000:
+		sim.step([h])
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_HIT and e[1] == 2:
+				fed = true
+		if fed and sim.ball.z >= sim.players[0].z:
+			out.append(sim.ball.x - sim.players[0].x)
+			fed = false
+	return out
+
+
+func test_dinks_reach_you_cross_court_too() -> void:
+	for cross in [false, true]:
+		var p := _passes(cross)
+		check(p.size() >= 6, "fed: %d" % p.size())
+		for d in p:
+			check(absi(d) <= 450000, "%s: within reach, %.2f m to the side" % ["CROSS" if cross else "ACROSS", d / 1e6])
+
+
+func test_the_partner_moves_before_your_ball_bounces() -> void:
+	var sim := Sim.new(Settings.new().partner_config())
+	var bot := Bot.new(sim, 0)
+	var early := 0
+	var late := 0
+	var start := Vector2.ZERO
+	var watching := false
+	for i in 8000:
+		sim.step([bot.input()])
+		var q := sim.players[2]
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_HIT and e[1] == 0:
+				start = Vector2(q.x, q.z)
+				watching = true
+			elif e[0] == K.EVENT_BOUNCE and e[2] < 0 and watching:
+				watching = false
+				if Vector2(q.x, q.z).distance_to(start) > 300000:
+					early += 1
+				else:
+					late += 1
+	check(early >= 8 and early > late * 3, "it reads your shot and goes: %d early, %d not" % [early, late])

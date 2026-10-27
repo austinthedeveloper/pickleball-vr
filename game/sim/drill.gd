@@ -81,12 +81,13 @@ const PARTNER := 5                   ## DINK PARTNER: your ball's on their side,
 ## in front of you, never away from you, never a winner.
 const PARTNER_Z := -(K.KITCHEN_DEPTH + 350000)
 const PARTNER_SPEED := 30000         ## 3.6 m/s
+const PARTNER_REACT := 22            ## ticks after your hit it starts moving (0.18 s)
 ## A dink's difficulty is how low it skims the tape: EASY floats 60 cm
 ## over it (slow, a big bounce), HARD skims 12 cm (fast and low).
 const PARTNER_CLEAR := [600000, 300000, K.NET_CLEAR]
 const PARTNER_PACE := [30000, 38000, 46000]
 const PACE_NAMES := ["EASY", "MEDIUM", "HARD"]
-const PARTNER_SCATTER := 450000      ## how far from your line its dinks wander
+const PARTNER_SCATTER := 300000      ## how far from you its dinks wander
 ## Floor targets: a circle on their side; land in it for a TARGET HIT.
 const TARGET_RADIUS := 450000
 
@@ -129,6 +130,7 @@ var aim_x := 0                       ## where the last feed was aimed (the nozzl
 var hit_at := 0
 var machine_z := BASELINE_Z
 var partner_plan := -1               ## the tick the partner means to hit
+var read_at := 0                     ## when the partner reads your shot
 var target_x := 0
 var target_z := 0
 var target_hits := 0
@@ -208,7 +210,10 @@ func _serve_ready(sim: Sim) -> void:
 func update(sim: Sim, tossed: bool) -> void:
 	var p := sim.players[0]
 	if partner and stage != PARTNER:
-		_partner_home(sim)
+		if stage == RETURN and partner_plan >= 0:
+			_partner_step(sim.players[2], sim.players[2].goal_x, sim.players[2].goal_z)
+		else:
+			_partner_home(sim)
 	match stage:
 		WAIT:
 			if sim.tick >= next_feed:
@@ -326,9 +331,13 @@ func _fly(sim: Sim, p: SimTypes.Player) -> void:
 		_result(sim, RESULT_KITCHEN)
 	else:
 		stage = RETURN
+		if partner:
+			_partner_reads(sim)
 
 
 func _return(sim: Sim) -> void:
+	if partner and partner_plan == -1 and sim.tick >= read_at:
+		_partner_plan(sim)
 	var ev := sim.ball.step()
 	if ev & Ball.EV_NET:
 		sim.emit(K.EVENT_NET, sim.ball.ev_x, sim.ball.ev_y, 0)
@@ -455,9 +464,13 @@ func _result(sim: Sim, r: int, rally_on := false) -> void:
 func _partner_dink(sim: Sim, x: int, y: int, z: int) -> void:
 	var p := sim.players[0]
 	var q := sim.players[2]
-	var tx := clampi(p.x + sim.scatter(PARTNER_SCATTER), -K.COURT_HALF_WIDTH + 300000,
-		K.COURT_HALF_WIDTH - 300000)
+	# Bounce about a metre in front of you on the line from here to you, so
+	# after the bounce the ball carries on to you, cross court too (a
+	# bounce at your x would drift on past you, ADR-010 amended).
 	var tz := clampi(p.z - 1000000 + sim.scatter(250000), 600000, K.KITCHEN_DEPTH * 85 / 100)
+	var want_x := p.x + sim.scatter(PARTNER_SCATTER)
+	var tx := clampi(x + (want_x - x) * (tz - z) / maxi(p.z - z, 1), -K.COURT_HALF_WIDTH + 300000,
+		K.COURT_HALF_WIDTH - 300000)
 	var level := clampi(partner_pace, 0, 2)
 	var pace: int = PARTNER_PACE[level]
 	var w := Aim.topspin(tx - x, tz - z, -150000)
@@ -478,21 +491,44 @@ func _partner_dink(sim: Sim, x: int, y: int, z: int) -> void:
 	sim.emit(K.EVENT_HIT, 2, b.speed(), 0)
 
 
-## Your ball just bounced on their side, in: the partner plans its reply.
+## You've hit: the partner reads it after a moment (a person's reaction),
+## then moves to meet it, letting it bounce (the two-bounce machinery
+## makes the planner wait for the bounce).
+func _partner_reads(sim: Sim) -> void:
+	sim.required_bounce = K.REQUIRED_BOUNCE_SERVE
+	sim.serving_team = 0
+	partner_plan = -1
+	read_at = sim.tick + PARTNER_REACT
+
+
+func _partner_plan(sim: Sim) -> void:
+	var q := sim.players[2]
+	var plan := Intercept.plan(sim, 1, q.x, q.z, PARTNER_SPEED)
+	if plan.is_empty():
+		partner_plan = -2                # unreachable: it stays put and the bounce decides
+		return
+	partner_plan = sim.tick + plan[0]
+	q.goal_x = plan[4]
+	q.goal_z = plan[5]
+
+
+## Your ball just bounced on their side, in: the partner refines its plan.
 func _partner_chase(sim: Sim) -> void:
 	var q := sim.players[2]
 	stage = PARTNER
 	bounces = 1
 	sim.bounce_count = 1
 	sim.last_hitter = 0
+	sim.required_bounce = K.REQUIRED_BOUNCE_NONE
 	var plan := Intercept.plan(sim, 1, q.x, q.z, PARTNER_SPEED)
+	var had_plan := partner_plan >= 0
 	partner_plan = -1
 	if not plan.is_empty():
 		partner_plan = sim.tick + plan[0]
 		q.goal_x = plan[4]
 		q.goal_z = plan[5]
-	else:
-		q.goal_x = q.x
+	elif not had_plan:
+		q.goal_x = q.x                   # no plan before or now: it stays put
 		q.goal_z = q.z
 
 
@@ -576,5 +612,5 @@ func _new_target(sim: Sim) -> void:
 
 func snapshot() -> Array:
 	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
-		hit_at, machine_z, partner_plan, target_x, target_z, target_hits, rally, best_rally,
+		hit_at, machine_z, partner_plan, read_at, target_x, target_z, target_hits, rally, best_rally,
 		1 if partner else 0]

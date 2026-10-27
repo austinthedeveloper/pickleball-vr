@@ -61,6 +61,21 @@ bonus, they asked for floor targets to aim at.
   court again where you stand (OpenXR's `pose_recentered`). Before, the
   game ignored it.
 
+## Amended again 2026-10-27: reach and reaction
+
+- **Dinks reach you cross court.** The partner aimed each dink to bounce
+  at your x, but a diagonal ball keeps drifting sideways after the
+  bounce: fresh cross-court dinks passed 1.0 to 1.6 m to your side, out
+  of reach. Now it bounces on the line from the partner to you, so it
+  carries on to you, with the scatter down to 30 cm. Every fresh dink
+  passes within 30 cm (`test_dinks_reach_you_cross_court_too`).
+- **It reads your shot.** The partner used to plan only once your ball
+  bounced. Now, 0.18 s after you hit it (a person's reaction), it plans
+  to meet the ball after the bounce and moves, then refines the plan on
+  the bounce. It's usually 1 to 2.5 m on its way before your ball lands
+  (`test_the_partner_moves_before_your_ball_bounces`). The person's
+  swing follows that early plan too.
+
 ## Consequences
 
 - The partner is pure sim like everything else: seeded, deterministic,

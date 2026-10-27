@@ -239,14 +239,15 @@ static func two_bone(root: Vector3, target: Vector3, a: float, b: float, pole: V
 ## The tick the sim means this player to hit at, or -1.
 func _plan_tick(sim: Sim) -> int:
 	if sim.drill and sim.drill.partner and slot == 2:
-		return sim.drill.partner_plan if sim.drill.stage == Drill.PARTNER else -1
+		var st := sim.drill.stage
+		return sim.drill.partner_plan if st == Drill.PARTNER or st == Drill.RETURN else -1
 	var p := sim.players[slot]
 	return p.plan_tick if p.cpu else -1
 
 
 func _incoming(sim: Sim) -> bool:
 	if sim.drill:
-		return sim.drill.partner and slot == 2 and sim.drill.stage == Drill.PARTNER
+		return sim.drill.partner and slot == 2 and (sim.drill.stage == Drill.PARTNER or sim.drill.stage == Drill.RETURN)
 	return sim.phase == K.PHASE_LIVE and sim.last_hitter >= 0 and sim.last_hitter >> 1 != slot >> 1
 
 
