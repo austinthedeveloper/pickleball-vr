@@ -248,6 +248,14 @@ func _maybe_plan() -> void:
 	_ux = s * _n[0] / K.Q14 + (b.vx - vin_n * _n[0] / K.Q14) + bt[0]
 	_uy = s * _n[1] / K.Q14 + (b.vy - vin_n * _n[1] / K.Q14) + bt[1]
 	_uz = s * _n[2] / K.Q14 + (b.vz - vin_n * _n[2] / K.Q14) + bt[2]
+	# That's the face's effective velocity; the sim curves the real one
+	# (ADR-003), so swing the speed that curves to it.
+	var eff := Fx.length(_ux, _uy, _uz)
+	if eff > 0:
+		var real := K.swing_for(eff)
+		_ux = _ux * real / eff
+		_uy = _uy * real / eff
+		_uz = _uz * real / eff
 	var rel := Fx.dot_q14(b.vx - _ux, b.vy - _uy, b.vz - _uz, _n)   # < 0: closing
 	var gap := K.BALL_RADIUS + K.PADDLE_HALF_THICK + rel / 2
 	_px = b.x - gap * _n[0] / K.Q14

@@ -140,6 +140,40 @@ static func fault_text(f: int) -> String:
 
 
 ## +1 if the team's side is z > 0.
+## The swing curve (ADR-003, tuned on the lead's logged swings): a VR
+## controller weighs nothing, so touch comes out underhit and power
+## overhit. The face's speed counts x1.22 up to 2.5 m/s, x1.0 at 4.5 m/s,
+## x0.75 from 8 m/s (Q8; s um/tick). s * gain still rises with s.
+const SWING_SOFT_GAIN_256 := 312
+const SWING_HARD_GAIN_256 := 192
+const SWING_SOFT_V := 20833
+const SWING_MID_V := 37500
+const SWING_HARD_V := 66667
+
+
+static func swing_gain(s: int) -> int:
+	if s <= SWING_SOFT_V:
+		return SWING_SOFT_GAIN_256
+	if s <= SWING_MID_V:
+		return SWING_SOFT_GAIN_256 - (SWING_SOFT_GAIN_256 - 256) * (s - SWING_SOFT_V) / (SWING_MID_V - SWING_SOFT_V)
+	if s <= SWING_HARD_V:
+		return 256 - (256 - SWING_HARD_GAIN_256) * (s - SWING_MID_V) / (SWING_HARD_V - SWING_MID_V)
+	return SWING_HARD_GAIN_256
+
+
+## The face speed whose swing-curved speed is `eff` (the bot swings by it).
+static func swing_for(eff: int) -> int:
+	var lo := 0
+	var hi := eff * 2 + 1000
+	for k in 30:
+		var mid := (lo + hi) / 2
+		if mid * swing_gain(mid) / 256 < eff:
+			lo = mid + 1
+		else:
+			hi = mid
+	return lo
+
+
 ## The paddle's restitution (Q8) at a closing speed of `v` um/tick.
 static func paddle_e(v: int) -> int:
 	var t := clampi(v - PADDLE_SOFT_V, 0, PADDLE_HARD_V - PADDLE_SOFT_V)

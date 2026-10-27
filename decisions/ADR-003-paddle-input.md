@@ -61,6 +61,24 @@ a frame (72-120 Hz), and a fast paddle moves 10+ cm between samples.
   the sweet spot in VR. `test_the_leads_strokes_land` replays their
   typical strokes: into the net before the change, into their kitchen
   after. The golden traces were regenerated.
+- **The swing curve** (amended 2026-10-27, second logged session, 57
+  swings). With the restitution change, gentle dinks landing in their
+  kitchen went from 3 of 24 to 15 of 32, but half still found the net,
+  just short of the speed they needed. The firm strokes still flew. The
+  lead's touch strokes were 2.6 to 3.1 m/s at the face; anything with
+  intent jumped to 5 to 7.7 m/s. That's the usual VR effect: a controller
+  has no weight, so touch comes out underhit and power overhit. So the
+  face's speed counts for the hit through a curve: x1.22 up to 2.5 m/s,
+  x1.0 at 4.5 m/s, x0.75 from 8 m/s (`K.swing_gain`, still rising
+  overall). Where the face touched the ball is unchanged. Replaying their
+  52 logged kitchen-line strokes (a float replay of the model matched
+  the logged speeds within about 5%):
+  - kitchen dinks would go from 12 of 32 to 26 of 32;
+  - the firm strokes' median depth from 3.7 m to 3.0 m;
+  - deep or long from 5 to 1.
+
+  The bot swings the speed whose curve gives what it wants
+  (`K.swing_for`). The golden traces were regenerated.
 - **Flat mode and DEMO** drive the same input from `Bot`, which plans a
   swing through the ball on the sim's own prediction. In flat mode you
   move and aim and the bot swings; in DEMO it does all of it.

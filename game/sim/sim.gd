@@ -371,9 +371,15 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 	if off2 > face * face:
 		return false
 	var nn: Array[int] = [n[0] * s, n[1] * s, n[2] * s]
-	var ux := p.px - p.qx
-	var uy := p.py - p.qy
-	var uz := p.pz - p.qz
+	# The face's travel this tick (where it touched) and its effective speed
+	# for the hit: the swing curve (ADR-003) for a controller with no weight.
+	var mx := p.px - p.qx
+	var my := p.py - p.qy
+	var mz := p.pz - p.qz
+	var g := K.swing_gain(Fx.length(mx, my, mz))
+	var ux := mx * g / 256
+	var uy := my * g / 256
+	var uz := mz * g / 256
 	var vn := Fx.dot_q14(ball.vx - ux, ball.vy - uy, ball.vz - uz, nn)
 	if vn >= 0:
 		return false                 # already leaving the face
@@ -406,9 +412,9 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 	var swz := (bx * nn[1] - by * nn[0]) / K.Q14 * k + ball.wz * keep / 100
 	last_offset = Fx.isqrt(off2)
 	# Leave from the face at the moment of touch.
-	var cx := p.qx + ux * f / 65536
-	var cy := p.qy + uy * f / 65536
-	var cz := p.qz + uz * f / 65536
+	var cx := p.qx + mx * f / 65536
+	var cy := p.qy + my * f / 65536
+	var cz := p.qz + mz * f / 65536
 	ball.x = cx + tx + reach * nn[0] / K.Q14
 	ball.y = maxi(cy + ty + reach * nn[1] / K.Q14, K.BALL_RADIUS)
 	ball.z = cz + tz + reach * nn[2] / K.Q14

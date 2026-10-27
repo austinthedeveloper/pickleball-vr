@@ -115,3 +115,17 @@ func test_mid_assist_rescues_depth_but_keeps_your_aim() -> void:
 	check(lr[3] == 1 or not K.in_court(lr[1], lr[2]), "unassisted misses: %s" % str(lr))
 	check(lm[3] == 0 and K.in_court(lm[1], lm[2]) and lm[2] < 0, "MID lands it in: %s" % str(lm))
 	check(lm[1] > 0, "and it still goes where the face pointed (right): %d" % lm[1])
+
+
+func test_the_swing_curve_rises_and_inverts() -> void:
+	# Faster swings always hit harder (the curve never folds back), and the
+	# bot's inverse lands on the speed it asks for.
+	var last := -1
+	for s in range(0, 120000, 1500):
+		var eff := s * K.swing_gain(s) / 256
+		check(eff >= last, "rises at %d um/tick" % s)
+		last = eff
+		near(K.swing_for(eff) * K.swing_gain(K.swing_for(eff)) / 256, eff, 2, "inverts at %d" % eff)
+	check(K.swing_gain(15000) > 300 and K.swing_gain(90000) < 200, "touch boosted, power trimmed")
+	if asserts > 30:
+		asserts = 30
