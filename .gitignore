@@ -1,0 +1,6 @@
+game/.godot/
+*.import.tmp
+build/
+.venv/
+*.apk
+*.aab

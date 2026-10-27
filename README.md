@@ -1,0 +1,58 @@
+# Pickleball '94 VR
+
+First-person pickleball in VR, the next artifact of *Pickleball '94* after
+the Godot remaster (`../pickleball-port-kit`). You hold the paddle; the
+rules, the CPUs' personalities and the park come from the port kit.
+
+Godot **4.7** with OpenXR (ADR-001). Built for **Meta Quest**, standalone.
+On a Mac, or anywhere without a headset, it plays in **flat mode** on the
+monitor.
+
+## Run
+
+```sh
+godot --path game                 # play (flat mode without a headset)
+godot --path game -- demo         # DEMO: the bot against the CPU
+game/tools/test.sh                # all tests, headless (must pass)
+```
+
+## Controls
+
+| | Quest | Flat mode |
+|---|---|---|
+| Swing | swing the paddle (right controller) | automatic when the ball's in reach |
+| Aim | the paddle's angle and speed | the mouse (a ring on the far court) |
+| Move | walk; left stick | WASD / arrows |
+| Turn | right stick (45 deg snaps) | |
+| Serve | the ball is in your left hand: pull its trigger to let go, then hit it | Space |
+| Soft shot | swing gently | hold Shift |
+| New match (at the end) | A / X | Enter |
+
+The **shot assist** (ADR-003) pulls a miss toward a good shot, 65% by
+default.
+
+## Rules
+
+As in the remaster: rally scoring to 5. Serve diagonally, past the
+kitchen. The serve and the return each bounce once (the two-bounce rule).
+No volleys from your own kitchen. Lines are in. Faults are called the
+remaster's way: NET!, OUT!, FAULT! (the wrong box), KITCHEN!, VOLLEY!.
+
+## Layout
+
+```
+game/sim/     the pure sim: k (constants), fx (int maths), ball, aim,
+              intercept, sim (rules, serve, CPUs), bot, types
+game/view/    world (the park), match_view, xr_rig, flat_rig, avatar,
+              paddle_mesh, scoreboard
+game/scenes/  main (XR or flat)
+game/tests/   headless suites, golden traces
+game/tools/   test.sh, screenshot.gd, rally_stats.gd
+design/       ROADMAP, KNOWN_ISSUES, QUEST_SETUP, FROM_THE_PORT_KIT
+decisions/    ADRs
+```
+
+## On the Quest
+
+See `design/QUEST_SETUP.md` (a JDK, the Android SDK, developer mode, a USB
+cable).
