@@ -50,8 +50,15 @@ const URAD := 1000000
 # --- Paddle: the face as a disc (contact), 8 x 10 in; half thickness.
 const PADDLE_FACE_RADIUS := 115000
 const PADDLE_HALF_THICK := 8000
-const PADDLE_E_256 := 128            ## paddle-ball restitution 0.5, at the sweet spot
-const PADDLE_EDGE_LOSS_PCT := 40     ## at the face's rim, 40% of that is lost (ADR-006)
+const PADDLE_E_256 := 128            ## paddle-ball restitution 0.5, mid-speed (see paddle_e)
+## Restitution falls with the impact (ADR-003, tuned on the lead's logged
+## swings): lively for touch, deader for a hard hit, like a real ball.
+## 0.66 up to 4 m/s of closing speed, easing to 0.34 at 9 m/s and beyond.
+const PADDLE_E_SOFT_256 := 169
+const PADDLE_E_HARD_256 := 87
+const PADDLE_SOFT_V := 33333         ## 4 m/s, um/tick
+const PADDLE_HARD_V := 75000         ## 9 m/s
+const PADDLE_EDGE_LOSS_PCT := 20     ## at the face's rim, 20% of that is lost (ADR-006; was 40)
 ## The face grips the ball: half the slide between them is taken out
 ## (a hollow ball rolling without slip would lose 60%). ADR-003 amended.
 const PADDLE_GRIP_256 := 128
@@ -133,6 +140,12 @@ static func fault_text(f: int) -> String:
 
 
 ## +1 if the team's side is z > 0.
+## The paddle's restitution (Q8) at a closing speed of `v` um/tick.
+static func paddle_e(v: int) -> int:
+	var t := clampi(v - PADDLE_SOFT_V, 0, PADDLE_HARD_V - PADDLE_SOFT_V)
+	return PADDLE_E_SOFT_256 - (PADDLE_E_SOFT_256 - PADDLE_E_HARD_256) * t / (PADDLE_HARD_V - PADDLE_SOFT_V)
+
+
 static func side_sign(team: int) -> int:
 	return 1 if team == 0 else -1
 

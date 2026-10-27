@@ -141,3 +141,52 @@ func test_a_low_to_high_swing_lifts_the_ball() -> void:
 	check(lift[0] > flat[0] + 0.8, "lifting adds %.1f m/s up (flat %.1f)" % [lift[0] - flat[0], flat[0]])
 	var big := _lift(30.0, 3.5, 1.0)
 	check(big[0] > 2.5, "an open face lifted hard: %.1f m/s up" % big[0])
+
+
+## A stroke as the lead logged them on the Quest: the face `open_deg`
+## open, the paddle `fwd` m/s forward and `up` m/s up, meeting a dink
+## coming at 3.1 m/s, 0.55 m up and 2.2 m from the net. Assist OFF.
+## Returns where it lands: "NET", "SHORT", "KITCHEN", "IN" or "OUT".
+func _real_stroke(open_deg: float, fwd: float, up: float) -> String:
+	var cfg := SimTypes.MatchConfig.new()
+	cfg.assist = K.ASSIST_OFF
+	var sim := Sim.new(cfg)
+	sim.phase = K.PHASE_LIVE
+	sim.last_hitter = 2
+	var a := deg_to_rad(open_deg)
+	var n := Vector3(0, sin(a), -cos(a))
+	var contact := Vector3(0, 0.55, 2.2) * 1e6
+	var vin := Vector3(0, 0.6, 3.1) * 1e6 / 120.0
+	sim.ball.held = true
+	sim.ball.place(0, 5 * K.M, -5 * K.M)
+	for t in range(-1, 30):
+		if t == 0:
+			sim.ball.place(int(contact.x), int(contact.y - 10 * vin.y), int(contact.z - 10 * vin.z))
+			sim.ball.launch(int(vin.x), int(vin.y + 10 * K.GRAVITY), int(vin.z))
+		var h := SimTypes.HumanInput.new()
+		h.head_z = 3300000
+		var pc := contact - n * 45000 + Vector3(0, up, -fwd) * 1e6 / 120.0 * (maxi(t, 0) - 10)
+		h.paddle_x = int(pc.x)
+		h.paddle_y = int(pc.y)
+		h.paddle_z = int(pc.z)
+		h.normal = [int(n.x * K.Q14), int(n.y * K.Q14), int(n.z * K.Q14)]
+		sim.step([h])
+		if sim.last_hitter == 0:
+			var l: Array[int] = Aim.landing(sim.ball)
+			if l[3] == 1:
+				return "NET"
+			if l[2] > 0:
+				return "SHORT"
+			if not K.in_court(l[1], l[2]):
+				return "OUT"
+			return "KITCHEN" if -l[2] <= K.KITCHEN_DEPTH else "IN"
+	return "MISS"
+
+
+func test_the_leads_strokes_land() -> void:
+	# From the lead's logged session (2026-10-27): their dinks went into the
+	# net or short with a flat 0.5 restitution and a harsh sweet spot.
+	eq(_real_stroke(30.0, 2.0, 1.4), "KITCHEN", "a typical gentle dink of theirs")
+	eq(_real_stroke(33.0, 1.9, 1.5), "KITCHEN", "another")
+	var firm := _real_stroke(30.0, 4.5, 3.0)
+	check(firm == "IN" or firm == "KITCHEN", "a firm one lands in court: %s" % firm)

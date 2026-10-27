@@ -585,7 +585,7 @@ func _trail_draw(b: Vector3, delta: float) -> void:
 const SWING_LOG := "user://swings.log"
 func _log_swing() -> void:
 	var c := sim.last_contact
-	if c.size() < 14:
+	if c.size() < 16:
 		return
 	var fwd := -K.side_sign(0)             # the near side faces -z
 	var u := Vector3(c[0], c[1], c[2]) * K.TICK_HZ / float(K.M)
@@ -597,8 +597,8 @@ func _log_swing() -> void:
 	probe.launch(c[9], c[10], c[11])
 	var lr: Array[int] = Aim.landing(probe)
 	var la: Array[int] = Aim.landing(sim.ball)
-	var line := ("SWING paddle %.1f m/s (fwd %.1f up %.1f side %.1f) face open %d yaw %d | at %.2f m high, %.1f m from net | in %.1f m/s | raw out %.1f m/s at %d deg -> %s | assisted -> %s" % [
-		u.length(), u.z * fwd, u.y, u.x, roundi(rad_to_deg(asin(clampf(n.y, -1, 1)))),
+	var line := ("SWING off-centre %d mm, bounce-back %.2f | paddle %.1f m/s (fwd %.1f up %.1f side %.1f) face open %d yaw %d | at %.2f m high, %.1f m from net | in %.1f m/s | raw out %.1f m/s at %d deg -> %s | assisted -> %s" % [
+		c[14] / 1000, c[15] / 256.0, u.length(), u.z * fwd, u.y, u.x, roundi(rad_to_deg(asin(clampf(n.y, -1, 1)))),
 		roundi(rad_to_deg(atan2(n.x, n.z * fwd))), c[12] / 1e6, absf(c[13]) / 1e6, vin.length(),
 		raw.length(), roundi(rad_to_deg(atan2(raw.y, Vector2(raw.x, raw.z).length()))), _where(lr), _where(la)])
 	print(line)

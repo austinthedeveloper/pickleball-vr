@@ -379,7 +379,8 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 		return false                 # already leaving the face
 	# The sweet spot (ADR-006): restitution falls off toward the rim.
 	var fr := K.PADDLE_FACE_RADIUS
-	var e := K.PADDLE_E_256 - K.PADDLE_E_256 * K.PADDLE_EDGE_LOSS_PCT * mini(off2, fr * fr) / (100 * fr * fr)
+	var e0 := K.paddle_e(-vn)
+	var e := e0 - e0 * K.PADDLE_EDGE_LOSS_PCT * mini(off2, fr * fr) / (100 * fr * fr)
 	var j := -vn * (256 + e) / 256
 	var vx := ball.vx + j * nn[0] / K.Q14
 	var vy := ball.vy + j * nn[1] / K.Q14
@@ -412,7 +413,8 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 	ball.y = maxi(cy + ty + reach * nn[1] / K.Q14, K.BALL_RADIUS)
 	ball.z = cz + tz + reach * nn[2] / K.Q14
 	ball.set_spin(swx, swy, swz)
-	last_contact = [ux, uy, uz, nn[0], nn[1], nn[2], ball.vx, ball.vy, ball.vz, vx, vy, vz, ball.y, ball.z]
+	last_contact = [ux, uy, uz, nn[0], nn[1], nn[2], ball.vx, ball.vy, ball.vz, vx, vy, vz, ball.y, ball.z,
+		Fx.isqrt(off2), e]
 	var v := _assist(p.team, [vx, vy, vz])
 	ball.launch(v[0], v[1], v[2])
 	return true

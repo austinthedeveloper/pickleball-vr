@@ -236,7 +236,13 @@ func _maybe_plan() -> void:
 	bt = _across_up(_n, brush)
 	var dl := Fx.length(dx, dy, dz)
 	var vin_n := Fx.dot_q14(b.vx, b.vy, b.vz, _n)
-	var s := dl * 256 / (256 + K.PADDLE_E_256) + vin_n
+	# Restitution depends on the closing speed, which depends on the swing:
+	# two passes settle it.
+	var e := K.PADDLE_E_256
+	var s := 0
+	for k in 2:
+		s = dl * 256 / (256 + e) + vin_n
+		e = K.paddle_e(s - vin_n)
 	# The face moves with the ball across itself (so the grip adds only
 	# the brush), and into it along the normal.
 	_ux = s * _n[0] / K.Q14 + (b.vx - vin_n * _n[0] / K.Q14) + bt[0]

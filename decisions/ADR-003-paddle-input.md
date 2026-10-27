@@ -48,6 +48,19 @@ a frame (72-120 Hz), and a fast paddle moves 10+ cm between samples.
   (`PADDLE_GRIP`, a hollow ball rolling without slip would lose 60%), so
   lifting the paddle lifts the ball (`test_a_low_to_high_swing_lifts_the_ball`).
   The bot plans for it. The golden traces were regenerated for it.
+- **Restitution falls with the impact, and the sweet spot is gentler**
+  (amended 2026-10-27, from the lead's logged session: 44 swings at
+  assist OFF, read off the headset with `game/tools/swings.sh`). Their
+  kitchen-line dinks were consistent and correct: the face 25 to 37°
+  open, a 35 to 44° launch. But they came off at 3.9 to 5.6 m/s, about
+  15% short of the 5.5 to 6.5 m/s a dink needs from there, and 19 of 24
+  went into the net or short. Their firmer strokes came off about 15% too
+  hot. Now restitution is 0.66 for a closing speed up to 4 m/s, easing to
+  0.34 at 9 m/s (`K.paddle_e`): lively for touch, deader for a hard hit,
+  as real balls are. A rim hit loses 20%, not 40%, since you can't feel
+  the sweet spot in VR. `test_the_leads_strokes_land` replays their
+  typical strokes: into the net before the change, into their kitchen
+  after. The golden traces were regenerated.
 - **Flat mode and DEMO** drive the same input from `Bot`, which plans a
   swing through the ball on the sim's own prediction. In flat mode you
   move and aim and the bot swings; in DEMO it does all of it.

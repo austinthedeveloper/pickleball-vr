@@ -104,7 +104,7 @@ func test_mid_assist_rescues_depth_but_keeps_your_aim() -> void:
 		sim.ball.launch(0, 0, 0)
 		sim.ball.place(0, 1 * K.M, 2 * K.M)
 		var h := _input(2300000)
-		h.normal = Fx.unit_q14(2000, 0, -K.Q14)
+		h.normal = Fx.unit_q14(4400, 0, -K.Q14)     # the face 15 degrees to your right
 		sim.step([h])
 		var g := _input(2000000)
 		g.normal = h.normal
