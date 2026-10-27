@@ -35,7 +35,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-03 | The CPU and the bot | `feature/cld-vr-singles` | Ready to test |
 | VR-04 | The park, the match view, flat mode | `feature/cld-vr-singles` | Ready to test |
 | VR-05 | The XR rig: paddle hand, serve hand, sticks, haptics | `feature/cld-vr-singles` | Blocked (needs the Quest set up) |
-| VR-06 | Quest build: export preset, OpenXR vendors plugin | | Blocked (needs the Quest set up) |
+| VR-06 | Quest build: export preset, `quest_build.sh`, OpenXR vendors plugin | `feature/cld-vr-quest` | Blocked (preset and script done; needs QUEST_SETUP steps 1 to 3) |
 | VR-07 | Doubles (ADR-004) | `feature/cld-vr-doubles` | Ready to test |
 | VR-08 | The ladder's eight teams as CPUs (ADR-005) | `feature/cld-vr-setup` | Ready to test |
 | VR-09 | The lobby and MATCH SETUP in the world (ADR-005) | `feature/cld-vr-setup` | Ready to test |

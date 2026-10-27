@@ -15,6 +15,7 @@ godot --headless --path game -s res://tests/golden.gd   # regenerate golden trac
 godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play> <frames> <out.png> [doubles]
 godot --headless --path game -s res://tools/rally_stats.gd -- <matches> <difficulty> [doubles]
 python3 game/tools/import_opponents.py                # the ladder, from the port kit
+game/tools/quest_build.sh [--check]                   # build + install on the Quest (design/QUEST_SETUP.md)
 ```
 
 `design/ROADMAP.md` is the milestone sheet: keep it current with each

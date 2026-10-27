@@ -19,6 +19,10 @@ What a Quest build needs on the Mac (no Windows needed: ADR-001). Steps
    headset, allow USB debugging (tick "always allow"). `adb devices`
    should then list it.
 
+`game/tools/quest_build.sh --check` reports what's still missing. Once it
+passes, `game/tools/quest_build.sh` builds, installs and launches the game
+on the headset.
+
 Then the rest (VR-06):
 
 4. **Godot's Android settings:** Editor Settings > Export > Android: the
@@ -28,9 +32,9 @@ Then the rest (VR-06):
 5. **The Godot OpenXR Vendors plugin** (GodotVR's official release on
    GitHub, the version made for Godot 4.7) goes in `game/addons/`. It
    carries Meta's OpenXR loader.
-6. **The export preset:** Android, XR Mode OpenXR, the Meta plugin on,
-   arm64 only, Gradle build, min SDK 32. Then
-   `godot --path game --export-debug "Quest" build/pickleball-vr.apk` and
-   `adb install -r build/pickleball-vr.apk`.
+6. **The export preset** is in `game/export_presets.cfg` ("Quest": XR
+   Mode OpenXR, the Meta plugin on, arm64 only, Gradle build, min SDK 32).
+   Godot's Android build template still has to be installed into
+   `game/android/`. The first export also makes a debug keystore.
 
 The Android export templates for 4.7.2 are already installed on this Mac.
