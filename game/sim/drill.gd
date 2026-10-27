@@ -74,6 +74,21 @@ const FLY := 1                       ## fed, coming to you
 const RETURN := 2                    ## you hit it, going back
 const SERVING := 3                   ## SERVE: the ball in your hand or tossed
 const DONE := 4                      ## the lesson's goal is met
+const PARTNER := 5                   ## DINK PARTNER: your ball's on their side, they're going for it
+
+## DINK PARTNER (ADR-010): a CPU at their kitchen line who only wants the
+## rally to go on: every ball it reaches comes back as a dink about a metre
+## in front of you, never away from you, never a winner.
+const PARTNER_Z := -(K.KITCHEN_DEPTH + 350000)
+const PARTNER_SPEED := 30000         ## 3.6 m/s
+## A dink's difficulty is how low it skims the tape: EASY floats 60 cm
+## over it (slow, a big bounce), HARD skims 12 cm (fast and low).
+const PARTNER_CLEAR := [600000, 300000, K.NET_CLEAR]
+const PARTNER_PACE := [30000, 38000, 46000]
+const PACE_NAMES := ["EASY", "MEDIUM", "HARD"]
+const PARTNER_SCATTER := 450000      ## how far from your line its dinks wander
+## Floor targets: a circle on their side; land in it for a TARGET HIT.
+const TARGET_RADIUS := 450000
 
 ## The machine: centred, the nozzle at 90 cm.
 const MACHINE_Y := 900000
@@ -90,6 +105,9 @@ var speed := 1
 var machine_at := AT_AUTO
 var zone := ZONE_ANY
 var rules := 0
+var partner := false                 ## DINK PARTNER instead of the machine
+var partner_pace := 1
+var targets := false                 ## floor targets on
 var goal := 0                        ## good returns to finish; 0 runs forever
 ## The spot you start on (a lesson's), um; x, z.
 var spot_x := 0
@@ -109,12 +127,21 @@ var last_result := -1
 var aim_x := 0                       ## where the last feed was aimed (the nozzle turns)
 var hit_at := 0
 var machine_z := BASELINE_Z
+var partner_plan := -1               ## the tick the partner means to hit
+var target_x := 0
+var target_z := 0
+var target_hits := 0
+var rally := 0                       ## DINK PARTNER: your hits back this rally
+var best_rally := 0
 
 
 func copy_settings_from(o: Drill) -> void:
 	shot = o.shot
 	target = o.target
 	rate = o.rate
+	partner = o.partner
+	partner_pace = o.partner_pace
+	targets = o.targets
 	speed = o.speed
 	machine_at = o.machine_at
 	zone = o.zone
@@ -148,6 +175,16 @@ func reset(sim: Sim) -> void:
 	sim.last_hitter = 2
 	sim.players[0].x = spot_x
 	sim.players[0].z = spot_z
+	target_hits = 0
+	rally = 0
+	if partner:
+		var q := sim.players[2]
+		q.x = 0
+		q.z = PARTNER_Z
+		q.swing_tick = -1
+		sim.ball.place(0, 500000, PARTNER_Z)
+	if targets:
+		_new_target(sim)
 	if shot == SHOT_SERVE:
 		_serve_ready(sim)
 
@@ -168,11 +205,16 @@ func _serve_ready(sim: Sim) -> void:
 
 func update(sim: Sim, tossed: bool) -> void:
 	var p := sim.players[0]
+	if partner and stage != PARTNER:
+		_partner_home(sim)
 	match stage:
 		WAIT:
 			if sim.tick >= next_feed:
 				if shot == SHOT_SERVE:
 					_serve_ready(sim)
+				elif partner:
+					var q := sim.players[2]
+					_partner_dink(sim, q.x - 300000, 500000, q.z + 300000)   # a fresh rally
 				else:
 					_feed(sim)
 			else:
@@ -181,6 +223,8 @@ func update(sim: Sim, tossed: bool) -> void:
 			_fly(sim, p)
 		RETURN:
 			_return(sim)
+		PARTNER:
+			_partner(sim)
 		SERVING:
 			_serving(sim, p, tossed)
 		DONE:
@@ -297,14 +341,25 @@ func _return(sim: Sim) -> void:
 	sim.emit(K.EVENT_BOUNCE, x, z, 0)
 	if z > 0:
 		_result(sim, RESULT_NET)
-	elif not K.in_court(x, z):
+		return
+	if not K.in_court(x, z):
 		_result(sim, RESULT_OUT)
-	elif not in_zone(x, z):
-		_result(sim, RESULT_ZONE)
+		return
+	if targets and Fx.length(x - target_x, 0, z - target_z) <= TARGET_RADIUS:
+		target_hits += 1
+		sim.emit(K.EVENT_TARGET, x, z, target_hits)
+		_new_target(sim)
+	var r := RESULT_GOOD
+	if not in_zone(x, z):
+		r = RESULT_ZONE
 	elif rules & RULE_TOPSPIN and not _topspin(sim.ball):
-		_result(sim, RESULT_SPIN)
-	else:
-		_result(sim, RESULT_GOOD)
+		r = RESULT_SPIN
+	if partner:
+		rally += 1
+		best_rally = maxi(best_rally, rally)
+	_result(sim, r, partner)        # with a partner, an in-court ball plays on
+	if partner and stage == WAIT:
+		_partner_chase(sim)
 
 
 ## The ball (just bounced, its spin halved) had topspin along its travel.
@@ -366,8 +421,10 @@ func _serving(sim: Sim, p: SimTypes.Player, tossed: bool) -> void:
 		_result(sim, RESULT_OUT)
 
 
-func _result(sim: Sim, r: int) -> void:
+func _result(sim: Sim, r: int, rally_on := false) -> void:
 	last_result = r
+	if partner and not rally_on:
+		rally = 0
 	if r == RESULT_GOOD:
 		good += 1
 		streak += 1
@@ -385,8 +442,123 @@ func _result(sim: Sim, r: int) -> void:
 		return
 	stage = WAIT
 	next_feed = maxi(fed_at + RATE_TICKS[clampi(rate, 0, 3)], sim.tick + MIN_GAP)
+	if partner:
+		next_feed = sim.tick + MIN_GAP * 2   # the partner picks up a fresh ball
+
+
+# --- DINK PARTNER -------------------------------------------------------------
+
+## A dink from (x, y, z) to land about a metre in front of you, near your
+## line: the partner's every shot.
+func _partner_dink(sim: Sim, x: int, y: int, z: int) -> void:
+	var p := sim.players[0]
+	var q := sim.players[2]
+	var tx := clampi(p.x + sim.scatter(PARTNER_SCATTER), -K.COURT_HALF_WIDTH + 300000,
+		K.COURT_HALF_WIDTH - 300000)
+	var tz := clampi(p.z - 1000000 + sim.scatter(250000), 600000, K.KITCHEN_DEPTH * 85 / 100)
+	var level := clampi(partner_pace, 0, 2)
+	var pace: int = PARTNER_PACE[level]
+	var w := Aim.topspin(tx - x, tz - z, -150000)
+	var v := Aim.shot(x, y, z, tx, tz, pace, w, PARTNER_CLEAR[level])
+	var b := sim.ball
+	b.place(x, maxi(y, K.BALL_RADIUS), z)
+	b.launch(v[0], v[1], v[2])
+	b.set_spin(w[0], w[1], w[2])
+	aim_x = tx
+	sim.required_bounce = K.REQUIRED_BOUNCE_NONE
+	sim.last_hitter = 2
+	sim.bounce_count = 0
+	bounces = 0
+	feeds += 1
+	fed_at = sim.tick
+	q.swing_tick = sim.tick
+	stage = FLY
+	sim.emit(K.EVENT_HIT, 2, b.speed(), 0)
+
+
+## Your ball just bounced on their side, in: the partner plans its reply.
+func _partner_chase(sim: Sim) -> void:
+	var q := sim.players[2]
+	stage = PARTNER
+	bounces = 1
+	sim.bounce_count = 1
+	sim.last_hitter = 0
+	var plan := Intercept.plan(sim, 1, q.x, q.z, PARTNER_SPEED)
+	partner_plan = -1
+	if not plan.is_empty():
+		partner_plan = sim.tick + plan[0]
+		q.goal_x = plan[4]
+		q.goal_z = plan[5]
+	else:
+		q.goal_x = q.x
+		q.goal_z = q.z
+
+
+func _partner(sim: Sim) -> void:
+	var q := sim.players[2]
+	var ev := sim.ball.step()
+	if ev & Ball.EV_BOUNCE:
+		bounces += 1
+	_partner_step(q, q.goal_x, q.goal_z)
+	var b := sim.ball
+	if bounces >= 2 or b.rolling or b.z < -(K.COURT_HALF_LENGTH + 3 * K.M) or b.z > 0:
+		stage = WAIT                     # out of its reach: a fresh ball
+		next_feed = sim.tick + MIN_GAP * 2
+		return
+	var near := Fx.length(b.x - q.x, 0, b.z - q.z) <= K.REACH
+	var height := b.y >= K.REACH_LOW and b.y <= 1500000
+	if near and height and (partner_plan < 0 or sim.tick >= partner_plan - 1 or b.vy < 0 and b.y < 500000):
+		_partner_dink(sim, b.x, b.y, b.z)
+
+
+## Between shots the partner squares up to you along its kitchen line.
+func _partner_home(sim: Sim) -> void:
+	var q := sim.players[2]
+	_partner_step(q, clampi(sim.players[0].x, -K.COURT_HALF_WIDTH / 2, K.COURT_HALF_WIDTH / 2), PARTNER_Z)
+
+
+func _partner_step(q: SimTypes.Player, gx: int, gz: int) -> void:
+	var dx := gx - q.x
+	var dz := gz - q.z
+	var d := Fx.length(dx, 0, dz)
+	if d <= PARTNER_SPEED:
+		q.x = gx
+		q.z = gz
+	else:
+		q.x += dx * PARTNER_SPEED / d
+		q.z += dz * PARTNER_SPEED / d
+
+
+# --- Floor targets -----------------------------------------------------------------
+
+## A new target in the return zone (their kitchen for a partner), not on
+## top of the last one.
+func _new_target(sim: Sim) -> void:
+	var hw := K.COURT_HALF_WIDTH - 600000
+	var lo := 1000000
+	var hi := K.COURT_HALF_LENGTH - 600000
+	var xlo := -hw
+	var xhi := hw
+	var z2 := zone if not partner else ZONE_KITCHEN
+	match z2:
+		ZONE_KITCHEN:
+			lo = 500000
+			hi = K.KITCHEN_DEPTH - 400000
+		ZONE_DEEP:
+			lo = K.COURT_HALF_LENGTH * 2 / 3 + 400000
+		ZONE_LEFT:
+			xhi = -400000
+		ZONE_RIGHT:
+			xlo = 400000
+	var last_x := target_x
+	for k in 4:
+		target_x = xlo + sim.random(xhi - xlo + 1)
+		target_z = -(lo + sim.random(hi - lo + 1))
+		if absi(target_x - last_x) > 1000000:
+			break
 
 
 func snapshot() -> Array:
 	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
-		hit_at, machine_z]
+		hit_at, machine_z, partner_plan, target_x, target_z, target_hits, rally, best_rally,
+		1 if partner else 0]

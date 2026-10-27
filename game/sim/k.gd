@@ -115,6 +115,7 @@ const EVENT_MATCH := 6               ## winning team
 const EVENT_TOSS := 7                ## server slot
 const EVENT_FEED := 8                ## the machine fed: target x, z, shot
 const EVENT_DRILL := 9               ## a drill's result: result, streak, finished 0/1
+const EVENT_TARGET := 10             ## a floor target hit: x, z, hits so far
 
 
 static func fault_text(f: int) -> String:

@@ -94,7 +94,7 @@ static func solve(x: int, y: int, z: int, tx: int, tz: int, ticks: int,
 ## ground with spin `w`, lofted until it clears the net by NET_CLEAR.
 ## Returns the velocity.
 static func shot(x: int, y: int, z: int, tx: int, tz: int, pace: int,
-		w: Array[int] = [0, 0, 0]) -> Array[int]:
+		w: Array[int] = [0, 0, 0], clear := K.NET_CLEAR) -> Array[int]:
 	var dist := Fx.length(tx - x, 0, tz - z)
 	var ticks := clampi(dist / maxi(pace, 1000), 12, 300)
 	var v := solve(x, y, z, tx, tz, ticks, w)
@@ -106,7 +106,7 @@ static func shot(x: int, y: int, z: int, tx: int, tz: int, pace: int,
 		b.launch(v[0], v[1], v[2])
 		b.set_spin(w[0], w[1], w[2])
 		var l := landing(b)
-		if l[3] == 0 and l[4] >= K.NET_CLEAR:
+		if l[3] == 0 and l[4] >= clear:
 			return v
 		ticks = ticks * 9 / 8 + 2
 		v = solve(x, y, z, tx, tz, ticks, w)

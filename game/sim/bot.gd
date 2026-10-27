@@ -260,7 +260,11 @@ func _target(b: Ball) -> Array[int]:
 	if has_aim:
 		return [aim_x, aim_z, pace]
 	if sim.drill:
-		# Practice: to the zone the drill asks for (nobody over there).
+		# Practice: at the floor target if there is one, else to the zone
+		# the drill asks for.
+		if sim.drill.targets:
+			var soft := sim.drill.zone == Drill.ZONE_KITCHEN or sim.drill.partner
+			return [sim.drill.target_x, sim.drill.target_z, 40000 if soft else pace]
 		match sim.drill.zone:
 			Drill.ZONE_KITCHEN: return [0, os * K.KITCHEN_DEPTH * 6 / 10, 40000]
 			Drill.ZONE_LEFT: return [-K.COURT_HALF_WIDTH / 2, os * (K.COURT_HALF_LENGTH - 1500000), pace]

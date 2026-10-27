@@ -30,6 +30,11 @@ var machine_at := Drill.AT_AUTO
 var machine_zone := Drill.ZONE_ANY
 var machine_best := 0
 var lessons_done: Array = []         ## lesson ids
+var machine_targets := false
+## DINK PARTNER (ADR-010)
+var partner_level := 1
+var partner_targets := true
+var partner_best := 0
 
 
 func load_settings() -> void:
@@ -53,6 +58,10 @@ func load_settings() -> void:
 	machine_zone = c.get_value("machine", "zone", machine_zone)
 	machine_best = c.get_value("machine", "best", machine_best)
 	lessons_done = c.get_value("lessons", "done", lessons_done)
+	machine_targets = c.get_value("machine", "targets", machine_targets)
+	partner_level = c.get_value("partner", "level", partner_level)
+	partner_targets = c.get_value("partner", "targets", partner_targets)
+	partner_best = c.get_value("partner", "best", partner_best)
 
 
 func save() -> void:
@@ -75,6 +84,10 @@ func save() -> void:
 	c.set_value("machine", "zone", machine_zone)
 	c.set_value("machine", "best", machine_best)
 	c.set_value("lessons", "done", lessons_done)
+	c.set_value("machine", "targets", machine_targets)
+	c.set_value("partner", "level", partner_level)
+	c.set_value("partner", "targets", partner_targets)
+	c.set_value("partner", "best", partner_best)
 	c.save(path)
 
 
@@ -104,11 +117,27 @@ func machine_config() -> SimTypes.MatchConfig:
 	d.rate = machine_rate
 	d.speed = machine_speed
 	d.machine_at = machine_at
+	d.targets = machine_targets
 	d.zone = machine_zone
 	if d.shot == Drill.SHOT_SERVE:
 		var sp := d.serve_spot()
 		d.spot_x = sp[0]
 		d.spot_z = sp[1]
+	cfg.drill = d
+	return cfg
+
+
+## DINK PARTNER's rally: you at your kitchen line, no volleys from the
+## kitchen, dinks counted when they land in theirs.
+func partner_config() -> SimTypes.MatchConfig:
+	var cfg := match_config()
+	var d := Drill.new()
+	d.partner = true
+	d.partner_pace = partner_level
+	d.targets = partner_targets
+	d.zone = Drill.ZONE_KITCHEN
+	d.rules = Drill.RULE_KITCHEN
+	d.spot_z = K.KITCHEN_DEPTH + 300000
 	cfg.drill = d
 	return cfg
 

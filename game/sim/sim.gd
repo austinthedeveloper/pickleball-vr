@@ -49,7 +49,7 @@ func _init(cfg: SimTypes.MatchConfig = null) -> void:
 ## The active slots: singles plays 0 and 2, doubles all four.
 func active_slots() -> Array[int]:
 	if drill:
-		return [0]
+		return [0, 2] if drill.partner else [0]
 	if config.doubles:
 		return [0, 1, 2, 3]
 	return [0, 2]
@@ -57,7 +57,7 @@ func active_slots() -> Array[int]:
 
 func is_active(slot: int) -> bool:
 	if drill:
-		return slot == 0
+		return slot == 0 or (drill.partner and slot == 2)
 	return config.doubles or slot == 0 or slot == 2
 
 

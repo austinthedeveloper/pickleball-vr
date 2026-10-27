@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson> <frames> <out.png> [doubles | lesson number] [venue=NAME]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number] [venue=NAME]
 extends SceneTree
 
 var frames := 240
@@ -26,12 +26,16 @@ func _initialize() -> void:
 	for a in args:
 		if a.begins_with("venue="):
 			cfg.venue = Venues.NAMES.find(a.trim_prefix("venue="))
-	if mode == "machine":
+	if mode == "partner":
+		var st := Settings.new()
+		st.partner_targets = true
+		cfg.drill = st.partner_config().drill
+	elif mode == "machine":
 		cfg.drill = Drill.new()
 		cfg.drill.zone = Drill.ZONE_DEEP
 	elif mode == "lesson":
 		cfg.drill = Lessons.drill(int(args[3]) if args.size() > 3 else 0)
-	view.setup(cfg, false, demo or mode == "machine" or mode == "lesson")
+	view.setup(cfg, false, demo or mode in ["machine", "lesson", "partner"])
 	if mode == "lesson":
 		var l := Lessons.lesson(int(args[3]) if args.size() > 3 else 0)
 		view.show_lesson(String(l["title"]), l["lines"])

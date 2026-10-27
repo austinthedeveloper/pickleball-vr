@@ -58,12 +58,16 @@ func _label(parent: Node3D, at: Vector3, size: int, c: Color) -> Label3D:
 func show_from(sim: Sim, delta: float) -> void:
 	if drill:
 		var d := sim.drill
-		if d.goal > 0:
+		var tgt := "   TARGETS %d" % d.target_hits if d.targets else ""
+		if d.partner:
+			score_label.text = "%d" % d.rally
+			info_label.text = "RALLY   BEST %d%s" % [d.best_rally, tgt]
+		elif d.goal > 0:
 			score_label.text = "%d / %d" % [mini(d.good, d.goal), d.goal]
 			info_label.text = "LESSON" if d.stage != Drill.DONE else "DONE!"
 		else:
 			score_label.text = "%d" % d.streak
-			info_label.text = "STREAK   BEST %d" % d.best
+			info_label.text = "STREAK   BEST %d%s" % [d.best, tgt]
 		_fade(delta)
 		return
 	var srv := sim.serving_team

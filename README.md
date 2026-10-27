@@ -34,6 +34,17 @@ game/tools/test.sh                # all tests, headless (must pass)
 The **shot assist** (ADR-003) pulls a miss toward a good shot, 65% by
 default.
 
+## Practice
+
+- **DINK PARTNER:** a CPU at their kitchen line keeps a dinking rally
+  going, every ball back to you. You can set the DIFFICULTY (how low it
+  skims the net) and turn on floor TARGETS (ADR-010).
+- **BALL MACHINE:** drives, dinks, lobs or a mix. You set the SPEED, the
+  TARGET, where the machine stands (MACHINE AT), the RATE, RETURN TO and
+  TARGETS. At your kitchen line, drives come at you through the air
+  (ADR-007).
+- **HOW TO PLAY:** seven lessons, each a drill with one goal.
+
 ## Venues
 
 PARK, LAKESIDE, SUNSET, GYM and SPACE (ADR-008), each with the port kit's

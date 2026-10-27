@@ -56,7 +56,11 @@ func lobby(to := "") -> void:
 	if to != "":
 		page = to
 	lesson = -1
-	var demo_cfg := settings.machine_config() if page == "machine" else settings.match_config()
+	var demo_cfg := settings.match_config()
+	if page == "machine":
+		demo_cfg = settings.machine_config()
+	elif page == "partner":
+		demo_cfg = settings.partner_config()
 	_new_view().setup(demo_cfg, use_xr, true, true)
 	menu = _page(page)
 	menu.changed.connect(_on_changed)
@@ -91,8 +95,16 @@ func _page(id: String) -> Menu3D:
 			m.add_row("machine_at", "MACHINE AT", Drill.AT_NAMES, settings.machine_at)
 			m.add_row("rate", "RATE", Drill.RATE_NAMES, settings.machine_rate)
 			m.add_row("zone", "RETURN TO", Drill.ZONE_NAMES, settings.machine_zone)
+			m.add_row("targets", "TARGETS", OFF_ON, 1 if settings.machine_targets else 0)
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
 			m.add_row("start", "START")
+			m.add_row("back", "BACK")
+		"partner":
+			m.title = "DINK PARTNER   BEST %d" % settings.partner_best
+			m.add_row("level", "DIFFICULTY", Drill.PACE_NAMES, settings.partner_level)
+			m.add_row("ptargets", "TARGETS", OFF_ON, 1 if settings.partner_targets else 0)
+			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
+			m.add_row("pstart", "START")
 			m.add_row("back", "BACK")
 		"lessons":
 			m.title = "HOW TO PLAY"
@@ -104,6 +116,7 @@ func _page(id: String) -> Menu3D:
 		_:
 			m.title = "PICKLEBALL '94 VR"
 			m.add_row("to_match", "PLAY A MATCH")
+			m.add_row("to_partner", "DINK PARTNER")
 			m.add_row("to_machine", "BALL MACHINE")
 			m.add_row("to_lessons", "HOW TO PLAY")
 			if not use_xr:
@@ -128,8 +141,12 @@ func _on_changed(id: String, index: int) -> void:
 		"speed": settings.machine_speed = index
 		"machine_at": settings.machine_at = index
 		"zone": settings.machine_zone = index
+		"targets": settings.machine_targets = index == 1
+		"level": settings.partner_level = index
+		"ptargets": settings.partner_targets = index == 1
 	settings.save()
-	if id in ["mode", "vs", "venue", "hand", "angle", "shot", "target", "zone", "machine_at", "speed"]:
+	if id in ["mode", "vs", "venue", "hand", "angle", "shot", "target", "zone", "machine_at", "speed",
+			"targets", "level", "ptargets"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
 
@@ -140,6 +157,8 @@ func _on_pressed(id: String) -> void:
 	match id:
 		"to_match": lobby.call_deferred("match")
 		"to_machine": lobby.call_deferred("machine")
+		"to_partner": lobby.call_deferred("partner")
+		"pstart": _start.call_deferred(settings.partner_config(), false)
 		"to_lessons": lobby.call_deferred("lessons")
 		"back": lobby.call_deferred("main")
 		"play": _start.call_deferred(settings.match_config(), false)
@@ -155,7 +174,7 @@ func _on_pressed(id: String) -> void:
 		"next": _start_lesson.call_deferred(lesson + 1)
 		"lobby":
 			_keep_best()
-			lobby.call_deferred("lessons" if lesson >= 0 else ("machine" if view.sim.drill else "main"))
+			lobby.call_deferred(_back_page())
 
 
 func _start(cfg: SimTypes.MatchConfig, demo: bool) -> void:
@@ -172,11 +191,25 @@ func _start_lesson(i: int) -> void:
 	view.show_lesson(String(l["title"]), l["lines"])
 
 
-## The ball machine's best streak, kept.
+## The page a session goes back to.
+func _back_page() -> String:
+	if lesson >= 0:
+		return "lessons"
+	if view.sim.drill:
+		return "partner" if view.sim.drill.partner else "machine"
+	return "main"
+
+
+## The ball machine's best streak and the partner's best rally, kept.
 func _keep_best() -> void:
-	if view and view.sim.drill and view.sim.drill.goal == 0 and view.sim.drill.best > settings.machine_best:
-		settings.machine_best = view.sim.drill.best
-		settings.save()
+	if view == null or view.sim.drill == null or view.sim.drill.goal > 0:
+		return
+	var d := view.sim.drill
+	if d.partner and d.best_rally > settings.partner_best:
+		settings.partner_best = d.best_rally
+	elif not d.partner and d.best > settings.machine_best:
+		settings.machine_best = d.best
+	settings.save()
 
 
 func _on_match_over(winner: int) -> void:

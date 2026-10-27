@@ -15,5 +15,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [007](ADR-007-practice.md) | The ball machine and HOW TO PLAY |
 | [008](ADR-008-venues.md) | Venues, rebuilt in 3D |
 | [009](ADR-009-quest-performance.md) | Quest performance: one shadow map, foveation, a fast aim solver |
+| [010](ADR-010-dink-partner.md) | DINK PARTNER and floor targets |
 
-Next: ADR-010.
+Next: ADR-011.

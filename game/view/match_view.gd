@@ -38,6 +38,8 @@ var _commands: Array = []
 var _last_phase := -1
 var _quip := RandomNumberGenerator.new()     # display only: which quip
 var machine: Machine
+var floor_target: FloorTarget
+var partner_avatar: Avatar
 var lesson_label: Label3D
 var zone_mesh: MeshInstance3D
 var paused := false                  ## the sim isn't stepped while a pause menu is up
@@ -123,8 +125,18 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 
 ## Practice: the machine, the return zone, no crowd.
 func _practice_court() -> void:
-	machine = Machine.new()
-	add_child(machine)
+	if sim.drill.partner:
+		partner_avatar = Avatar.new()
+		partner_avatar.slot = 2
+		partner_avatar.shirt = Color(0.2, 0.62, 0.55)
+		add_child(partner_avatar)
+		avatars.append(partner_avatar)
+	else:
+		machine = Machine.new()
+		add_child(machine)
+	if sim.drill.targets:
+		floor_target = FloorTarget.new()
+		add_child(floor_target)
 	crowd.visible = false
 	crowd.process_mode = Node.PROCESS_MODE_DISABLED
 	board.drill = true
@@ -386,9 +398,21 @@ func _on_event(e: Array) -> void:
 		K.EVENT_FEED:
 			machine.kick()
 			_play("0_hit_soft", machine.global_position + Vector3(0, 0.9, 0), 0.8, -3.0)
+		K.EVENT_TARGET:
+			if floor_target:
+				floor_target.flare()
+			board.announce("TARGET!", Color(1, 0.85, 0.2), 1.0)
+			_play("4_applause", World.m(e[1], 0, e[2]), 1.3, -10.0)
 		K.EVENT_DRILL:
 			var r: int = e[1]
-			board.announce(Drill.RESULT_TEXT[r], Color(0.5, 1, 0.5) if r == Drill.RESULT_GOOD else Color(1, 0.5, 0.35), 1.2)
+			var rallying := sim.drill.partner and r == Drill.RESULT_GOOD
+			if rallying:
+				var n := sim.drill.rally
+				if n in [10, 15, 20, 30]:
+					announcer.say(["rally_%d" % n], Announcer.HIGH)
+					crowd.react(0.6)
+			else:
+				board.announce(Drill.RESULT_TEXT[r], Color(0.5, 1, 0.5) if r == Drill.RESULT_GOOD else Color(1, 0.5, 0.35), 1.2)
 			const CALLS := {Drill.RESULT_OUT: "out", Drill.RESULT_NET: "net", Drill.RESULT_KITCHEN: "kitchen",
 				Drill.RESULT_VOLLEY: "early_volley"}
 			if CALLS.has(r):
@@ -465,6 +489,8 @@ func _draw(delta: float) -> void:
 		a.show_from(sim, delta)
 	if machine:
 		machine.show_from(sim, delta)
+	if floor_target:
+		floor_target.show_from(sim, delta)
 	board.show_from(sim, delta)
 	if flat and demo and not spectate:
 		flat.head = World.m(bot.head_x, 0, bot.head_z) + Vector3(0, FlatRig.EYE, 0)

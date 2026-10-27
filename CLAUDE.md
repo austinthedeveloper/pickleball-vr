@@ -12,7 +12,7 @@ game/tools/test.sh                                   # all tests, headless (must
 godot --path game                                    # play (flat mode without a headset)
 godot --path game -- demo                            # DEMO: bot vs CPU
 godot --headless --path game -s res://tests/golden.gd   # regenerate golden traces (play changes only)
-godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson> <frames> <out.png> [doubles | lesson] [venue=NAME]
+godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson] [venue=NAME]
 godot --headless --path game -s res://tools/rally_stats.gd -- <matches> <difficulty> [doubles]
 python3 game/tools/import_opponents.py                # the ladder, from the port kit
 game/tools/fetch_openxr_vendors.sh                    # Meta's OpenXR loader into game/addons (pinned, git-ignored)
@@ -21,7 +21,7 @@ game/tools/quest_build.sh [--check]                   # build + install + launch
 
 `design/ROADMAP.md` is the milestone sheet: keep it current with each
 branch. `design/KNOWN_ISSUES.md` lists the defects, and
-`decisions/README.md` the ADRs (next: ADR-010). `design/QUEST_SETUP.md`
+`decisions/README.md` the ADRs (next: ADR-011). `design/QUEST_SETUP.md`
 covers the headset build.
 
 **The canon bible** is `../pickleball/docs/PICKLEBALL_94_BIBLE.md`. The VR
