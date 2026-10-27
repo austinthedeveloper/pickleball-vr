@@ -34,8 +34,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-02 | Paddle contact and the shot assist (ADR-003) | `feature/cld-vr-singles` | Ready to test |
 | VR-03 | The CPU and the bot | `feature/cld-vr-singles` | Ready to test |
 | VR-04 | The park, the match view, flat mode | `feature/cld-vr-singles` | Ready to test |
-| VR-05 | The XR rig: paddle hand, serve hand, sticks, haptics | `feature/cld-vr-singles` | Blocked (needs the Quest set up) |
-| VR-06 | Quest build: export preset, `quest_build.sh`, OpenXR vendors plugin | `feature/cld-vr-quest` | Blocked (preset and script done; needs QUEST_SETUP steps 1 to 3) |
+| VR-05 | The XR rig: paddle hand, serve hand, sticks, haptics | `feature/cld-vr-singles` | Ready to test (on the Quest 3) |
+| VR-06 | Quest build: export preset, `quest_build.sh`, OpenXR Vendors 5.1.0 | `feature/cld-vr-quest-device` | Ready to test (builds and installs on the Quest 3) |
 | VR-07 | Doubles (ADR-004) | `feature/cld-vr-doubles` | Ready to test |
 | VR-08 | The ladder's eight teams as CPUs (ADR-005) | `feature/cld-vr-setup` | Ready to test |
 | VR-09 | The lobby and MATCH SETUP in the world (ADR-005) | `feature/cld-vr-setup` | Ready to test |
@@ -116,7 +116,10 @@ does the SUNSET's low sun get in your eyes too much?
 
 ## For you
 
-1. **Quest setup** (QUEST_SETUP.md, steps 1 to 3): it unblocks VR-05/06.
+1. **The first session in the headset** (VR-05): wake the controllers, open
+   Library > Unknown Sources > Pickleball '94 VR, and check the paddle in
+   your hand, the stick, the serve, the laser in the menus and the
+   vibration.
 2. **A GitHub repository** for this project, if you want one (it's local
    only for now). Pick its name and visibility, and I'll add the remote
    and CI.

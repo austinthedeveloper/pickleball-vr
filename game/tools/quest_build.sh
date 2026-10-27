@@ -5,13 +5,15 @@
 cd "$(dirname "$0")/.." || exit 2
 missing=0
 need() { echo "  missing: $1"; missing=1; }
+export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17 2>/dev/null)}"
+export ANDROID_HOME="${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}"
 echo "Quest build prerequisites:"
-/usr/libexec/java_home -v 17 >/dev/null 2>&1 || need "Java 17 (brew install --cask temurin@17)"
+[ -n "$JAVA_HOME" ] || need "Java 17 (brew install --cask temurin@17)"
 command -v adb >/dev/null 2>&1 || need "adb (brew install --cask android-platform-tools)"
-sdk="${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}"
-[ -d "$sdk/platforms" ] || need "Android SDK platforms in $sdk (sdkmanager \"platforms;android-35\" \"build-tools;35.0.0\")"
-[ -d addons/godotopenxrvendors ] || need "the Godot OpenXR Vendors plugin in game/addons/ (QUEST_SETUP step 5)"
-[ -d android/build ] || need "Godot's Android build template (Project > Install Android Build Template, or --install-android-build-template)"
+[ -d "$ANDROID_HOME/platforms" ] || need "Android SDK platforms in $ANDROID_HOME (sdkmanager \"platforms;android-35\" \"build-tools;35.0.0\")"
+[ -x "$ANDROID_HOME/platform-tools/adb" ] || need "the SDK's own platform-tools (sdkmanager --sdk_root=$ANDROID_HOME \"platform-tools\")"
+[ -f "$HOME/Library/Application Support/Godot/keystores/debug.keystore" ] || need "Godot's debug keystore (design/QUEST_SETUP.md step 4)"
+[ -d addons/godotopenxrvendors ] || need "the OpenXR Vendors plugin (game/tools/fetch_openxr_vendors.sh)"
 if command -v adb >/dev/null 2>&1; then
   adb devices | grep -q "device$" || need "a Quest on USB with debugging allowed (adb devices lists none)"
 fi
@@ -21,5 +23,8 @@ fi
 echo "  all there."
 [ "$1" = "--check" ] && exit 0
 mkdir -p ../build
-godot --headless --path . --export-debug "Quest" ../build/pickleball-vr.apk || exit 1
-adb install -r ../build/pickleball-vr.apk && adb shell monkey -p com.tinychair.pickleball94vr 1
+template=""
+[ -d android/build ] || template="--install-android-build-template"
+godot --headless --path . $template --export-debug "Quest" ../build/pickleball-vr.apk || exit 1
+[ -f ../build/pickleball-vr.apk ] || { echo "no APK was written"; exit 1; }
+adb install -r ../build/pickleball-vr.apk && adb shell monkey -p com.tinychair.pickleball94vr -c android.intent.category.LAUNCHER 1

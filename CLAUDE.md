@@ -15,7 +15,8 @@ godot --headless --path game -s res://tests/golden.gd   # regenerate golden trac
 godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson> <frames> <out.png> [doubles | lesson] [venue=NAME]
 godot --headless --path game -s res://tools/rally_stats.gd -- <matches> <difficulty> [doubles]
 python3 game/tools/import_opponents.py                # the ladder, from the port kit
-game/tools/quest_build.sh [--check]                   # build + install on the Quest (design/QUEST_SETUP.md)
+game/tools/fetch_openxr_vendors.sh                    # Meta's OpenXR loader into game/addons (pinned, git-ignored)
+game/tools/quest_build.sh [--check]                   # build + install + launch on the Quest (design/QUEST_SETUP.md)
 ```
 
 `design/ROADMAP.md` is the milestone sheet: keep it current with each
