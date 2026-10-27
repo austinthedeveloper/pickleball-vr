@@ -4,6 +4,57 @@ What's new in each release of Pickleball '94 VR, for players. The format
 follows [Keep a Changelog](https://keepachangelog.com); versions follow
 [semver](https://semver.org) (design/RELEASING.md).
 
+## [0.2.0] - 2026-10-27
+
+The practice update: a dinking partner, a paddle tuned on real strokes,
+and a world that falls away in a long rally.
+
+### Added
+- **DINK PARTNER:** a CPU at their kitchen line who only wants the rally
+  to go on. Every ball comes back as a dink to your forehand or backhand.
+  - **DIFFICULTY** sets how low it skims the net.
+  - **PARTNER** puts it straight across or cross court.
+  - **SPREAD** sets how far it makes you reach.
+  - **Floor targets** to aim at.
+  - The board counts dinks in a row. A dink landing up to a foot past
+    their kitchen line counts.
+- **FOCUS:** string together a long rally and everything outside the court
+  darkens, step by step, a spotlight on the rally. In practice it begins
+  at your 8th good shot in a row.
+- **The ball machine:**
+  - At your kitchen line, drives come at you through the air for reflex
+    practice.
+  - New **SPEED** (up to about 17 m/s), **MACHINE AT** (the baseline or
+    their kitchen line) and **RAPID** rate settings.
+  - Real dinks from their kitchen.
+  - Floor targets.
+- **A new look:** the partner and the CPU players are people now. They
+  split-step, shuffle, watch the ball and swing in time with the hit. The
+  ball machine has a hopper that empties, a head that aims along each
+  feed and a countdown light. The paddle and the ball (with holes) are
+  remade, and fast balls leave a short trail.
+
+### Changed
+- **The paddle feels like a paddle.** It was tuned on 160+ logged strokes
+  from a real player:
+  - lifting through the ball lifts it;
+  - touch shots are livelier;
+  - an average swing gives a firm, controlled ball instead of flying long;
+  - the sweet spot is gentler.
+- **SHOT ASSIST** helps with length more than aim, so you keep your
+  direction.
+- **The partner** reads your shot and moves before it bounces, and its
+  footwork carries its body.
+
+### Fixed
+- Dinks from the machine were called OUT before your return came down.
+- Drives at the kitchen line came as slow lobs.
+- In the headset, the lobby's demo took your controllers, reset you to a
+  corner each point and hid the menu.
+- Changing an option no longer shifts your view. Holding the Meta button
+  recenters you facing the court.
+- The ball in your free hand sits in your fingers and leaves from there.
+
 ## [0.1.0] - 2026-10-27
 
 The first release: first-person pickleball on the Meta Quest, with a

@@ -28,6 +28,9 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 
 ## Releases
 
+- **v0.2.0** (2026-10-27): the practice update. DINK PARTNER, the ball
+  machine's volley feeds, the new look, the paddle tuned on logged
+  strokes, FOCUS.
 - **v0.1.0** (2026-10-27): the first release. Singles and doubles against
   the ladder, DINK PARTNER, the BALL MACHINE, HOW TO PLAY, five venues.
 
