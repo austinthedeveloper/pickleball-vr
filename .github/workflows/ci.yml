@@ -1,0 +1,40 @@
+# Every Godot test suite, headless on Linux, with the same script as a
+# local run (game/tools/test.sh fails on any failed test or SCRIPT ERROR),
+# plus the release tools' self-test. The OpenXR Vendors plugin is
+# git-ignored, so CI runs without it, as the tests are written to
+# (ADR-011). Copied from the port kit's CI and its pinned Godot.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to the same ref supersedes a running check.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Godot tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-godot
+
+      - name: Import the project
+        # test.sh imports too, silently; this one shows its log.
+        run: godot --headless --path game --import
+
+      - name: Tests
+        run: game/tools/test.sh
+
+      - name: Release tools' self-test
+        run: python3 game/tools/test_release.py
