@@ -64,7 +64,10 @@ func _ready() -> void:
 	sm.height = sm.radius * 2
 	held_ball.mesh = sm
 	held_ball.material_override = World.material(Color(0.9, 1.0, 0.1))
-	held_ball.position = Vector3(0, 0, -0.06)
+	# In the fingers on the palm side (the grip pose's -x for the left hand,
+	# +x for the right), a little forward: where a held ball sits.
+	var palm := -1.0 if free_hand == left else 1.0
+	held_ball.position = Vector3(palm * 0.05, -0.015, -0.035)
 	free_hand.add_child(held_ball)
 	held_ball.visible = false
 	laser = MeshInstance3D.new()
@@ -105,7 +108,7 @@ func begin_frame(delta: float) -> void:
 	var t := paddle.global_transform
 	_face = t * PaddleMesh.FACE_CENTER
 	_n = t.basis.x.normalized()
-	_hand = free_hand.global_position
+	_hand = held_ball.global_position      # the ball leaves from where you see it
 	var trig := free_hand.get_float("trigger") > 0.6
 	_toss = trig and not _trigger_was
 	_trigger_was = trig
@@ -176,6 +179,11 @@ func show_held_ball(on: bool) -> void:
 
 func head_position() -> Vector3:
 	return camera.global_position
+
+
+## True once the headset reports a real pose (the head above the floor).
+func tracking() -> bool:
+	return camera.position.y > 0.3
 
 
 ## The menu laser, from the free hand.

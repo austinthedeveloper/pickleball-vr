@@ -97,7 +97,10 @@ func _sky(kind: String) -> void:
 	sun.rotation_degrees = Vector3(-52, -35, 0)
 	sun.light_energy = 0.95
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 30.0
+	# One orthogonal shadow map over the court, not four splits (each split
+	# draws the scene again: the Quest's biggest single cost, ADR-009).
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+	sun.directional_shadow_max_distance = 24.0
 	e.tonemap_mode = Environment.TONE_MAPPER_ACES
 	e.tonemap_white = 6.0
 	if kind == "indoor" or kind == "space":

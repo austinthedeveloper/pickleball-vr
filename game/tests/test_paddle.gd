@@ -92,3 +92,26 @@ func test_assist_pulls_a_long_shot_in() -> void:
 	check(lr[3] == 1 or not K.in_court(lr[1], lr[2]) or lr[2] > 0, "unassisted misses: %s" % str(lr))
 	eq(lf[3], 0, "assisted clears the net")
 	check(K.in_court(lf[1], lf[2]) and lf[2] < 0, "assisted lands in: %s" % str(lf))
+
+
+func test_mid_assist_rescues_depth_but_keeps_your_aim() -> void:
+	# The same hard swing, angled to your right: long without help; at MID
+	# it lands in, and still to the right of centre.
+	var raw := _live(K.ASSIST_OFF)
+	var mid := _live(K.ASSIST_MID)
+	for s in [raw, mid]:
+		var sim: Sim = s
+		sim.ball.launch(0, 0, 0)
+		sim.ball.place(0, 1 * K.M, 2 * K.M)
+		var h := _input(2300000)
+		h.normal = Fx.unit_q14(2000, 0, -K.Q14)
+		sim.step([h])
+		var g := _input(2000000)
+		g.normal = h.normal
+		g.paddle_x = -120000
+		sim.step([g])
+	var lr: Array[int] = Aim.landing(raw.ball)
+	var lm: Array[int] = Aim.landing(mid.ball)
+	check(lr[3] == 1 or not K.in_court(lr[1], lr[2]), "unassisted misses: %s" % str(lr))
+	check(lm[3] == 0 and K.in_court(lm[1], lm[2]) and lm[2] < 0, "MID lands it in: %s" % str(lm))
+	check(lm[1] > 0, "and it still goes where the face pointed (right): %d" % lm[1])

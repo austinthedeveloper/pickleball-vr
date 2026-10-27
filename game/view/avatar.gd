@@ -28,7 +28,7 @@ func _ready() -> void:
 		_part(SphereMesh, Vector3(s * 0.045, 1.62, -0.105), Vector2(0.018, 0.036), Color(0.08, 0.08, 0.1))
 	_part(CapsuleMesh, Vector3(-0.24, 1.1, 0), Vector2(0.05, 0.55), SKIN)
 	paddle = PaddleMesh.new()
-	paddle.color = Color(0.2, 0.3, 0.85)
+	paddle.color = Color(0.85, 0.15, 0.2) if slot < 2 else Color(0.2, 0.3, 0.85)   # your side's red
 	paddle.top_level = true          # posed in world space
 	add_child(paddle)
 

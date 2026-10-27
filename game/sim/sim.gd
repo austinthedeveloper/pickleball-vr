@@ -427,9 +427,18 @@ func _assist(team: int, v: Array[int]) -> Array[int]:
 		depth = clampi(depth, K.KITCHEN_DEPTH + m, K.COURT_HALF_LENGTH - m)
 	var pace := maxi(Fx.length(v[0], 0, v[2]), 30000)
 	var ideal := Aim.shot(ball.x, ball.y, ball.z, tx, depth * opp, pace, [ball.wx, ball.wy, ball.wz])
+	# Aim (the line over the ground) is pulled `assist`; depth (the pace
+	# over the ground and the arc) twice as hard (MID: all of it), since a swing's
+	# length is the hardest thing to judge in a headset (ADR-003).
 	var a := config.assist
-	return [v[0] + (ideal[0] - v[0]) * a / 100, v[1] + (ideal[1] - v[1]) * a / 100,
-		v[2] + (ideal[2] - v[2]) * a / 100]
+	var ad := mini(100, a * 2)
+	var dx := v[0] + (ideal[0] - v[0]) * a / 100
+	var dz := v[2] + (ideal[2] - v[2]) * a / 100
+	var dl := maxi(Fx.length(dx, 0, dz), 1)
+	var raw_pace := Fx.length(v[0], 0, v[2])
+	var good_pace := Fx.length(ideal[0], 0, ideal[2])
+	var p := raw_pace + (good_pace - raw_pace) * ad / 100
+	return [dx * p / dl, v[1] + (ideal[1] - v[1]) * ad / 100, dz * p / dl]
 
 
 func _others_react(slot: int) -> void:

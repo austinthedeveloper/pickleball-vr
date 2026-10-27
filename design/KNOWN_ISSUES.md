@@ -1,9 +1,12 @@
 # Known issues
 
-1. **The XR rig is untested on a headset.** Its action names (`trigger`,
-   `primary`, `ax_button`, `haptic`) match `game/openxr_action_map.tres`.
-   The pose name (`grip`), the stick directions and the paddle's angle in
-   the hand are unchecked on the Quest (VR-05).
+1. **The XR rig, first session on a Quest 3 (2026-10-27).** The paddle in
+   the hand felt right. Three bugs were found and fixed. The lobby's demo
+   took your controllers, so you played it from the spectator corner and
+   were reset there each point. Its panel was placed before tracking
+   started, so you never saw MATCH SETUP. The held ball sat above the
+   fist and jumped when let go. The sticks, the serve and the menus still
+   need a check.
 2. **Spin is simple** (ADR-006). The paddle makes spin from its brush,
    but friction never bends the shot's line (no sidespin "hook" off a
    slanted face). The spin axis comes straight from the brush, with no

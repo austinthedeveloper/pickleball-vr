@@ -41,6 +41,7 @@ var machine: Machine
 var lesson_label: Label3D
 var zone_mesh: MeshInstance3D
 var paused := false                  ## the sim isn't stepped while a pause menu is up
+var _placed := false                 ## XR: turned to the court and moved to the start, once tracked
 
 
 func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectating := false) -> void:
@@ -169,6 +170,17 @@ func _start_spot() -> Vector3:
 	return _spot(0)
 
 
+## The headset's first tracked frame: face down the court and stand on the
+## start (the spectator spot, the drill's spot, or your serve spot). Before
+## tracking starts the head reads as the origin, so this waits for it.
+func _place_xr() -> void:
+	if _placed or not xr.tracking():
+		return
+	_placed = true
+	xr.face_court()
+	xr.recenter(SPECTATE if spectate else _start_spot())
+
+
 ## Show a menu panel in front of you, pointed at with the laser or mouse.
 func show_menu(m: Menu3D) -> void:
 	if menu and menu != m:
@@ -178,6 +190,11 @@ func show_menu(m: Menu3D) -> void:
 		add_child(m)
 	var head := xr.head_position() if xr else flat.head_position()
 	var fwd := xr.forward() if xr else flat.forward()
+	if spectate:
+		# The lobby's panel stands at a fixed spot beside the spectator
+		# spot (the headset may not be tracking yet when it's built).
+		head = SPECTATE + Vector3(0, FlatRig.EYE, 0)
+		fwd = Vector3.FORWARD
 	var right := fwd.cross(Vector3.UP)
 	var at := head + fwd * 1.7 + right * (0.6 if spectate else 0.0)
 	at.y = head.y - 0.1
@@ -266,6 +283,7 @@ func _process(delta: float) -> void:
 		return
 	if xr:
 		xr.begin_frame(delta)
+		_place_xr()
 	else:
 		flat.begin_frame(delta)
 		if flat.serve_pressed and not (menu and menu.visible):
@@ -305,10 +323,12 @@ func _drive_menu() -> void:
 
 func _tick(alpha: float, first: bool) -> void:
 	var h: SimTypes.HumanInput
-	if xr:
+	if xr and not demo:
 		h = xr.sample(alpha, first)
 	else:
-		if not demo:
+		# The bot plays: flat mode's swing, DEMO, and the lobby's demo (in
+		# the headset too: there you watch, your controllers only point).
+		if flat and not demo:
 			var head := World.um(flat.head)
 			bot.head_x = head[0]
 			bot.head_z = head[2]
@@ -318,14 +338,11 @@ func _tick(alpha: float, first: bool) -> void:
 			bot.aim_z = aim[2]
 			bot.pace = 40000 if flat.soft else 105000
 		h = bot.input()
-		flat.show_paddle(h)
+		if flat:
+			flat.show_paddle(h)
 	input_log.append(h.to_array())
 	sim.step([h], _commands)
 	_commands = []
-	if sim.drill and sim.tick == 1 and not spectate:
-		if xr:
-			xr.face_court()
-			xr.recenter(_start_spot())
 	if sim.phase != _last_phase:
 		_on_phase(sim.phase)
 		_last_phase = sim.phase
@@ -346,9 +363,8 @@ func _on_phase(p: int) -> void:
 					break
 	if p == K.PHASE_SERVE_SETUP:
 		if xr:
-			if sim.tick <= 1:
-				xr.face_court()
-			xr.recenter(SPECTATE if spectate else _spot(0))
+			if _placed and not spectate:
+				xr.recenter(_spot(0))      # to your serve or return spot (the lobby stays put)
 		elif not demo:
 			flat.recenter(_spot(0))
 

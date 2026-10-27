@@ -216,11 +216,9 @@ func _maybe_plan() -> void:
 		target[0] += _scatter(error)
 		target[1] += _scatter(error)
 		if sim.phase == K.PHASE_LIVE and _scatter(50) + 50 < miss:
-			# Big enough that the shot assist can't save it all.
-			if _scatter(50) < 0:
-				target[1] += signi(target[1]) * 3200000
-			else:
-				target[0] = signi(target[0] + 1) * (K.COURT_HALF_WIDTH + 2600000)
+			# Wide, by enough that the assist (which saves depth, ADR-003)
+			# can't pull it back in.
+			target[0] = signi(target[0] + _scatter(1) + 1) * (K.COURT_HALF_WIDTH + 2600000)
 	var v := Aim.shot(b.x, b.y, b.z, target[0], target[1], target[2])
 	var dx: int = v[0] - b.vx
 	var dy: int = v[1] - b.vy

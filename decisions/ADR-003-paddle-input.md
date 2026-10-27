@@ -32,6 +32,13 @@ a frame (72-120 Hz), and a fast paddle moves 10+ cm between samples.
   to let go: lift as you pull for a toss, hold still for a drop (the drop
   serve is legal). Then hit it. A toss nobody hits is served again, with
   no fault.
+- **Depth is assisted harder than aim** (amended 2026-10-27, after the
+  first session on a Quest 3: most shots went long or short). The line
+  over the ground blends at the setting's share. The pace over the ground
+  and the arc blend at twice that, capped at 100%: all of it at MID, 70%
+  at LOW. You aim; the game judges length, the hardest thing to feel in
+  a headset. The bot's deliberate misses now go wide, since long misses
+  are always saved.
 - **Flat mode and DEMO** drive the same input from `Bot`, which plans a
   swing through the ball on the sim's own prediction. In flat mode you
   move and aim and the bot swings; in DEMO it does all of it.
