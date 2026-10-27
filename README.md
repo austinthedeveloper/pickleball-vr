@@ -34,6 +34,11 @@ game/tools/test.sh                # all tests, headless (must pass)
 The **shot assist** (ADR-003) pulls a miss toward a good shot, 65% by
 default.
 
+## Venues
+
+PARK, LAKESIDE, SUNSET, GYM and SPACE (ADR-008), each with the port kit's
+court colours and ambience. HOME plays at the opponent's home court.
+
 ## Rules
 
 As in the remaster: rally scoring to 5. Serve diagonally, past the
@@ -46,8 +51,11 @@ remaster's way: NET!, OUT!, FAULT! (the wrong box), KITCHEN!, VOLLEY!.
 ```
 game/sim/     the pure sim: k (constants), fx (int maths), ball, aim,
               intercept, sim (rules, serve, CPUs), bot, types
-game/view/    world (the park), match_view, xr_rig, flat_rig, avatar,
-              paddle_mesh, scoreboard
+game/sim/     ... drill (the ball machine and lessons)
+game/meta/    settings, opponents (the ladder), lessons, venues
+game/view/    world (the venues), match_view, xr_rig, flat_rig, avatar,
+              paddle_mesh, scoreboard, menu_3d, machine, crowd, announcer
+game/data/    opponents.json (imported), lessons.json
 game/scenes/  main (XR or flat)
 game/tests/   headless suites, golden traces
 game/tools/   test.sh, screenshot.gd, rally_stats.gd

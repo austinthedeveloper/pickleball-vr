@@ -24,6 +24,7 @@ var left_handed := false
 var menu: Menu3D
 var them := "CPU"
 var crowd: Crowd
+var world: World
 var announcer: Announcer
 var paddle_tilt := 0.0               ## degrees: the paddle's angle in the hand (XR)
 var board: Scoreboard
@@ -49,7 +50,9 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	bot = Bot.new(sim, 0)
 	if cfg.opponent >= 0:
 		them = String(Opponents.team(cfg.opponent)["team"])
-	add_child(World.new())
+	world = World.new()
+	world.venue = cfg.venue
+	add_child(world)
 	if use_xr:
 		xr = XrRig.new()
 		xr.left_handed = left_handed
@@ -207,7 +210,7 @@ func _sounds() -> void:
 		add_child(p)
 		sound[n] = p
 	var amb := AudioStreamPlayer.new()
-	var stream: AudioStreamOggVorbis = load("res://assets/audio/ambience_park.ogg")
+	var stream: AudioStreamOggVorbis = load(World.ambience(world.venue))
 	stream.loop = true
 	amb.stream = stream
 	amb.volume_db = -10.0

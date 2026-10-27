@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson> <frames> <out.png> [doubles | lesson number]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson> <frames> <out.png> [doubles | lesson number] [venue=NAME]
 extends SceneTree
 
 var frames := 240
@@ -23,6 +23,9 @@ func _initialize() -> void:
 	var cfg := SimTypes.MatchConfig.new()
 	cfg.doubles = args.has("doubles")
 	var mode: String = args[0] if args.size() > 0 else "demo"
+	for a in args:
+		if a.begins_with("venue="):
+			cfg.venue = Venues.NAMES.find(a.trim_prefix("venue="))
 	if mode == "machine":
 		cfg.drill = Drill.new()
 		cfg.drill.zone = Drill.ZONE_DEEP

@@ -13,5 +13,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [005](ADR-005-setup-and-ladder.md) | MATCH SETUP in the world, and the port kit's ladder |
 | [006](ADR-006-spin-and-feel.md) | Spin, the sweet spot, and how a point sounds |
 | [007](ADR-007-practice.md) | The ball machine and HOW TO PLAY |
+| [008](ADR-008-venues.md) | Venues, rebuilt in 3D |
 
-Next: ADR-008.
+Next: ADR-009.

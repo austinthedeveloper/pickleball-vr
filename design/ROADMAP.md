@@ -45,6 +45,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-13 | The ball machine (ADR-007) | `feature/cld-vr-practice` | Ready to test |
 | VR-14 | HOW TO PLAY: seven lessons (ADR-007) | `feature/cld-vr-practice` | Ready to test |
 | VR-15 | Menu pages and pause (ADR-007) | `feature/cld-vr-practice` | Ready to test |
+| VR-16 | Venues: PARK, LAKESIDE, SUNSET, GYM, SPACE (ADR-008) | `feature/cld-vr-practice` | Ready to test |
+| VR-17 | More venues: DINOSAUR, UNDERSEA, TIME of day | | Planned |
 
 ## Phase 1: singles
 
@@ -107,6 +109,10 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-16, ready to test.** MATCH SETUP > VENUE: try each one, and HOME
+against different teams (the GOTH CLUB play in SPACE). In the headset,
+does the SUNSET's low sun get in your eyes too much?
 
 ## For you
 
