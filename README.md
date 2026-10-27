@@ -80,6 +80,14 @@ design/       ROADMAP, KNOWN_ISSUES, QUEST_SETUP, FROM_THE_PORT_KIT
 decisions/    ADRs
 ```
 
+## Releases
+
+Download the APK from the
+[GitHub releases](https://github.com/austinthedeveloper/pickleball-vr/releases)
+and sideload it (`adb install -r pickleball-vr-X.Y.Z.apk`, with the Quest
+in developer mode), then open Library > Unknown Sources. `CHANGELOG.md`
+says what's in each; `design/RELEASING.md` says how one is cut.
+
 ## On the Quest
 
 See `design/QUEST_SETUP.md` (a JDK, the Android SDK, developer mode, a USB

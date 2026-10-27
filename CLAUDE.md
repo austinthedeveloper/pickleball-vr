@@ -13,6 +13,9 @@ godot --path game                                    # play (flat mode without a
 godot --path game -- demo                            # DEMO: bot vs CPU
 godot --headless --path game -s res://tests/golden.gd   # regenerate golden traces (play changes only)
 godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson] [venue=NAME]
+python3 game/tools/version.py [set X.Y.Z]            # the version, everywhere (design/RELEASING.md)
+python3 game/tools/release.py X.Y.Z --dry-run         # cut a release: checks, bump, tests, tag, APK (--push: GitHub release)
+python3 game/tools/test_release.py                    # the release tools' self-test
 game/tools/shots.sh [filter]                          # the standard screenshots into shots/ (git-ignored, for looking)
 godot --headless --path game -s res://tools/rally_stats.gd -- <matches> <difficulty> [doubles]
 python3 game/tools/import_opponents.py                # the ladder, from the port kit
@@ -20,9 +23,12 @@ game/tools/fetch_openxr_vendors.sh                    # Meta's OpenXR loader int
 game/tools/quest_build.sh [--check]                   # build + install + launch on the Quest (design/QUEST_SETUP.md)
 ```
 
+Releases are semver with tags `vX.Y.Z`, `CHANGELOG.md` and an APK on the
+GitHub release (`design/RELEASING.md`, ADR-011).
+
 `design/ROADMAP.md` is the milestone sheet: keep it current with each
 branch. `design/KNOWN_ISSUES.md` lists the defects, and
-`decisions/README.md` the ADRs (next: ADR-011). `design/QUEST_SETUP.md`
+`decisions/README.md` the ADRs (next: ADR-012). `design/QUEST_SETUP.md`
 covers the headset build.
 
 **The canon bible** is `../pickleball/docs/PICKLEBALL_94_BIBLE.md`. The VR

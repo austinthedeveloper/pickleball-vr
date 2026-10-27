@@ -26,6 +26,11 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
    records.
 6. **Online.** The port kit's rollback (port ADR-102/103) on the 120 Hz sim.
 
+## Releases
+
+- **v0.1.0** (2026-10-27): the first release. Singles and doubles against
+  the ladder, DINK PARTNER, the BALL MACHINE, HOW TO PLAY, five venues.
+
 ## Index
 
 | Task | What | Branch | Status |
@@ -51,6 +56,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-19 | Ball machine 2: volley feeds, SPEED, MACHINE AT, real dinks (ADR-007) | `feature/cld-vr-machine-2` | Done (played) |
 | VR-20 | DINK PARTNER: a cooperative dinking CPU (ADR-010) | `feature/cld-vr-dink-partner` | Done (played) |
 | VR-21 | Floor targets, partner and machine (ADR-010) | `feature/cld-vr-dink-partner` | Done (played) |
+| VR-22 | Releases: version.py, release.py, CHANGELOG (ADR-011) | `main` | Done |
 
 ## Phase 1: singles
 
