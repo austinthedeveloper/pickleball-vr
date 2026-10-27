@@ -124,7 +124,7 @@ def release(version, push, dry):
         raise Stop("tests failed, nothing committed:\n" + tests.stdout[-3000:])
     print("  tests: " + summary)
     run("git", "add", versions.PROJECT, versions.PRESETS, CHANGELOG, ROADMAP)
-    run("git", "commit", "-q", "-m", "Release %s\n\n%s" % (version, TRAILER))
+    run("git", "commit", "-q", "--allow-empty", "-m", "Release %s\n\n%s" % (version, TRAILER))
     first = entry(version).split("\n\n")[0]
     run("git", "tag", "-a", "v" + version, "-m", "Pickleball '94 VR %s\n\n%s" % (version, first))
     print("  tagged v%s on %s" % (version, rel))
