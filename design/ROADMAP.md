@@ -65,8 +65,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-25 | Paddle tuned on logged swings: grip, restitution, swing curve (ADR-003) | `feature/cld-vr-partner-2` | Done (played: "so much better, feeling really good") |
 | VR-26 | FOCUS: long rallies dim the world (ADR-013) | `feature/cld-vr-focus` | Ready to test |
 | VR-27 | The dink zone: a foot past the kitchen line (ADR-010) | `feature/cld-vr-focus` | Ready to test |
-| VR-28 | HANDS: the partner volleys hard at you (ADR-014) | `feature/cld-vr-hands` | Ready to test |
-| VR-29 | FOCUS deeper and sooner: 5 in a row, nearly black by 13 (ADR-013) | `feature/cld-vr-focus-2` | Ready to test |
+| VR-28 | HANDS: the partner volleys hard at you (ADR-014) | `feature/cld-vr-hands` | Done (played: "feel good") |
+| VR-29 | FOCUS deeper and sooner: 5 in a row, nearly black by 13 (ADR-013) | `feature/cld-vr-focus-2` | Done (played: "feel good") |
 
 ## Phase 1: singles
 
@@ -130,11 +130,11 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
 
-**VR-29, ready to test.** FOCUS, stronger: at 5 in a row the world
+**VR-29, played and approved.** FOCUS, stronger: at 5 in a row the world
 starts to darken, deeper every 2, nearly black by 13. Too much, or about
 right?
 
-**VR-28, ready to test.** MAIN > PRACTICE PARTNER > DRILL HANDS. Stand
+**VR-28, played and approved.** MAIN > PRACTICE PARTNER > DRILL HANDS. Stand
 at your kitchen line and volley: the partner comes up to theirs and
 volleys every ball back at you, hard, about waist to chest high. Try
 EASY, MEDIUM and HARD (7, 10 and 13 m/s). Is HARD fast enough, or too
