@@ -1,0 +1,229 @@
+## A stand-in human: it makes the SimTypes.HumanInput a player would, a
+## paddle swung through the ball on a planned path. It plays DEMO, the
+## tests' rallies and flat mode's swing (where you move and aim, it swings).
+## Pure like the sim: what it reads is the sim's state, what it gives is
+## an input.
+class_name Bot
+extends RefCounted
+
+const SWING_TICKS := 14
+const FOLLOW_TICKS := 8
+const SERVE_WAIT := 45
+const MIN_LEAD := 10
+
+var sim: Sim
+var slot := 0
+var auto_move := true                ## false: the head is yours (flat mode)
+var speed := 30000                   ## 3.6 m/s
+## false: the toss waits for `serve_now` (flat mode's key).
+var auto_serve := true
+var serve_now := false
+## Where to aim on the far court (flat mode's crosshair); off by default.
+var has_aim := false
+var aim_x := 0
+var aim_z := 0
+## Your shot's pace over the ground, um/tick.
+var pace := 105000
+## Aim scatter (um), from the bot's own seeded generator; 0 aims true.
+var error := 300000
+## Percent of shots that go wrong: long, wide or into the net.
+var miss := 14
+var rng := 7
+## The ready position, from the head (flat mode lifts it into view).
+var rest_side := 400000
+var rest_y := 950000
+var rest_forward := 250000
+## The body (head) when auto_move.
+var head_x := 0
+var head_z := 0
+
+var _plan_tick := -1
+var _plan_for := -2                  ## the shot number the plan answers
+var _px := 0                         ## the face's centre at contact
+var _py := 0
+var _pz := 0
+var _n: Array[int] = [0, 0, K.Q14]
+var _ux := 0                         ## the face's velocity through the swing
+var _uy := 0
+var _uz := 0
+var _last := SimTypes.HumanInput.new()
+var _goal_x := 0
+var _goal_z := 0
+var _move_at := 0
+var _move_for := -2
+
+
+func _init(s: Sim, which := 0) -> void:
+	sim = s
+	slot = which
+	var spot := sim.serve_spot(slot)
+	head_x = spot[0]
+	head_z = spot[1]
+
+
+func _team() -> int:
+	return slot >> 1
+
+
+## The input for the sim's next tick.
+func input() -> SimTypes.HumanInput:
+	var h := SimTypes.HumanInput.new()
+	var team := _team()
+	var side := K.side_sign(team)
+	var fore := K.right_sign(team)
+	var next := sim.tick + 1
+	if sim.phase == K.PHASE_SERVE_SETUP:
+		var spot := sim.serve_spot(slot)
+		head_x = spot[0]
+		head_z = spot[1]
+		_plan_tick = -1
+	elif auto_move:
+		_move()
+	h.head_x = head_x
+	h.head_z = head_z
+	# The free hand holds the ball out in front at the serve.
+	h.hand_x = head_x - fore * 250000
+	h.hand_y = 900000
+	h.hand_z = head_z - side * 350000
+	if sim.phase == K.PHASE_SERVE and sim.server_slot == slot and sim.phase_timer >= SERVE_WAIT \
+			and (auto_serve or serve_now):
+		serve_now = false
+		h.toss = true
+		h.hand_y = _last.hand_y + 22000      # a gentle toss up, 2.6 m/s
+	_rest(h)
+	_maybe_plan()
+	if _plan_tick >= 0 and next >= _plan_tick - SWING_TICKS and next <= _plan_tick + FOLLOW_TICKS:
+		var k := _plan_tick - next
+		h.paddle_x = _px - _ux * k
+		h.paddle_y = _py - _uy * k
+		h.paddle_z = _pz - _uz * k
+		h.normal = _n.duplicate()
+	_last = h
+	return h
+
+
+## The paddle held ready by the body, face to the net.
+func _rest(h: SimTypes.HumanInput) -> void:
+	var team := _team()
+	var side := K.side_sign(team)
+	h.paddle_x = head_x + K.right_sign(team) * rest_side
+	h.paddle_y = rest_y
+	h.paddle_z = head_z - side * rest_forward
+	h.normal = [0, 0, -side * K.Q14]
+
+
+func _incoming() -> bool:
+	var team := _team()
+	if sim.phase == K.PHASE_TOSS:
+		return sim.server_slot == slot
+	return sim.phase == K.PHASE_LIVE and sim.last_hitter >= 0 and sim.last_hitter >> 1 != team
+
+
+func _move() -> void:
+	var team := _team()
+	var side := K.side_sign(team)
+	var gx := 0
+	var gz := side * (K.COURT_HALF_LENGTH - 300000)
+	if _incoming() and sim.phase == K.PHASE_LIVE:
+		# Replan now and then, as the CPUs do (the plan costs a flight's prediction).
+		var key := sim.shots * 4 + sim.bounce_count
+		if key != _move_for or sim.tick >= _move_at:
+			_move_for = key
+			_move_at = sim.tick + 12
+			var plan := Intercept.plan(sim, team, head_x, head_z, speed, -1, MIN_LEAD)
+			if plan.is_empty():
+				return
+			_goal_x = plan[4]
+			_goal_z = plan[5]
+		gx = _goal_x
+		gz = _goal_z
+	elif sim.phase != K.PHASE_LIVE:
+		return
+	elif sim.required_bounce == K.REQUIRED_BOUNCE_NONE and sim.shots >= 3:
+		gz = side * (K.KITCHEN_DEPTH + 400000)
+	var dx := gx - head_x
+	var dz := gz - head_z
+	var d := Fx.length(dx, 0, dz)
+	if d <= speed:
+		head_x = gx
+		head_z = gz
+	else:
+		head_x += dx * speed / d
+		head_z += dz * speed / d
+
+
+## Plan a swing once per incoming shot (again if the ball's path changed).
+func _maybe_plan() -> void:
+	if not _incoming():
+		if sim.phase != K.PHASE_LIVE and sim.phase != K.PHASE_TOSS:
+			_plan_tick = -1
+		elif _plan_tick >= 0 and sim.tick > _plan_tick + FOLLOW_TICKS:
+			_plan_tick = -1
+		return
+	var key := sim.shots * 4 + (1 if sim.phase == K.PHASE_TOSS else 0) + sim.bounce_count * 2
+	if key == _plan_for and _plan_tick > sim.tick:
+		return
+	var team := _team()
+	if sim.phase == K.PHASE_LIVE and sim.going_out(team):
+		_plan_for = key
+		_plan_tick = -1
+		return
+	var reach := -1 if auto_move else K.REACH
+	var lead := SERVE_WAIT / 2 if sim.phase == K.PHASE_TOSS else MIN_LEAD
+	var plan := Intercept.plan(sim, team, head_x, head_z, speed, reach, lead)
+	if plan.is_empty():
+		return
+	_plan_for = key
+	var i: int = plan[0]
+	var b := sim.ball.copy()
+	b.held = false
+	for t in i:
+		b.step()
+	var target := _target(b)
+	if error > 0 and not has_aim:
+		target[0] += _scatter(error)
+		target[1] += _scatter(error)
+		if sim.phase == K.PHASE_LIVE and _scatter(50) + 50 < miss:
+			# Big enough that the shot assist can't save it all.
+			if _scatter(50) < 0:
+				target[1] += signi(target[1]) * 3200000
+			else:
+				target[0] = signi(target[0] + 1) * (K.COURT_HALF_WIDTH + 2600000)
+	var v := Aim.shot(b.x, b.y, b.z, target[0], target[1], target[2])
+	var dx: int = v[0] - b.vx
+	var dy: int = v[1] - b.vy
+	var dz: int = v[2] - b.vz
+	_n = Fx.unit_q14(dx, dy, dz)
+	var dl := Fx.length(dx, dy, dz)
+	var s := dl * 256 / (256 + K.PADDLE_E_256) + Fx.dot_q14(b.vx, b.vy, b.vz, _n)
+	_ux = s * _n[0] / K.Q14
+	_uy = s * _n[1] / K.Q14
+	_uz = s * _n[2] / K.Q14
+	var rel := Fx.dot_q14(b.vx - _ux, b.vy - _uy, b.vz - _uz, _n)   # < 0: closing
+	var gap := K.BALL_RADIUS + K.PADDLE_HALF_THICK + rel / 2
+	_px = b.x - gap * _n[0] / K.Q14
+	_py = b.y - gap * _n[1] / K.Q14
+	_pz = b.z - gap * _n[2] / K.Q14
+	_plan_tick = sim.tick + i
+
+
+func _scatter(r: int) -> int:
+	rng = Fx.lcg(rng)
+	return Fx.lcg_bits(rng) * (2 * r) / 0x7fff - r
+
+
+## [x, z, pace] for the shot from ball `b`.
+func _target(b: Ball) -> Array[int]:
+	var team := _team()
+	var opp := 1 - team
+	var os := K.side_sign(opp)
+	if sim.phase == K.PHASE_TOSS:
+		var box := K.right_sign(opp) * (1 if sim.serve_from_right() else -1)
+		return [box * K.COURT_HALF_WIDTH / 2, os * (K.COURT_HALF_LENGTH - 1500000), 95000]
+	if has_aim:
+		return [aim_x, aim_z, pace]
+	var o := sim.players[opp * 2]
+	var tx := -signi(o.x) * (K.COURT_HALF_WIDTH - 1000000) if o.x != 0 else 0
+	if absi(o.z) < K.KITCHEN_DEPTH + 900000 and b.y < 900000:
+		return [tx / 2, os * K.KITCHEN_DEPTH * 6 / 10, 40000]
+	return [tx, os * (K.COURT_HALF_LENGTH - 1100000), pace]
