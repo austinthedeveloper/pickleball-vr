@@ -101,7 +101,7 @@ func test_partner_deterministic() -> void:
 func test_dink_partner_menu_flow() -> void:
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	runner.root.add_child(main)
-	check(main.menu.row("to_partner").size() > 0, "DINK PARTNER on MAIN")
+	check(main.menu.row("to_partner").size() > 0, "PRACTICE PARTNER on MAIN")
 	main.lobby("partner")
 	check(main.view.sim.drill.partner and main.view.partner_avatar != null, "the lobby demos the partner")
 	main.menu.select("level")
@@ -218,3 +218,75 @@ func test_the_partner_moves_before_your_ball_bounces() -> void:
 				else:
 					late += 1
 	check(early >= 8 and early > late * 3, "it reads your shot and goes: %d early, %d not" % [early, late])
+
+
+func _hands(level: int) -> Array:
+	var s := Settings.new()
+	s.partner_hands = true
+	s.partner_level = level
+	var sim := Sim.new(s.partner_config())
+	return [sim, Bot.new(sim, 0)]
+
+
+func test_hands_is_volleys_at_you_at_every_level() -> void:
+	var speeds := []
+	for level in 3:
+		var m := _hands(level)
+		var sim: Sim = m[0]
+		var bot: Bot = m[1]
+		check(sim.drill.hands and sim.drill.partner, "HANDS is a partner drill")
+		var partner_hits := 0
+		var bounced := 0
+		var fastest := 0
+		for i in 9000:
+			sim.step([bot.input()])
+			for e in sim.drain_events():
+				if e[0] == K.EVENT_HIT and e[1] == 2:
+					partner_hits += 1
+					fastest = maxi(fastest, Fx.length(sim.ball.vx, sim.ball.vy, sim.ball.vz))
+				elif e[0] == K.EVENT_BOUNCE and e[2] > 0 and sim.drill.stage == Drill.FLY and sim.last_hitter == 2:
+					bounced += 1             # the partner's ball reached you on the bounce
+		check(partner_hits >= 30, "%s: the partner volleys back: %d hits" % [Drill.PACE_NAMES[level], partner_hits])
+		check(sim.drill.best >= 15, "%s: playable, %d in a row" % [Drill.PACE_NAMES[level], sim.drill.best])
+		check(bounced * 10 <= partner_hits, "%s: in the air, not bounced: %d of %d" % [Drill.PACE_NAMES[level], bounced, partner_hits])
+		speeds.append(fastest)
+	check(speeds[0] < speeds[1] and speeds[1] < speeds[2], "harder is faster: %s" % str(speeds))
+
+
+func test_hands_partner_stands_at_their_kitchen() -> void:
+	var m := _hands(1)
+	var sim: Sim = m[0]
+	var bot: Bot = m[1]
+	var deepest := 0
+	for i in 4000:
+		sim.step([bot.input()])
+		deepest = maxi(deepest, absi(sim.players[2].z))
+	check(deepest < K.KITCHEN_DEPTH + 1500000, "up at the net, not back at the baseline: %d" % deepest)
+
+
+func test_hands_deterministic() -> void:
+	var a := _hands(2)
+	var b := _hands(2)
+	for i in 4000:
+		(a[0] as Sim).step([(a[1] as Bot).input()])
+		(b[0] as Sim).step([(b[1] as Bot).input()])
+	eq((a[0] as Sim).snapshot(), (b[0] as Sim).snapshot(), "same rally")
+
+
+func test_hands_menu_and_save() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	runner.root.add_child(main)
+	main.lobby("partner")
+	main.menu.select("drill")
+	main.menu.change(1)
+	check(main.settings.partner_hands, "DRILL HANDS")
+	main._start(main.settings.partner_config(), false)
+	check(main.view.sim.drill.hands, "the match is HANDS")
+	main.queue_free()
+	var s := Settings.new()
+	s.partner_hands = true
+	s.save()
+	var back := Settings.new()
+	back.load_settings()
+	check(back.partner_hands, "saved")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))

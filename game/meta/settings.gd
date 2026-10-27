@@ -36,6 +36,7 @@ var partner_level := 1
 var partner_targets := true
 var partner_cross := false
 var partner_spread := 1
+var partner_hands := false           ## DRILL: DINKS or HANDS (ADR-014)
 var partner_best := 0
 
 
@@ -66,6 +67,7 @@ func load_settings() -> void:
 	partner_best = c.get_value("partner", "best", partner_best)
 	partner_cross = c.get_value("partner", "cross", partner_cross)
 	partner_spread = c.get_value("partner", "spread", partner_spread)
+	partner_hands = c.get_value("partner", "hands", partner_hands)
 
 
 func save() -> void:
@@ -94,6 +96,7 @@ func save() -> void:
 	c.set_value("partner", "best", partner_best)
 	c.set_value("partner", "cross", partner_cross)
 	c.set_value("partner", "spread", partner_spread)
+	c.set_value("partner", "hands", partner_hands)
 	c.save(path)
 
 
@@ -145,6 +148,10 @@ func partner_config() -> SimTypes.MatchConfig:
 	d.rules = Drill.RULE_KITCHEN
 	d.cross = partner_cross
 	d.spread = partner_spread
+	d.hands = partner_hands
+	if partner_hands:
+		d.zone = Drill.ZONE_ANY          # a volley that lands anywhere in counts too
+		d.targets = false                # no placing: volleys, not dinks
 	d.spot_z = K.KITCHEN_DEPTH + 300000
 	if partner_cross:
 		d.spot_x = K.COURT_HALF_WIDTH / 2      # your right court, the partner diagonal

@@ -65,6 +65,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-25 | Paddle tuned on logged swings: grip, restitution, swing curve (ADR-003) | `feature/cld-vr-partner-2` | Done (played: "so much better, feeling really good") |
 | VR-26 | FOCUS: long rallies dim the world (ADR-013) | `feature/cld-vr-focus` | Ready to test |
 | VR-27 | The dink zone: a foot past the kitchen line (ADR-010) | `feature/cld-vr-focus` | Ready to test |
+| VR-28 | HANDS: the partner volleys hard at you (ADR-014) | `feature/cld-vr-hands` | Ready to test |
 
 ## Phase 1: singles
 
@@ -127,6 +128,12 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-28, ready to test.** MAIN > PRACTICE PARTNER > DRILL HANDS. Stand
+at your kitchen line and volley: the partner comes up to theirs and
+volleys every ball back at you, hard, about waist to chest high. Try
+EASY, MEDIUM and HARD (7, 10 and 13 m/s). Is HARD fast enough, or too
+fast? Does the count (HANDS IN A ROW) feel fair?
 
 **VR-26 / VR-27, ready to test.** DINK PARTNER: string 8 dinks together
 and the world starts to darken, deeper every couple of dinks, back when

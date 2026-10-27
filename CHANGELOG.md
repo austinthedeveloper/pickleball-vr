@@ -4,6 +4,17 @@ What's new in each release of Pickleball '94 VR, for players. The format
 follows [Keep a Changelog](https://keepachangelog.com); versions follow
 [semver](https://semver.org) (design/RELEASING.md).
 
+## [Unreleased]
+
+### Added
+- **HANDS:** a new PRACTICE PARTNER drill (DRILL: HANDS). You and the
+  partner stand at your kitchen lines and volley hard at each other; it
+  takes every ball out of the air and sends it back at you. DIFFICULTY
+  is the pace.
+
+### Changed
+- DINK PARTNER is now PRACTICE PARTNER, with DINKS and HANDS drills.
+
 ## [0.2.0] - 2026-10-27
 
 The practice update: a dinking partner, a paddle tuned on real strokes,

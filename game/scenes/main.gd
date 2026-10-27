@@ -111,7 +111,8 @@ func _page(id: String) -> Menu3D:
 			m.add_row("start", "START")
 			m.add_row("back", "BACK")
 		"partner":
-			m.title = "DINK PARTNER   BEST %d" % settings.partner_best
+			m.title = "PRACTICE PARTNER   BEST %d" % settings.partner_best
+			m.add_row("drill", "DRILL", ["DINKS", "HANDS"], 1 if settings.partner_hands else 0)
 			m.add_row("level", "DIFFICULTY", Drill.PACE_NAMES, settings.partner_level)
 			m.add_row("side", "PARTNER", ["ACROSS", "CROSS COURT"], 1 if settings.partner_cross else 0)
 			m.add_row("spread", "SPREAD", Drill.SPREAD_NAMES, settings.partner_spread)
@@ -129,7 +130,7 @@ func _page(id: String) -> Menu3D:
 		_:
 			m.title = "PICKLEBALL '94 VR"
 			m.add_row("to_match", "PLAY A MATCH")
-			m.add_row("to_partner", "DINK PARTNER")
+			m.add_row("to_partner", "PRACTICE PARTNER")
 			m.add_row("to_machine", "BALL MACHINE")
 			m.add_row("to_lessons", "HOW TO PLAY")
 			if not use_xr:
@@ -159,9 +160,10 @@ func _on_changed(id: String, index: int) -> void:
 		"ptargets": settings.partner_targets = index == 1
 		"side": settings.partner_cross = index == 1
 		"spread": settings.partner_spread = index
+		"drill": settings.partner_hands = index == 1
 	settings.save()
 	if id in ["mode", "vs", "venue", "hand", "angle", "shot", "target", "zone", "machine_at", "speed",
-			"targets", "level", "ptargets", "side", "spread"]:
+			"targets", "level", "ptargets", "side", "spread", "drill"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
 

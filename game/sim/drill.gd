@@ -85,6 +85,13 @@ const PARTNER := 5                   ## DINK PARTNER: your ball's on their side,
 const PARTNER_Z := -(K.KITCHEN_DEPTH + 350000)
 const PARTNER_SPEED := 30000         ## 3.6 m/s
 const PARTNER_REACT := 22            ## ticks after your hit it starts moving (0.18 s)
+## HANDS (ADR-014): both at the kitchen line, keeping it alive in the air.
+## The partner volleys at you at DIFFICULTY's pace (7, 10, 13 m/s), waist to
+## chest high, and reads your volley faster than a dink.
+const HANDS_PACE := [60000, 85000, 110000]
+const HANDS_REACT := 12              ## 0.1 s
+const HANDS_HEIGHT := 950000         ## where it comes at you, give or take 15 cm
+const HANDS_HIGH := 1800000          ## a chest-high volley is still a volley to plan for
 ## A dink's difficulty is how low it skims the tape: EASY floats 60 cm
 ## over it (slow, a big bounce), HARD skims 12 cm (fast and low).
 const PARTNER_CLEAR := [600000, 300000, K.NET_CLEAR]
@@ -114,6 +121,7 @@ var rules := 0
 var partner := false                 ## DINK PARTNER instead of the machine
 var partner_pace := 1
 var cross := false                   ## the partner stands diagonally across, not straight
+var hands := false                   ## HANDS (ADR-014): volleys at each other, not dinks
 var spread := 1
 var targets := false                 ## floor targets on
 var goal := 0                        ## good returns to finish; 0 runs forever
@@ -151,6 +159,7 @@ func copy_settings_from(o: Drill) -> void:
 	partner = o.partner
 	partner_pace = o.partner_pace
 	cross = o.cross
+	hands = o.hands
 	spread = o.spread
 	targets = o.targets
 	speed = o.speed
@@ -351,6 +360,8 @@ func _return(sim: Sim) -> void:
 		_result(sim, RESULT_NET)
 		return
 	if not (ev & Ball.EV_BOUNCE):
+		if hands and _partner_takes_it(sim):
+			return
 		if sim.tick - hit_at > RETURN_GIVE_UP:
 			_result(sim, RESULT_OUT)
 		return
@@ -469,6 +480,9 @@ func _result(sim: Sim, r: int, rally_on := false) -> void:
 ## A dink from (x, y, z) to land about a metre in front of you, near your
 ## line: the partner's every shot.
 func _partner_dink(sim: Sim, x: int, y: int, z: int) -> void:
+	if hands:
+		_partner_volley(sim, x, y, z)
+		return
 	var p := sim.players[0]
 	var q := sim.players[2]
 	# Bounce about a metre in front of you on the line from here to you, so
@@ -508,15 +522,68 @@ func _partner_dink(sim: Sim, x: int, y: int, z: int) -> void:
 ## then moves to meet it, letting it bounce (the two-bounce machinery
 ## makes the planner wait for the bounce).
 func _partner_reads(sim: Sim) -> void:
-	sim.required_bounce = K.REQUIRED_BOUNCE_SERVE
+	# Dinks: let it bounce (the two-bounce machinery makes the planner wait).
+	# HANDS: take it out of the air.
+	sim.required_bounce = K.REQUIRED_BOUNCE_NONE if hands else K.REQUIRED_BOUNCE_SERVE
 	sim.serving_team = 0
 	partner_plan = -1
-	read_at = sim.tick + PARTNER_REACT
+	read_at = sim.tick + (HANDS_REACT if hands else PARTNER_REACT)
+
+
+## HANDS: a firm volley straight at you through the air, to your forehand,
+## backhand or body as SPREAD has it.
+func _partner_volley(sim: Sim, x: int, y: int, z: int) -> void:
+	var p := sim.players[0]
+	var q := sim.players[2]
+	var r: Array = SPREADS[clampi(spread, 0, SPREADS.size() - 1)]
+	var off: int = r[0] + sim.random(r[1] - r[0] + 1)
+	if sim.random(100) < 20:
+		off = sim.random(150001)
+	var tx := clampi(p.x + (off if sim.random(2) == 0 else -off), -K.COURT_HALF_WIDTH + 300000,
+		K.COURT_HALF_WIDTH - 300000)
+	var ty := HANDS_HEIGHT + sim.scatter(150000)
+	var pace: int = HANDS_PACE[clampi(partner_pace, 0, 2)]
+	var w := Aim.topspin(tx - x, p.z - z, 250000)
+	var v := Aim.through(x, maxi(y, 300000), z, tx, ty, p.z, pace, w)
+	var b := sim.ball
+	b.place(x, maxi(y, 300000), z)
+	b.launch(v[0], v[1], v[2])
+	b.set_spin(w[0], w[1], w[2])
+	aim_x = tx
+	sim.required_bounce = K.REQUIRED_BOUNCE_NONE
+	sim.last_hitter = 2
+	sim.bounce_count = 0
+	bounces = 0
+	feeds += 1
+	fed_at = sim.tick
+	q.swing_tick = sim.tick
+	stage = FLY
+	sim.emit(K.EVENT_HIT, 2, b.speed(), 0)
+
+
+## HANDS: your volley reaching the partner in the air. Returns true if it
+## volleyed it back (your shot counted, the rally goes on).
+func _partner_takes_it(sim: Sim) -> bool:
+	var b := sim.ball
+	var q := sim.players[2]
+	if bounces > 0 or b.z >= 0 or b.vz >= 0:
+		return false
+	if b.y < 250000 or b.y > 1900000 or Fx.length(b.x - q.x, 0, b.z - q.z) > K.REACH:
+		return false
+	if partner_plan >= 0 and sim.tick < partner_plan - 1 and b.z > q.z:
+		return false                     # not yet: it meets the ball where it planned
+	if sim.going_out(1):
+		return false                     # going out: it leaves it
+	rally += 1
+	best_rally = maxi(best_rally, rally)
+	_result(sim, RESULT_GOOD, true)
+	_partner_volley(sim, b.x, b.y, b.z)
+	return true
 
 
 func _partner_plan(sim: Sim) -> void:
 	var q := sim.players[2]
-	var plan := Intercept.plan(sim, 1, q.x, q.z, PARTNER_SPEED)
+	var plan := Intercept.plan(sim, 1, q.x, q.z, PARTNER_SPEED, -1, 1, HANDS_HIGH if hands else Intercept.COMFORT_HIGH)
 	if plan.is_empty():
 		partner_plan = -2                # unreachable: it stays put and the bounce decides
 		return
@@ -626,4 +693,4 @@ func _new_target(sim: Sim) -> void:
 func snapshot() -> Array:
 	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
 		hit_at, machine_z, partner_plan, read_at, target_x, target_z, target_hits, rally, best_rally,
-		1 if partner else 0]
+		1 if partner else 0, 1 if hands else 0]
