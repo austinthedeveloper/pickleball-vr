@@ -39,6 +39,9 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-07 | Doubles (ADR-004) | `feature/cld-vr-doubles` | Ready to test |
 | VR-08 | The ladder's eight teams as CPUs (ADR-005) | `feature/cld-vr-setup` | Ready to test |
 | VR-09 | The lobby and MATCH SETUP in the world (ADR-005) | `feature/cld-vr-setup` | Ready to test |
+| VR-10 | Spin and the sweet spot (ADR-006) | `feature/cld-vr-feel` | Ready to test |
+| VR-11 | Hit sounds, haptics, PADDLE ANGLE (ADR-006) | `feature/cld-vr-feel` | Ready to test |
+| VR-12 | The crowd and the announcer (ADR-006) | `feature/cld-vr-feel` | Ready to test |
 
 ## Phase 1: singles
 
@@ -72,6 +75,22 @@ DOUBLES, VS CHAMPS, then PLAY. The team's intro is called at the start.
 At the end, REMATCH or MATCH SETUP. On the Quest, point with your
 free-hand laser and pull a trigger. Do the teams feel different?
 HENDERSON should be easy and the CHAMPS hard.
+
+## Phase 3: feel
+
+**VR-10, ready to test.** Watch the demo (`-- demo`): CPU drives dip and
+kick forward off the bounce, and dinks float and check up. In the headset,
+brush up the back of the ball for topspin and slice under it for
+backspin. A hit off the rim should come off slower.
+
+**VR-11, ready to test (headset).** Hit sounds change with the shot.
+Haptics should be crisp from the sweet spot and dull off the rim. Try
+PADDLE ANGLE at 0, 15, 30 and 45 and see which matches how you hold a
+real paddle.
+
+**VR-12, ready to test.** Listen to a match: the start, a fault call,
+then the score before the serve ("four two", "three all"), match point,
+the result. The crowd stands for long rallies. Check the volumes.
 
 ## For you
 

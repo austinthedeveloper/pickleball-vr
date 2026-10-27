@@ -10,6 +10,7 @@ const ASSISTS := ["OFF", "LOW", "MID", "FULL"]
 const POINTS := ["5", "7", "11", "15"]
 const OFF_ON := ["OFF", "ON"]
 const HANDS := ["RIGHT", "LEFT"]
+const ANGLES := ["0", "15", "30", "45"]
 
 var settings := Settings.new()
 var view: MatchView
@@ -40,6 +41,7 @@ func _new_view() -> MatchView:
 	menu = null
 	view = MatchView.new()
 	view.left_handed = settings.left_handed
+	view.paddle_tilt = settings.tilt()
 	add_child(view)
 	return view
 
@@ -57,6 +59,8 @@ func lobby() -> void:
 	menu.add_row("points", "POINTS", POINTS, settings.points)
 	menu.add_row("win_by_2", "WIN BY 2", OFF_ON, 1 if settings.win_by_2 else 0)
 	menu.add_row("hand", "PADDLE HAND", HANDS, 1 if settings.left_handed else 0)
+	if use_xr:
+		menu.add_row("angle", "PADDLE ANGLE", ANGLES, settings.paddle_angle)
 	menu.add_row("play", "PLAY")
 	if not use_xr:
 		menu.add_row("quit", "QUIT")
@@ -75,8 +79,9 @@ func _on_changed(id: String, index: int) -> void:
 		"points": settings.points = index
 		"win_by_2": settings.win_by_2 = index == 1
 		"hand": settings.left_handed = index == 1
+		"angle": settings.paddle_angle = index
 	settings.save()
-	if id == "mode" or id == "vs" or id == "hand":
+	if id == "mode" or id == "vs" or id == "hand" or id == "angle":
 		lobby.call_deferred()        # the demo shows the new match
 
 

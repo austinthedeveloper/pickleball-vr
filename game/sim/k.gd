@@ -30,15 +30,28 @@ const BALL_RADIUS := 37000
 const GRAVITY := 681                 ## 9.807 m/s^2
 const DRAG_Q32 := 171
 const BOUNCE_VERTICAL_256 := 172     ## 0.67 (drag takes the rest): 78 in drop, back to 31
-const BOUNCE_PLANAR_256 := 205       ## 0.80 of the speed along the ground kept
+const BOUNCE_FRICTION_256 := 51      ## the bounce takes 0.2 of the slip at the contact
+                                     ## (no spin: 0.80 of the speed along the ground kept)
 const ROLL_VY := 1250                ## a bounce slower than 0.15 m/s rolls
 const ROLL_FRICTION_256 := 250
 const NET_KEEP_256 := 64             ## off the net: a quarter of the speed back
 
+# --- Spin (ADR-006): angular velocity in urad/tick. Magnus: a = k (w x v)
+# with k ~ 0.002 (a holed ball curves less than a tennis ball), times 2^32
+# and per urad.
+const MAGNUS_Q32 := 9
+const SPIN_DECAY_256 := 255          ## per tick: about 0.6 left after a second
+const SPIN_BOUNCE_KEEP_256 := 128
+const SPIN_MAX := 1600000            ## 190 rad/s, about 1800 rpm
+const SPIN_BRUSH_PCT := 40           ## of the paddle's brush across the ball that becomes spin
+const SPIN_KEEP_ON_HIT_PCT := 25     ## of the incoming spin that survives a hit
+const URAD := 1000000
+
 # --- Paddle: the face as a disc (contact), 8 x 10 in; half thickness.
 const PADDLE_FACE_RADIUS := 115000
 const PADDLE_HALF_THICK := 8000
-const PADDLE_E_256 := 128            ## paddle-ball restitution 0.5
+const PADDLE_E_256 := 128            ## paddle-ball restitution 0.5, at the sweet spot
+const PADDLE_EDGE_LOSS_PCT := 40     ## at the face's rim, 40% of that is lost (ADR-006)
 const PADDLE_COOLDOWN := 15          ## ticks before a paddle can hit again
 const Q14 := 16384                   ## unit vectors are Q14
 

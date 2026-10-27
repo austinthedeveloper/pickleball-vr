@@ -6,6 +6,7 @@ extends RefCounted
 const VERSION := 1
 const POINTS := [5, 7, 11, 15]
 const ASSISTS := [K.ASSIST_OFF, K.ASSIST_LOW, K.ASSIST_MID, K.ASSIST_FULL]
+const ANGLES := [0, 15, 30, 45]
 
 ## Tests point this at their own file (the runner does), never the player's.
 static var default_path := "user://settings.cfg"
@@ -18,6 +19,7 @@ var assist := 2                      ## index into ASSISTS
 var points := 0                      ## index into POINTS
 var win_by_2 := false
 var left_handed := false
+var paddle_angle := 1                ## index into ANGLES
 
 
 func load_settings() -> void:
@@ -31,6 +33,7 @@ func load_settings() -> void:
 	points = c.get_value("match", "points", points)
 	win_by_2 = c.get_value("match", "win_by_2", win_by_2)
 	left_handed = c.get_value("player", "left_handed", left_handed)
+	paddle_angle = c.get_value("player", "paddle_angle", paddle_angle)
 
 
 func save() -> void:
@@ -43,7 +46,12 @@ func save() -> void:
 	c.set_value("match", "points", points)
 	c.set_value("match", "win_by_2", win_by_2)
 	c.set_value("player", "left_handed", left_handed)
+	c.set_value("player", "paddle_angle", paddle_angle)
 	c.save(path)
+
+
+func tilt() -> float:
+	return float(ANGLES[clampi(paddle_angle, 0, ANGLES.size() - 1)])
 
 
 func match_config() -> SimTypes.MatchConfig:

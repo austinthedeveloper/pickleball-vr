@@ -17,6 +17,7 @@ var free_hand: XRController3D
 var paddle: PaddleMesh
 var held_ball: MeshInstance3D
 var left_handed := false
+var paddle_tilt := 0.0               ## degrees, the face tipped forward in the hand
 
 var _prev_head := Vector3.ZERO
 var _head := Vector3.ZERO
@@ -53,6 +54,7 @@ func _ready() -> void:
 	paddle_hand = left if left_handed else right
 	free_hand = right if left_handed else left
 	paddle = PaddleMesh.new()
+	paddle.rotation.x = -deg_to_rad(paddle_tilt)   # about the normal's axis: the face stays square
 	paddle_hand.add_child(paddle)
 	held_ball = MeshInstance3D.new()
 	var sm := SphereMesh.new()
@@ -158,8 +160,8 @@ func face_court() -> void:
 	global_position += pivot - camera.global_position
 
 
-func pulse(strength: float) -> void:
-	paddle_hand.trigger_haptic_pulse(&"haptic", 0.0, clampf(strength, 0.1, 1.0), 0.06, 0.0)
+func pulse(strength: float, seconds := 0.06) -> void:
+	paddle_hand.trigger_haptic_pulse(&"haptic", 0.0, clampf(strength, 0.1, 1.0), seconds, 0.0)
 
 
 func show_held_ball(on: bool) -> void:

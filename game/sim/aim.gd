@@ -6,6 +6,9 @@ extends RefCounted
 
 const MAX_FLIGHT := 480
 const SOLVE_PASSES := 10
+## The solver aims the centre a millimetre under bounce height, so the
+## bounce falls on tick n: corrections under n um round away to nothing.
+const LAND_Y := K.BALL_RADIUS - 1000
 
 
 ## A ball's flight to its first bounce or the net:
@@ -28,25 +31,36 @@ static func landing(b: Ball) -> Array[int]:
 	return [MAX_FLIGHT, t.x, t.z, 0, clear]
 
 
-## The velocity from (x, y, z) that lands on (tx, tz) in `ticks`, drag
-## and all (Newton-ish passes on the no-drag answer).
-static func solve(x: int, y: int, z: int, tx: int, tz: int, ticks: int) -> Array[int]:
+## Topspin of `mag` urad/tick for a ball travelling along (dx, dz); a
+## negative `mag` is backspin.
+static func topspin(dx: int, dz: int, mag: int) -> Array[int]:
+	var d := Fx.length(dx, 0, dz)
+	if d == 0:
+		return [0, 0, 0]
+	return [dz * mag / d, 0, -dx * mag / d]
+
+
+## The velocity from (x, y, z) that lands on (tx, tz) in `ticks` with spin
+## `w`, drag, Magnus and all (Newton-ish passes on the no-drag answer).
+static func solve(x: int, y: int, z: int, tx: int, tz: int, ticks: int,
+		w: Array[int] = [0, 0, 0]) -> Array[int]:
 	var n := maxi(ticks, 4)
 	var vx := (tx - x) / n
 	var vz := (tz - z) / n
 	# Semi-implicit Euler: y_n = y + n vy - g n (n + 1) / 2.
-	var vy := (K.BALL_RADIUS - y + K.GRAVITY * n * (n + 1) / 2) / n
+	var vy := (LAND_Y - y + K.GRAVITY * n * (n + 1) / 2) / n
 	var b := Ball.new()
 	for k in SOLVE_PASSES:
 		b.place(x, y, z)
 		b.launch(vx, vy, vz)
+		b.set_spin(w[0], w[1], w[2])
 		var ex := 0
 		var ey := 0
 		var ez := 0
 		for i in n:
-			_fly(b)
+			b.fly()
 		ex = tx - b.x
-		ey = K.BALL_RADIUS - b.y
+		ey = LAND_Y - b.y
 		ez = tz - b.z
 		vx += ex / n
 		vy += ey / n
@@ -54,33 +68,24 @@ static func solve(x: int, y: int, z: int, tx: int, tz: int, ticks: int) -> Array
 	return [vx, vy, vz]
 
 
-## One step of flight with no net and no ground (the solver's).
-static func _fly(b: Ball) -> void:
-	var s := Fx.length(b.vx, b.vy, b.vz)
-	b.vx -= Fx.drag(b.vx, s)
-	b.vy -= Fx.drag(b.vy, s) + K.GRAVITY
-	b.vz -= Fx.drag(b.vz, s)
-	b.x += b.vx
-	b.y += b.vy
-	b.z += b.vz
-
-
 ## A shot from (x, y, z) to (tx, tz) at about `pace` um/tick over the
-## ground, lofted until it clears the net by NET_CLEAR. Returns the
-## velocity.
-static func shot(x: int, y: int, z: int, tx: int, tz: int, pace: int) -> Array[int]:
+## ground with spin `w`, lofted until it clears the net by NET_CLEAR.
+## Returns the velocity.
+static func shot(x: int, y: int, z: int, tx: int, tz: int, pace: int,
+		w: Array[int] = [0, 0, 0]) -> Array[int]:
 	var dist := Fx.length(tx - x, 0, tz - z)
 	var ticks := clampi(dist / maxi(pace, 1000), 12, 300)
-	var v := solve(x, y, z, tx, tz, ticks)
+	var v := solve(x, y, z, tx, tz, ticks, w)
 	if (z > 0) == (tz > 0):
 		return v                     # no net between
 	var b := Ball.new()
 	for i in 12:
 		b.place(x, y, z)
 		b.launch(v[0], v[1], v[2])
+		b.set_spin(w[0], w[1], w[2])
 		var l := landing(b)
 		if l[3] == 0 and l[4] >= K.NET_CLEAR:
 			return v
 		ticks = ticks * 9 / 8 + 2
-		v = solve(x, y, z, tx, tz, ticks)
+		v = solve(x, y, z, tx, tz, ticks, w)
 	return v

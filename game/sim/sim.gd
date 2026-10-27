@@ -25,6 +25,9 @@ var point_winner := K.NO_TEAM
 var match_winner := K.NO_TEAM
 var still_ticks := 0
 var shots := 0                       ## hits this rally
+## The last human contact's distance from the face's centre (um): the
+## view's haptics and sound read it.
+var last_offset := 0
 var rng := 1
 var events: Array = []
 
@@ -227,8 +230,10 @@ func _cpu_serve(p: SimTypes.Player) -> void:
 	var tx := box_sign * K.COURT_HALF_WIDTH / 2 + scatter(_error(p) / 2)
 	var tz := K.side_sign(recv) * (K.COURT_HALF_LENGTH - 1500000 + scatter(_error(p) / 2))
 	ball.place(p.x - K.right_sign(p.team) * 350000, 700000, p.z - K.side_sign(p.team) * 300000)
-	var v := Aim.shot(ball.x, ball.y, ball.z, tx, tz, st.serve_pace)
+	var w := Aim.topspin(tx - ball.x, tz - ball.z, 300000)
+	var v := Aim.shot(ball.x, ball.y, ball.z, tx, tz, st.serve_pace, w)
 	ball.launch(v[0], v[1], v[2])
+	ball.set_spin(w[0], w[1], w[2])
 	p.swing_tick = tick
 	_serve_struck(p.slot)
 
@@ -346,7 +351,8 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 	var ty := ry - rn * n[1] / K.Q14
 	var tz := rz - rn * n[2] / K.Q14
 	var face := K.PADDLE_FACE_RADIUS + K.BALL_RADIUS / 2
-	if tx * tx + ty * ty + tz * tz > face * face:
+	var off2 := tx * tx + ty * ty + tz * tz
+	if off2 > face * face:
 		return false
 	var nn: Array[int] = [n[0] * s, n[1] * s, n[2] * s]
 	var ux := p.px - p.qx
@@ -355,10 +361,27 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 	var vn := Fx.dot_q14(ball.vx - ux, ball.vy - uy, ball.vz - uz, nn)
 	if vn >= 0:
 		return false                 # already leaving the face
-	var j := -vn * (256 + K.PADDLE_E_256) / 256
+	# The sweet spot (ADR-006): restitution falls off toward the rim.
+	var fr := K.PADDLE_FACE_RADIUS
+	var e := K.PADDLE_E_256 - K.PADDLE_E_256 * K.PADDLE_EDGE_LOSS_PCT * mini(off2, fr * fr) / (100 * fr * fr)
+	var j := -vn * (256 + e) / 256
 	var vx := ball.vx + j * nn[0] / K.Q14
 	var vy := ball.vy + j * nn[1] / K.Q14
 	var vz := ball.vz + j * nn[2] / K.Q14
+	# Spin: the face brushing across the ball, plus some of what it had.
+	var bx := ux - ball.vx
+	var by := uy - ball.vy
+	var bz := uz - ball.vz
+	var bn := Fx.dot_q14(bx, by, bz, nn)
+	bx -= bn * nn[0] / K.Q14
+	by -= bn * nn[1] / K.Q14
+	bz -= bn * nn[2] / K.Q14
+	var k := K.URAD / 100 * K.SPIN_BRUSH_PCT / K.BALL_RADIUS
+	var keep := K.SPIN_KEEP_ON_HIT_PCT
+	var swx := (by * nn[2] - bz * nn[1]) / K.Q14 * k + ball.wx * keep / 100
+	var swy := (bz * nn[0] - bx * nn[2]) / K.Q14 * k + ball.wy * keep / 100
+	var swz := (bx * nn[1] - by * nn[0]) / K.Q14 * k + ball.wz * keep / 100
+	last_offset = Fx.isqrt(off2)
 	# Leave from the face at the moment of touch.
 	var cx := p.qx + ux * f / 65536
 	var cy := p.qy + uy * f / 65536
@@ -366,6 +389,7 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 	ball.x = cx + tx + reach * nn[0] / K.Q14
 	ball.y = maxi(cy + ty + reach * nn[1] / K.Q14, K.BALL_RADIUS)
 	ball.z = cz + tz + reach * nn[2] / K.Q14
+	ball.set_spin(swx, swy, swz)
 	var v := _assist(p.team, [vx, vy, vz])
 	ball.launch(v[0], v[1], v[2])
 	return true
@@ -391,7 +415,7 @@ func _assist(team: int, v: Array[int]) -> Array[int]:
 		tx = box * clampi(tx * box, m, K.COURT_HALF_WIDTH - m)
 		depth = clampi(depth, K.KITCHEN_DEPTH + m, K.COURT_HALF_LENGTH - m)
 	var pace := maxi(Fx.length(v[0], 0, v[2]), 30000)
-	var ideal := Aim.shot(ball.x, ball.y, ball.z, tx, depth * opp, pace)
+	var ideal := Aim.shot(ball.x, ball.y, ball.z, tx, depth * opp, pace, [ball.wx, ball.wy, ball.wz])
 	var a := config.assist
 	return [v[0] + (ideal[0] - v[0]) * a / 100, v[1] + (ideal[1] - v[1]) * a / 100,
 		v[2] + (ideal[2] - v[2]) * a / 100]
@@ -589,8 +613,17 @@ func _cpu_shot(p: SimTypes.Player) -> void:
 		else:
 			tx = signi(tx + 1) * (K.COURT_HALF_WIDTH + 400000)
 	depth = maxi(depth, 300000)
-	var v := Aim.shot(ball.x, ball.y, ball.z, tx, depth * os, pace)
+	# Spin by the shot (ADR-006): drives rolled over, lobs a little, dinks
+	# and drops cut under.
+	var spin := 600000
+	if pace < 50000:
+		spin = -250000
+	elif pace < 70000:
+		spin = 350000
+	var w := Aim.topspin(tx - ball.x, depth * os - ball.z, spin)
+	var v := Aim.shot(ball.x, ball.y, ball.z, tx, depth * os, pace, w)
 	ball.launch(v[0], v[1], v[2])
+	ball.set_spin(w[0], w[1], w[2])
 
 
 # --- The step ---------------------------------------------------------------------
@@ -743,7 +776,8 @@ func snapshot() -> Array:
 	var a: Array = [tick, phase, phase_timer, score[0], score[1], serving_team, server_slot,
 		required_bounce, 1 if serve_pending else 0, bounce_count, last_hitter, last_fault,
 		point_winner, match_winner, shots, rng, receiver_slot,
-		ball.x, ball.y, ball.z, ball.vx, ball.vy, ball.vz, 1 if ball.held else 0]
+		ball.x, ball.y, ball.z, ball.vx, ball.vy, ball.vz, ball.wx, ball.wy, ball.wz,
+		1 if ball.held else 0]
 	for s in active_slots():
 		var p := players[s]
 		a.append_array([p.x, p.z, p.px, p.py, p.pz, p.cooldown, p.goal_x, p.goal_z, p.plan_tick,

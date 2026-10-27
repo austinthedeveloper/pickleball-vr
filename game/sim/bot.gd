@@ -216,6 +216,13 @@ func _maybe_plan() -> void:
 	_ux = s * _n[0] / K.Q14
 	_uy = s * _n[1] / K.Q14
 	_uz = s * _n[2] / K.Q14
+	# Brush up the back of a drive (topspin), down under a dink (backspin):
+	# across the face, so the shot's pace and line don't change (ADR-006).
+	var brush := 26000 if target[2] >= 80000 else -9000
+	var ty := K.Q14 - _n[1] * _n[1] / K.Q14         # up, less its part along the normal
+	_ux += brush * (-_n[1] * _n[0] / K.Q14) / K.Q14
+	_uy += brush * ty / K.Q14
+	_uz += brush * (-_n[1] * _n[2] / K.Q14) / K.Q14
 	var rel := Fx.dot_q14(b.vx - _ux, b.vy - _uy, b.vz - _uz, _n)   # < 0: closing
 	var gap := K.BALL_RADIUS + K.PADDLE_HALF_THICK + rel / 2
 	_px = b.x - gap * _n[0] / K.Q14

@@ -21,6 +21,9 @@ var spectate := false
 var left_handed := false
 var menu: Menu3D
 var them := "CPU"
+var crowd: Crowd
+var announcer: Announcer
+var paddle_tilt := 0.0               ## degrees: the paddle's angle in the hand (XR)
 var board: Scoreboard
 var avatars: Array[Avatar] = []
 var ball_mesh: MeshInstance3D
@@ -44,6 +47,7 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	if use_xr:
 		xr = XrRig.new()
 		xr.left_handed = left_handed
+		xr.paddle_tilt = paddle_tilt
 		add_child(xr)
 	else:
 		flat = FlatRig.new()
@@ -92,6 +96,10 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(shadow)
 	_sounds()
+	crowd = Crowd.new()
+	add_child(crowd)
+	announcer = Announcer.new()
+	add_child(announcer)
 	if spectate:
 		if flat:
 			flat.recenter(SPECTATE)
@@ -123,11 +131,22 @@ func hide_menu() -> void:
 		menu.visible = false
 
 
+## Each sound family is its variants (0_hit, 0_hit_2 ..), one 3D player
+## each, a variant picked per play (display only: the view's own roll).
+const FAMILIES := {"0_hit": 4, "0_hit_drive": 4, "0_hit_soft": 4, "0_hit_slice": 3,
+	"0_hit_smash": 2, "1_bounce": 3, "2_net": 1, "3_whistle": 1, "4_applause": 1}
+
+
 func _sounds() -> void:
-	for n in ["0_hit", "0_hit_drive", "1_bounce", "2_net", "3_whistle", "4_applause"]:
+	for n in FAMILIES:
 		var p := AudioStreamPlayer3D.new()
-		p.stream = load("res://assets/audio/%s.wav" % n)
+		var variants: Array[AudioStream] = []
+		for v in int(FAMILIES[n]):
+			variants.append(load("res://assets/audio/%s%s.wav" % [n, "" if v == 0 else "_%d" % (v + 1)]))
+		p.stream = variants[0]
+		p.set_meta("variants", variants)
 		p.unit_size = 6.0
+		p.max_polyphony = 2
 		add_child(p)
 		sound[n] = p
 	var amb := AudioStreamPlayer.new()
@@ -140,11 +159,31 @@ func _sounds() -> void:
 		amb.play.call_deferred()
 
 
-func _play(n: String, at: Vector3, pitch := 1.0) -> void:
+func _play(n: String, at: Vector3, pitch := 1.0, db := 0.0) -> void:
 	var p: AudioStreamPlayer3D = sound[n]
+	var variants: Array = p.get_meta("variants")
+	p.stream = variants[_quip.randi() % variants.size()]
 	p.global_position = at
 	p.pitch_scale = pitch
+	p.volume_db = db
 	p.play()
+
+
+## The hit's sound from the shot it made: a smash, a slice (backspin), a
+## soft touch, a drive, or the plain pop.
+func _hit_sound(speed: int) -> String:
+	var b := sim.ball
+	if b.vy < -40000 and speed > 110000 and b.y > 1400000:
+		return "0_hit_smash"
+	var top := Aim.topspin(b.vx, b.vz, 1)
+	var along := top[0] * b.wx + top[2] * b.wz
+	if along < -200000 and speed > 45000:
+		return "0_hit_slice"
+	if speed < 55000:
+		return "0_hit_soft"
+	if speed > 115000:
+		return "0_hit_drive"
+	return "0_hit"
 
 
 ## A change to the running match goes in on the next tick (port ADR-102).
@@ -223,6 +262,16 @@ func _tick(alpha: float, first: bool) -> void:
 
 
 func _on_phase(p: int) -> void:
+	if p == K.PHASE_SERVE and not spectate:
+		if sim.score[0] + sim.score[1] == 0 and announcer.said.is_empty():
+			announcer.say(["match_begin", "match_doubles" if sim.config.doubles else "match_singles"], Announcer.TOP)
+		else:
+			var srv := sim.serving_team
+			announcer.say(Announcer.score_line(sim.score[srv], sim.score[1 - srv]), Announcer.MID, true)
+			for t in [srv, 1 - srv]:
+				if sim.score_wins(sim.score[t] + 1, sim.score[1 - t]):
+					announcer.say(["match_point"], Announcer.HIGH, true)
+					break
 	if p == K.PHASE_SERVE_SETUP:
 		if xr:
 			if sim.tick <= 1:
@@ -236,18 +285,37 @@ func _on_event(e: Array) -> void:
 	var at := World.m(sim.ball.x, sim.ball.y, sim.ball.z)
 	match int(e[0]):
 		K.EVENT_HIT:
-			var hard: bool = e[2] > 110000
-			_play("0_hit_drive" if hard else "0_hit", at, 0.95 + 0.1 * (e[2] % 3))
+			var speed: int = e[2]
+			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf())
 			if xr and e[1] == 0:
-				xr.pulse(0.4 + e[2] / 250000.0)
+				# Crisp from the sweet spot, a duller, longer buzz off the rim.
+				var off := clampf(sim.last_offset / float(K.PADDLE_FACE_RADIUS), 0.0, 1.0)
+				xr.pulse((0.35 + speed / 250000.0) * (1.0 - 0.4 * off), 0.04 + 0.06 * off)
 		K.EVENT_BOUNCE:
-			_play("1_bounce", World.m(e[1], 0, e[2]))
+			_play("1_bounce", World.m(e[1], 0, e[2]), 1.0, -4.0)
 		K.EVENT_NET:
 			_play("2_net", World.m(e[1], e[2], 0))
 		K.EVENT_FAULT:
 			board.announce(K.fault_text(e[1]), Color(1, 0.4, 0.3))
+			const CALLS := {K.FAULT_OUT: "out", K.FAULT_NET: "net", K.FAULT_KITCHEN: "kitchen",
+				K.FAULT_EARLY_VOLLEY: "early_volley", K.FAULT_WRONG_BOX: "wrong_box"}
+			if not spectate and CALLS.has(int(e[1])):
+				announcer.say([CALLS[int(e[1])]], Announcer.MID)
 		K.EVENT_POINT:
-			_play("3_whistle", Vector3(0, 2, 0))
+			_play("3_whistle", Vector3(0, 2, 0), 1.0, -6.0)
+			var good := sim.last_fault == K.FAULT_SECOND_BOUNCE
+			crowd.react(sim.shots / 14.0 + (0.35 if good else 0.0))
+			if sim.shots >= 8 or good:
+				_play("4_applause", Vector3(-7, 1, 0), 1.0, linear_to_db(clampf(sim.shots / 16.0 + 0.3, 0.3, 1.0)))
+			if not spectate:
+				if good and sim.shots == 1:
+					announcer.say(["ace"], Announcer.HIGH)
+				elif good:
+					announcer.say(["winner"], Announcer.MID)
+				for r in [30, 20, 15, 10]:
+					if sim.shots >= r:
+						announcer.say(["rally_%d" % r], Announcer.HIGH, true)
+						break
 			if sim.last_fault == K.FAULT_NONE or sim.last_fault == K.FAULT_SECOND_BOUNCE:
 				board.announce("POINT YOU" if e[1] == 0 else "POINT CPU",
 					Color(0.5, 1, 0.5) if e[1] == 0 else Color(1, 0.8, 0.3))
@@ -256,7 +324,9 @@ func _on_event(e: Array) -> void:
 				board.announce(String(quips[_quip.randi() % quips.size()]), Color(1, 0.8, 0.4), 2.2)
 		K.EVENT_MATCH:
 			_play("4_applause", Vector3(0, 2, 0))
+			crowd.react(1.0)
 			if not spectate:
+				announcer.say(["match_win" if e[1] == 0 else "match_loss"], Announcer.TOP)
 				var line := "YOU WIN!" if e[1] == 0 else "%s WIN" % them
 				board.announce(line, Color(1, 0.9, 0.2), 4.0)
 				match_over.emit(e[1])
