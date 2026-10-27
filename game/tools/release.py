@@ -41,6 +41,13 @@ def run(*cmd, check=True, cwd=None, quiet=False):
     return r.stdout.strip() if not quiet else r
 
 
+def changed_files(porcelain):
+    """The paths in `git status --porcelain` output. Split on the space, not
+    by column: the output arrives stripped, so the first line can lose its
+    leading space (" M CHANGELOG.md" read as "HANGELOG.md")."""
+    return [l.split(None, 1)[1] for l in porcelain.splitlines() if l.strip()]
+
+
 def entry(version, text=None):
     """The CHANGELOG entry for `version` (without its heading), or None."""
     text = text if text is not None else (ROOT / CHANGELOG).read_text()
@@ -70,7 +77,7 @@ def checks(version, push):
     branch = run("git", "branch", "--show-current")
     if branch != "main":
         problems.append("releases are cut from main (on %s)" % branch)
-    dirty = [l[3:] for l in run("git", "status", "--porcelain", "--untracked-files=no").splitlines()]
+    dirty = changed_files(run("git", "status", "--porcelain", "--untracked-files=no"))
     extra = [f for f in dirty if f not in MAY_BE_DIRTY]
     if extra:
         problems.append("uncommitted changes outside %s: %s" % (", ".join(sorted(MAY_BE_DIRTY)), ", ".join(extra)))

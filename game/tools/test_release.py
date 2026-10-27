@@ -40,6 +40,13 @@ class Versions(unittest.TestCase):
         self.assertIn("version/code=702", presets)
 
 
+class Status(unittest.TestCase):
+    def test_paths_survive_a_stripped_first_line(self):
+        # run() strips its output: the first line's leading space goes.
+        out = "M CHANGELOG.md\n M design/ROADMAP.md\nMM game/x.gd"
+        self.assertEqual(release.changed_files(out), ["CHANGELOG.md", "design/ROADMAP.md", "game/x.gd"])
+
+
 class Changelog(unittest.TestCase):
     TEXT = ("# Changelog\n\n## [0.2.0] - 2026-11-01\n\nNew things.\n\n### Added\n- A\n\n"
             "## [0.1.0] - 2026-10-27\n\nFirst.\n")
