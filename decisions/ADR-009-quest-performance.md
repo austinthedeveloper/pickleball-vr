@@ -46,4 +46,13 @@ calls it.
 | Worst bot input | 14 ms | 2.2 ms |
 | The test suite | 17 s | 8 s |
 
-The Quest's numbers go here once the PERF lines are read on the device.
+**On the Quest 3, in a match (2026-10-27, debug build):**
+
+- **CPU:** a frame's work averages about 0.5 ms (crowd 0.2, sim 0.1,
+  input and draw under 0.1 each). The worst frame in 2 s ranges from 0.7
+  to 6.7 ms. No frame went over 11 ms.
+- **Display:** 72/72 fps. Late frames went from 1 to 9 a second to 0
+  most seconds, with an occasional 2 or 3.
+- **What remains is the GPU:** 10.4 to 11.5 ms a frame of the 13.9 ms
+  budget. The few late frames come at the top of that range, not from
+  the CPU. The next savings are on the GPU side.

@@ -47,6 +47,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-15 | Menu pages and pause (ADR-007) | `feature/cld-vr-practice` | Ready to test |
 | VR-16 | Venues: PARK, LAKESIDE, SUNSET, GYM, SPACE (ADR-008) | `feature/cld-vr-practice` | Ready to test |
 | VR-17 | More venues: DINOSAUR, UNDERSEA, TIME of day | | Planned |
+| VR-18 | Quest performance: CPU spikes fixed, PERF timing (ADR-009) | `feature/cld-vr-quest-device` | Done (measured on the Quest 3) |
 
 ## Phase 1: singles
 
