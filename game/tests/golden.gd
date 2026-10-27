@@ -4,15 +4,17 @@
 ## vs CPU match.
 extends SceneTree
 
-const CASES := {"singles_1994": [1994, 1], "singles_7_hard": [7, 2], "singles_42_easy": [42, 0]}
+const CASES := {"singles_1994": [1994, 1, false], "singles_7_hard": [7, 2, false],
+	"singles_42_easy": [42, 0, false], "doubles_1994": [1994, 1, true]}
 const TICKS := 24000
 const EVERY := 60
 
 
-static func trace(seed: int, difficulty: int) -> PackedStringArray:
+static func trace(seed: int, difficulty: int, doubles := false) -> PackedStringArray:
 	var cfg := SimTypes.MatchConfig.new()
 	cfg.seed = seed
 	cfg.difficulty = difficulty
+	cfg.doubles = doubles
 	var sim := Sim.new(cfg)
 	var bot := Bot.new(sim, 0)
 	var lines := PackedStringArray()
@@ -27,6 +29,6 @@ func _initialize() -> void:
 	for name in CASES:
 		var c: Array = CASES[name]
 		var f := FileAccess.open("res://tests/golden/%s.txt" % name, FileAccess.WRITE)
-		f.store_string("\n".join(trace(c[0], c[1])) + "\n")
+		f.store_string("\n".join(trace(c[0], c[1], c[2])) + "\n")
 		print("wrote ", name)
 	quit()

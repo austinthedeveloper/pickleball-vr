@@ -15,6 +15,7 @@ var phase_timer := 0
 var score: Array[int] = [0, 0]
 var serving_team := 0
 var server_slot := 0
+var receiver_slot := 2
 var required_bounce := K.REQUIRED_BOUNCE_NONE
 var serve_pending := false           ## the serve's first bounce is checked
 var bounce_count := 0                ## since the last hit
@@ -65,6 +66,7 @@ func new_match() -> void:
 	events = []
 	for p in players:
 		p.cpu = not is_human(p.slot)
+		p.court_right = p.slot % 2 == 0       # slots 0 and 2 start on the right
 		p.cooldown = 0
 		p.plan_tick = -1
 		p.swing_tick = -1
@@ -101,10 +103,19 @@ func set_phase(p: int) -> void:
 
 # --- Serving ---------------------------------------------------------------
 
-## The serving side's player for this point (singles: the only one; doubles
-## comes in phase 2).
+## The player of `team` in its right court (if `right`) or left. Singles
+## has one player, who serves and receives from either.
+func _player_on(team: int, right: bool) -> int:
+	if not config.doubles:
+		return team * 2
+	var a := team * 2
+	return a if players[a].court_right == right else a + 1
+
+
+## The serving side's player for this point: in doubles with rally scoring,
+## the one in the right court on an even score, the left on odd.
 func _server_for(team: int) -> int:
-	return team * 2
+	return _player_on(team, serve_from_right())
 
 
 ## True when the server serves from their right-hand court.
@@ -117,12 +128,48 @@ func serve_spot(slot: int) -> Array[int]:
 	var team := slot >> 1
 	var side := K.side_sign(team)
 	var right := serve_from_right()
+	if config.doubles:
+		return _doubles_spot(slot)
 	if team == serving_team:
 		var sx := K.right_sign(team) * (1 if right else -1) * (K.COURT_HALF_WIDTH / 3)
 		return [sx, side * (K.COURT_HALF_LENGTH + 350000)]
 	# The receiver, diagonally opposite: their own right when the server's is.
 	var rx := K.right_sign(team) * (1 if right else -1) * (K.COURT_HALF_WIDTH / 2)
 	return [rx, side * (K.COURT_HALF_LENGTH + 250000)]
+
+
+## Doubles: the server and partner back; the receiver back, partner at the
+## kitchen line. Each in their own court (right or left).
+func _doubles_spot(slot: int) -> Array[int]:
+	var p := players[slot]
+	var team := p.team
+	var side := K.side_sign(team)
+	var lane := K.right_sign(team) * (1 if p.court_right else -1)
+	var depth := K.COURT_HALF_LENGTH + 250000
+	if team == serving_team:
+		if slot == _server_for(team):
+			return [lane * K.COURT_HALF_WIDTH / 3, side * (K.COURT_HALF_LENGTH + 350000)]
+		return [lane * K.COURT_HALF_WIDTH / 2, side * (K.COURT_HALF_LENGTH - 200000)]
+	if p.court_right != serve_from_right():
+		depth = K.KITCHEN_DEPTH + 300000          # the receiver's partner
+	return [lane * K.COURT_HALF_WIDTH / 2, side * depth]
+
+
+## True if `slot` should take a ball at x: in singles always; in doubles
+## the serve is the receiver's, and after it whoever is nearer the ball's
+## line (the right-court player on a tie).
+func covers(slot: int, x: int) -> bool:
+	if not config.doubles:
+		return true
+	if required_bounce == K.REQUIRED_BOUNCE_SERVE:
+		return slot == receiver_slot
+	var p := players[slot]
+	var mate := players[slot ^ 1]
+	var dm := absi(x - p.x)
+	var dt := absi(x - mate.x)
+	if dm != dt:
+		return dm < dt
+	return p.court_right
 
 
 ## True if (x, z) is in the box the current serve must land in.
@@ -137,6 +184,7 @@ func in_service_box(x: int, z: int) -> bool:
 
 func _serve_setup() -> void:
 	server_slot = _server_for(serving_team)
+	receiver_slot = _player_on(1 - serving_team, serve_from_right())
 	required_bounce = K.REQUIRED_BOUNCE_NONE
 	serve_pending = false
 	bounce_count = 0
@@ -205,6 +253,9 @@ func resolve_point(losing_team: int, fault: int) -> void:
 	var winner := 1 - losing_team
 	point_winner = winner
 	last_fault = fault
+	if config.doubles and winner == serving_team:
+		for s in [winner * 2, winner * 2 + 1]:
+			players[s].court_right = not players[s].court_right   # the server's side switches
 	score[winner] += 1               # rally scoring (the ROM's default)
 	serving_team = winner
 	if fault != K.FAULT_NONE and fault != K.FAULT_SECOND_BOUNCE:
@@ -397,8 +448,11 @@ func _home(p: SimTypes.Player) -> Array[int]:
 	if not waiting_return and shots >= 2 and (p.slot * 37 + score[0] * 11 + score[1] * 7) % 100 < config.style.net_rush:
 		depth = K.KITCHEN_DEPTH + 350000
 	var x := 0
-	var opp := players[(1 - p.team) * 2]
-	x = clampi(opp.x / 3, -K.COURT_HALF_WIDTH / 2, K.COURT_HALF_WIDTH / 2)
+	if config.doubles:
+		x = K.right_sign(p.team) * (1 if p.court_right else -1) * K.COURT_HALF_WIDTH / 2
+	else:
+		var opp := players[(1 - p.team) * 2]
+		x = clampi(opp.x / 3, -K.COURT_HALF_WIDTH / 2, K.COURT_HALF_WIDTH / 2)
 	return [x, depth * side]
 
 
@@ -422,6 +476,12 @@ func _cpu_think(p: SimTypes.Player) -> void:
 	var plan := Intercept.plan(self, p.team, p.x, p.z, config.style.speed)
 	if plan.is_empty():
 		return
+	if not covers(p.slot, plan[1]):
+		p.plan_tick = -1
+		var h := _home(p)
+		p.goal_x = h[0]
+		p.goal_z = h[1]
+		return
 	p.goal_x = plan[4]
 	p.goal_z = plan[5]
 	p.plan_tick = tick + plan[0]
@@ -440,6 +500,13 @@ func _cpu_move(p: SimTypes.Player) -> void:
 		p.z += dz * sp / d
 	var side := K.side_sign(p.team)
 	p.z = side * clampi(p.z * side, K.NET_GAP, K.COURT_HALF_LENGTH + K.RUNOFF_BACK)
+	if config.doubles:
+		# Teammates keep a stride apart, side by side (port separate_teammates).
+		var mate := players[p.slot ^ 1]
+		var gap := p.x - mate.x
+		if absi(gap) < 900000 and Fx.length(gap, 0, p.z - mate.z) < 900000:
+			var away := 1 if gap > 0 or (gap == 0 and p.court_right == (K.right_sign(p.team) > 0)) else -1
+			p.x += away * (900000 - absi(gap)) / 2
 
 
 ## A CPU swings when the ball is in reach, legal and at (or past) its plan.
@@ -456,6 +523,8 @@ func _cpu_try_hit(p: SimTypes.Player) -> bool:
 	if ball.y < K.REACH_LOW or ball.y > K.REACH_HIGH:
 		return false
 	if Fx.length(ball.x - p.x, 0, ball.z - p.z) > K.REACH:
+		return false
+	if not covers(p.slot, ball.x):
 		return false
 	var passing := ball.z * side >= p.z * side - 100000
 	if p.plan_tick >= 0 and tick < p.plan_tick and not passing and ball.y > K.REACH_LOW * 2:
@@ -476,6 +545,12 @@ func _cpu_shot(p: SimTypes.Player) -> void:
 	var err := _error()
 	var at_net := opp.z * os < K.KITCHEN_DEPTH + 900000
 	var tx := -signi(opp.x) * (K.COURT_HALF_WIDTH - 450000) if opp.x != 0 else K.COURT_HALF_WIDTH / 2
+	if config.doubles:
+		var o2 := players[opp_team * 2 + 1]
+		at_net = at_net and o2.z * os < K.KITCHEN_DEPTH + 900000
+		tx = (opp.x + o2.x) / 2                        # down the middle, between them
+		if at_net:
+			tx = -signi(ball.x + 1) * K.COURT_HALF_WIDTH / 2   # dinks go crosscourt
 	var depth := K.COURT_HALF_LENGTH - 1000000
 	var pace := st.drive_pace
 	var roll := random(100)
@@ -637,8 +712,8 @@ func _update_live() -> void:
 			continue
 		if ball.z * K.side_sign(p.team) < -200000:
 			continue                     # reaching over the net
-		if last_hitter == s and bounce_count == 0:
-			continue                     # your own shot on its way out
+		if _hitter_team() == p.team and bounce_count == 0:
+			continue                     # your side's shot on its way out
 		if paddle_contact(p, bx, by, bz):
 			if _rules_hit(s):
 				_hit_by(s)
@@ -655,11 +730,12 @@ func _update_ball_only() -> void:
 func snapshot() -> Array:
 	var a: Array = [tick, phase, phase_timer, score[0], score[1], serving_team, server_slot,
 		required_bounce, 1 if serve_pending else 0, bounce_count, last_hitter, last_fault,
-		point_winner, match_winner, shots, rng,
+		point_winner, match_winner, shots, rng, receiver_slot,
 		ball.x, ball.y, ball.z, ball.vx, ball.vy, ball.vz, 1 if ball.held else 0]
 	for s in active_slots():
 		var p := players[s]
-		a.append_array([p.x, p.z, p.px, p.py, p.pz, p.cooldown, p.goal_x, p.goal_z, p.plan_tick])
+		a.append_array([p.x, p.z, p.px, p.py, p.pz, p.cooldown, p.goal_x, p.goal_z, p.plan_tick,
+			1 if p.court_right else 0, 1 if p.let_go else 0])
 	return a
 
 

@@ -102,6 +102,15 @@ func input() -> SimTypes.HumanInput:
 	return h
 
 
+## Where to wait across the court: the middle in singles, your own court
+## in doubles.
+func _lane_x() -> int:
+	if not sim.config.doubles:
+		return 0
+	var p := sim.players[slot]
+	return K.right_sign(_team()) * (1 if p.court_right else -1) * K.COURT_HALF_WIDTH / 2
+
+
 ## The paddle held ready by the body, face to the net.
 func _rest(h: SimTypes.HumanInput) -> void:
 	var team := _team()
@@ -122,7 +131,7 @@ func _incoming() -> bool:
 func _move() -> void:
 	var team := _team()
 	var side := K.side_sign(team)
-	var gx := 0
+	var gx := _lane_x()
 	var gz := side * (K.COURT_HALF_LENGTH - 300000)
 	if _incoming() and sim.phase == K.PHASE_LIVE:
 		# Replan now and then, as the CPUs do (the plan costs a flight's prediction).
@@ -133,8 +142,12 @@ func _move() -> void:
 			var plan := Intercept.plan(sim, team, head_x, head_z, speed, -1, MIN_LEAD)
 			if plan.is_empty():
 				return
-			_goal_x = plan[4]
-			_goal_z = plan[5]
+			if sim.covers(slot, plan[1]):
+				_goal_x = plan[4]
+				_goal_z = plan[5]
+			else:
+				_goal_x = _lane_x()
+				_goal_z = side * (K.COURT_HALF_LENGTH - 300000)
 		gx = _goal_x
 		gz = _goal_z
 	elif sim.phase != K.PHASE_LIVE:
@@ -173,6 +186,10 @@ func _maybe_plan() -> void:
 	var plan := Intercept.plan(sim, team, head_x, head_z, speed, reach, lead)
 	if plan.is_empty():
 		return
+	if sim.phase == K.PHASE_LIVE and not sim.covers(slot, plan[1]):
+		_plan_for = key
+		_plan_tick = -1
+		return                       # the partner's ball
 	_plan_for = key
 	var i: int = plan[0]
 	var b := sim.ball.copy()

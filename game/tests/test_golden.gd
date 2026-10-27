@@ -9,7 +9,7 @@ func test_golden_traces() -> void:
 	for name in Golden.CASES:
 		var c: Array = Golden.CASES[name]
 		var want := FileAccess.get_file_as_string("res://tests/golden/%s.txt" % name).strip_edges().split("\n")
-		var got := Golden.trace(c[0], c[1])
+		var got := Golden.trace(c[0], c[1], c[2])
 		var first := -1
 		for i in mini(want.size(), got.size()):
 			if want[i] != got[i]:

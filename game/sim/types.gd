@@ -107,3 +107,4 @@ class Player:
 	var think_at := 0
 	var swing_tick := -1             ## the view's cue for a CPU's swing
 	var let_go := false              ## the ball's going out: leave it
+	var court_right := true          ## doubles: in the right court (as they face the net)

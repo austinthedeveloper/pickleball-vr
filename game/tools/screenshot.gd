@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <demo|play> <frames> <out.png>
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <demo|play> <frames> <out.png> [doubles]
 extends SceneTree
 
 var frames := 240
@@ -16,7 +16,9 @@ func _initialize() -> void:
 		out = args[2]
 	var view := MatchView.new()
 	root.add_child(view)
-	view.setup(SimTypes.MatchConfig.new(), false, demo)
+	var cfg := SimTypes.MatchConfig.new()
+	cfg.doubles = args.has("doubles")
+	view.setup(cfg, false, demo)
 
 
 func _process(_delta: float) -> bool:

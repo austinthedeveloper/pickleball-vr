@@ -14,7 +14,7 @@ var xr: XrRig
 var flat: FlatRig
 var demo := false
 var board: Scoreboard
-var avatar: Avatar
+var avatars: Array[Avatar] = []
 var ball_mesh: MeshInstance3D
 var shadow: MeshInstance3D
 var sound := {}
@@ -42,9 +42,14 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false) -> void:
 		bot.rest_side = 300000
 		bot.rest_y = 1250000
 		bot.rest_forward = 600000
-	avatar = Avatar.new()
-	avatar.slot = 2
-	add_child(avatar)
+	const SHIRTS := [Color(0.85, 0.15, 0.2), Color(0.95, 0.85, 0.2), Color(0.95, 0.55, 0.12), Color(0.55, 0.25, 0.75)]
+	for s in sim.active_slots():
+		if sim.players[s].cpu:
+			var a := Avatar.new()
+			a.slot = s
+			a.shirt = SHIRTS[s]
+			add_child(a)
+			avatars.append(a)
 	board = Scoreboard.new()
 	add_child(board)
 	ball_mesh = MeshInstance3D.new()
@@ -208,7 +213,8 @@ func _draw(delta: float) -> void:
 	shadow.global_position = Vector3(b.x, 0.02, b.z)
 	var s := clampf(1.0 - b.y / 4.0, 0.35, 1.0)
 	shadow.scale = Vector3(s * 1.4, 1, s * 1.4)
-	avatar.show_from(sim, delta)
+	for a in avatars:
+		a.show_from(sim, delta)
 	board.show_from(sim, delta)
 	if flat and demo:
 		flat.head = World.m(bot.head_x, 0, bot.head_z) + Vector3(0, FlatRig.EYE, 0)

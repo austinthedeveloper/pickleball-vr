@@ -13,6 +13,7 @@ monitor.
 ```sh
 godot --path game                 # play (flat mode without a headset)
 godot --path game -- demo         # DEMO: the bot against the CPU
+godot --path game -- doubles      # doubles, with a CPU partner (ADR-004)
 game/tools/test.sh                # all tests, headless (must pass)
 ```
 

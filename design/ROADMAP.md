@@ -36,7 +36,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-04 | The park, the match view, flat mode | `feature/cld-vr-singles` | Ready to test |
 | VR-05 | The XR rig: paddle hand, serve hand, sticks, haptics | `feature/cld-vr-singles` | Blocked (needs the Quest set up) |
 | VR-06 | Quest build: export preset, OpenXR vendors plugin | | Blocked (needs the Quest set up) |
-| VR-07 | Doubles | | Planned |
+| VR-07 | Doubles (ADR-004) | `feature/cld-vr-doubles` | Ready to test |
 
 ## Phase 1: singles
 
@@ -54,6 +54,13 @@ and choose shots like a rec player? Rally stats:
 JDK and SDK are in and the Quest is in developer mode, the remaining work
 is the export preset, the vendors plugin and the first on-device check:
 pose names, the paddle's angle in the hand, frame rate.
+
+## Phase 2: doubles
+
+**VR-07, ready to test.** `godot --path game -- doubles` (or
+`-- doubles demo`). Watch for the rotation: after your side wins a point
+you switch courts. Does the CPU partner leave your balls to you? Rally
+stats: `rally_stats.gd -- 4 1 doubles` (about 12 shots a rally).
 
 ## For you
 
