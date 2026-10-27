@@ -580,7 +580,9 @@ func _trail_draw(b: Vector3, delta: float) -> void:
 
 
 ## Debug builds: one line per human hit, for tuning the paddle to real
-## swings (`adb logcat -s godot | grep SWING`). Forward is toward the net.
+## swings, to the log and to SWING_LOG on the device (game/tools/swings.sh
+## reads it). Forward is toward the net.
+const SWING_LOG := "user://swings.log"
 func _log_swing() -> void:
 	var c := sim.last_contact
 	if c.size() < 14:
@@ -595,10 +597,17 @@ func _log_swing() -> void:
 	probe.launch(c[9], c[10], c[11])
 	var lr: Array[int] = Aim.landing(probe)
 	var la: Array[int] = Aim.landing(sim.ball)
-	print("SWING paddle %.1f m/s (fwd %.1f up %.1f side %.1f) face open %d yaw %d | at %.2f m high, %.1f m from net | in %.1f m/s | raw out %.1f m/s at %d deg -> %s | assisted -> %s" % [
+	var line := ("SWING paddle %.1f m/s (fwd %.1f up %.1f side %.1f) face open %d yaw %d | at %.2f m high, %.1f m from net | in %.1f m/s | raw out %.1f m/s at %d deg -> %s | assisted -> %s" % [
 		u.length(), u.z * fwd, u.y, u.x, roundi(rad_to_deg(asin(clampf(n.y, -1, 1)))),
 		roundi(rad_to_deg(atan2(n.x, n.z * fwd))), c[12] / 1e6, absf(c[13]) / 1e6, vin.length(),
 		raw.length(), roundi(rad_to_deg(atan2(raw.y, Vector2(raw.x, raw.z).length()))), _where(lr), _where(la)])
+	print(line)
+	# Also to a file: the Quest's log buffer is only minutes long.
+	# Read it with game/tools/swings.sh.
+	var f := FileAccess.open(SWING_LOG, FileAccess.READ_WRITE if FileAccess.file_exists(SWING_LOG) else FileAccess.WRITE)
+	if f:
+		f.seek_end()
+		f.store_line("%s assist=%d %s" % [Time.get_datetime_string_from_system(), sim.config.assist, line])
 
 
 func _where(l: Array[int]) -> String:
