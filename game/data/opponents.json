@@ -38,7 +38,8 @@
       "lob": 0,
       "drive_pace": 115000,
       "serve_pace": 90000,
-      "aim": 0
+      "aim": 0,
+      "miss": 12
      }
     },
     {
@@ -62,7 +63,8 @@
       "lob": 15,
       "drive_pace": 115000,
       "serve_pace": 90000,
-      "aim": 2
+      "aim": 2,
+      "miss": 12
      }
     }
    ]
@@ -104,7 +106,8 @@
       "lob": 40,
       "drive_pace": 119000,
       "serve_pace": 92500,
-      "aim": 0
+      "aim": 0,
+      "miss": 11
      }
     },
     {
@@ -128,7 +131,8 @@
       "lob": 40,
       "drive_pace": 119000,
       "serve_pace": 92500,
-      "aim": 0
+      "aim": 0,
+      "miss": 11
      }
     }
    ]
@@ -170,7 +174,8 @@
       "lob": 0,
       "drive_pace": 123000,
       "serve_pace": 95000,
-      "aim": 1
+      "aim": 1,
+      "miss": 10
      }
     },
     {
@@ -194,7 +199,8 @@
       "lob": 0,
       "drive_pace": 123000,
       "serve_pace": 95000,
-      "aim": 1
+      "aim": 1,
+      "miss": 10
      }
     }
    ]
@@ -236,7 +242,8 @@
       "lob": 10,
       "drive_pace": 127000,
       "serve_pace": 97500,
-      "aim": 1
+      "aim": 1,
+      "miss": 9
      }
     },
     {
@@ -260,7 +267,8 @@
       "lob": 10,
       "drive_pace": 127000,
       "serve_pace": 97500,
-      "aim": 1
+      "aim": 1,
+      "miss": 9
      }
     }
    ]
@@ -302,7 +310,8 @@
       "lob": 0,
       "drive_pace": 131000,
       "serve_pace": 100000,
-      "aim": 0
+      "aim": 0,
+      "miss": 8
      }
     },
     {
@@ -326,7 +335,8 @@
       "lob": 0,
       "drive_pace": 131000,
       "serve_pace": 100000,
-      "aim": 0
+      "aim": 0,
+      "miss": 8
      }
     }
    ]
@@ -368,7 +378,8 @@
       "lob": 25,
       "drive_pace": 135000,
       "serve_pace": 102500,
-      "aim": 2
+      "aim": 2,
+      "miss": 7
      }
     },
     {
@@ -392,7 +403,8 @@
       "lob": 25,
       "drive_pace": 135000,
       "serve_pace": 102500,
-      "aim": 2
+      "aim": 2,
+      "miss": 7
      }
     }
    ]
@@ -434,7 +446,8 @@
       "lob": 18,
       "drive_pace": 139000,
       "serve_pace": 105000,
-      "aim": 2
+      "aim": 2,
+      "miss": 6
      }
     },
     {
@@ -458,7 +471,8 @@
       "lob": 18,
       "drive_pace": 139000,
       "serve_pace": 105000,
-      "aim": 2
+      "aim": 2,
+      "miss": 6
      }
     }
    ]
@@ -500,7 +514,8 @@
       "lob": 24,
       "drive_pace": 143000,
       "serve_pace": 107500,
-      "aim": 0
+      "aim": 0,
+      "miss": 5
      }
     },
     {
@@ -524,7 +539,8 @@
       "lob": 24,
       "drive_pace": 143000,
       "serve_pace": 107500,
-      "aim": 0
+      "aim": 0,
+      "miss": 5
      }
     }
    ]

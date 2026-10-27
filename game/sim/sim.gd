@@ -581,6 +581,8 @@ func _cpu_shot(p: SimTypes.Player) -> void:
 	pace += scatter(pace / 10)
 	# A mistake now and then: long, or wide.
 	var miss: int = [15, 9, 5][clampi(config.difficulty, 0, 2)]
+	if st.miss >= 0:
+		miss = st.miss * [16, 10, 6][clampi(config.difficulty, 0, 2)] / 10
 	if random(100) < miss:
 		if random(2) == 0:
 			depth = K.COURT_HALF_LENGTH + 500000

@@ -1,5 +1,5 @@
 ## Rally statistics, bot against CPU, as the game plays them:
-##   godot --headless --path game -s res://tools/rally_stats.gd -- [matches] [difficulty] [singles|doubles]
+##   godot --headless --path game -s res://tools/rally_stats.gd -- [matches] [difficulty] [singles|doubles] [ladder team 0-7]
 extends SceneTree
 
 
@@ -8,6 +8,7 @@ func _initialize() -> void:
 	var matches := int(args[0]) if args.size() > 0 else 4
 	var diff := int(args[1]) if args.size() > 1 else 1
 	var doubles := args.size() > 2 and args[2] == "doubles"
+	var team := int(args[3]) if args.size() > 3 else -1
 	var points := 0
 	var shots := 0
 	var faults := {}
@@ -18,6 +19,8 @@ func _initialize() -> void:
 		cfg.seed = 100 + m
 		cfg.difficulty = diff
 		cfg.doubles = doubles
+		if team >= 0:
+			Opponents.apply(cfg, team)
 		var sim := Sim.new(cfg)
 		var bot := Bot.new(sim, 0)
 		for i in 200000:

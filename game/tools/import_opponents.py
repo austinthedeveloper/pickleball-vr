@@ -28,6 +28,7 @@ def style(s, rung):
         "drive_pace": 115000 + rung * 4000,                        # um/tick
         "serve_pace": 90000 + rung * 2500,
         "aim": AIMS.get(s.get("aim", "away"), 0),
+        "miss": 12 - rung,                                         # percent at NORMAL
     }
 
 

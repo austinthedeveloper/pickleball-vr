@@ -51,10 +51,11 @@ class CpuStyle:
 	var drive_pace := 135000         ## um/tick, 16 m/s
 	var serve_pace := 100000
 	var aim := 0                     ## 0 away from the player, 1 at them, 2 a mix
+	var miss := -1                   ## percent of shots gone wrong at NORMAL; -1: the default table
 
 	static func from_dict(d: Dictionary) -> CpuStyle:
 		var c := CpuStyle.new()
-		for k in ["speed", "reaction", "error", "net_rush", "dink", "lob", "drive_pace", "serve_pace", "aim"]:
+		for k in ["speed", "reaction", "error", "net_rush", "dink", "lob", "drive_pace", "serve_pace", "aim", "miss"]:
 			if d.has(k):
 				c.set(k, int(d[k]))
 		return c
@@ -70,6 +71,7 @@ class CpuStyle:
 		c.drive_pace = drive_pace
 		c.serve_pace = serve_pace
 		c.aim = aim
+		c.miss = miss
 		return c
 
 
