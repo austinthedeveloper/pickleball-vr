@@ -14,6 +14,8 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ### Changed
 - DINK PARTNER is now PRACTICE PARTNER, with DINKS and HANDS drills.
+- **FOCUS is much stronger:** it starts at 5 in a row and the world is
+  nearly black around the court by 13.
 
 ## [0.2.0] - 2026-10-27
 

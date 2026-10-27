@@ -1,20 +1,20 @@
 ## FOCUS (ADR-013, after the port kit's rally heat, port ADR-068): in a long
 ## rally everything outside the court dims, step by step, a spotlight on
-## the rally: the court, net, players and ball stay bright. The port kit's
-## numbers, counted in shots by both sides: the first step at 15, one more
-## every 5, each 13% darker, capped at 62% so it never goes black. In
-## practice only your shots count, so a practice streak counts double
-## (the lead's ask: "the same numbers, halved").
+## the rally: the court, net, players and ball stay bright. Counted in
+## shots by both sides: the first step at 10, one more every 4, each 18%
+## darker, down to 88% (the port kit's 15, 5, 13% and 62% went unnoticed
+## in the headset). In practice only your shots count, so a practice
+## streak counts double: 5 in a row starts it, 13 is as dark as it gets.
 ##
 ## The first piece of the "zen state" the lead wants to grow: more can hang
 ## off the same amount later (sound, colour, the crowd's hush).
 class_name Focus
 extends RefCounted
 
-const AT := 15                       ## shots (both sides): the first step
-const STEP := 5                      ## shots between steps
-const ALPHA := 0.13                  ## each step's darkness
-const MAX := 0.62                    ## never black
+const AT := 10                       ## shots (both sides): the first step
+const STEP := 4                      ## shots between steps
+const ALPHA := 0.18                  ## each step's darkness
+const MAX := 0.88                    ## almost black, never quite
 const EASE_IN := 2.0                 ## per second: in over about half a second
 const EASE_OUT := 1.2                ## ...out a little slower
 

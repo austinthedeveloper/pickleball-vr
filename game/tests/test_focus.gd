@@ -2,19 +2,22 @@
 extends TestSuite
 
 
-func test_the_port_kits_numbers() -> void:
-	eq(Focus.amount(14), 0.0, "nothing before 15 shots")
-	near(int(Focus.amount(15) * 100), 13, 0, "a first step at 15")
-	near(int(Focus.amount(20) * 100), 26, 0, "darker every 5")
+func test_the_steps() -> void:
+	eq(Focus.amount(9), 0.0, "nothing before 10 shots")
+	near(int(round(Focus.amount(10) * 100)), 18, 0, "a first step at 10")
+	near(int(round(Focus.amount(14) * 100)), 36, 0, "darker every 4")
 	eq(Focus.amount(200), Focus.MAX, "never black")
+	check(Focus.MAX >= 0.85, "deep enough to notice: %.2f" % Focus.MAX)
 
 
 func test_practice_counts_your_shots_double() -> void:
 	var sim := Sim.new(Settings.new().partner_config())
-	sim.drill.streak = 7
-	eq(Focus.amount(Focus.shots_of(sim)), 0.0, "7 dinks in a row: not yet")
-	sim.drill.streak = 8
-	check(Focus.amount(Focus.shots_of(sim)) > 0.0, "the 8th: focus begins (the port kit's 15, halved)")
+	sim.drill.streak = 4
+	eq(Focus.amount(Focus.shots_of(sim)), 0.0, "4 dinks in a row: not yet")
+	sim.drill.streak = 5
+	check(Focus.amount(Focus.shots_of(sim)) > 0.0, "the 5th: focus begins")
+	sim.drill.streak = 13
+	eq(Focus.amount(Focus.shots_of(sim)), Focus.MAX, "13 in a row: as dark as it gets")
 
 
 func test_a_long_streak_dims_the_world_not_the_court() -> void:
