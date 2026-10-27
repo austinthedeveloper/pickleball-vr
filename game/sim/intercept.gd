@@ -11,7 +11,7 @@ const BEHIND := 150000
 
 ## [ticks ahead, ball x, y, z, stance x, z] or [] when there is none.
 static func plan(sim: Sim, team: int, body_x: int, body_z: int, speed: int,
-		max_reach := -1, min_ticks := 1) -> Array[int]:
+		max_reach := -1, min_ticks := 1, high := COMFORT_HIGH) -> Array[int]:
 	var b := sim.ball.copy()
 	var bounces := sim.bounce_count
 	var need_bounce := sim.needs_bounce(team)
@@ -33,7 +33,7 @@ static func plan(sim: Sim, team: int, body_x: int, body_z: int, speed: int,
 			continue
 		if need_bounce and bounces == 0:
 			continue
-		if b.y < K.REACH_LOW or b.y > COMFORT_HIGH:
+		if b.y < K.REACH_LOW or b.y > high:
 			continue
 		var sx := clampi(b.x - fore * SIDE_STEP, -K.COURT_HALF_WIDTH - K.RUNOFF_SIDE,
 			K.COURT_HALF_WIDTH + K.RUNOFF_SIDE)

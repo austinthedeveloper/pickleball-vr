@@ -147,8 +147,11 @@ func _move() -> void:
 			_move_at = sim.tick + 12
 			var plan := Intercept.plan(sim, team, head_x, head_z, speed, -1, MIN_LEAD)
 			if plan.is_empty():
-				return
-			if sim.covers(slot, plan[1]):
+				# Nothing to plan yet (the ball's not on its way): home, not a
+				# stale goal (it used to walk to (0, 0), the middle of the net).
+				_goal_x = sim.drill.spot_x if sim.drill else _lane_x()
+				_goal_z = sim.drill.spot_z if sim.drill else side * (K.COURT_HALF_LENGTH - 300000)
+			elif sim.covers(slot, plan[1]):
 				_goal_x = plan[4]
 				_goal_z = plan[5]
 			else:
@@ -192,13 +195,17 @@ func _maybe_plan() -> void:
 	if key == _plan_for and _plan_tick > sim.tick:
 		return
 	var team := _team()
-	if sim.phase == K.PHASE_LIVE and sim.going_out(team):
+	var hands := sim.drill != null and sim.drill.hands
+	# Leave what's going out, except in HANDS: there everything's played
+	# (a hard volley at the chest would land long).
+	if sim.phase == K.PHASE_LIVE and not hands and sim.going_out(team):
 		_plan_for = key
 		_plan_tick = -1
 		return
 	var reach := -1 if auto_move else K.REACH
 	var lead := SERVE_WAIT / 2 if sim.phase == K.PHASE_TOSS else MIN_LEAD
-	var plan := Intercept.plan(sim, team, head_x, head_z, speed, reach, lead)
+	var high := Drill.HANDS_HIGH if hands else Intercept.COMFORT_HIGH
+	var plan := Intercept.plan(sim, team, head_x, head_z, speed, reach, lead, high)
 	if plan.is_empty():
 		return
 	if sim.phase == K.PHASE_LIVE and not sim.covers(slot, plan[1]):
@@ -289,6 +296,10 @@ func _target(b: Ball) -> Array[int]:
 	if sim.drill:
 		# Practice: at the floor target if there is one, else to the zone
 		# the drill asks for.
+		if sim.drill.hands:
+			# HANDS: a firm volley at the partner (it passes them waist high).
+			var q := sim.players[2]
+			return [q.x, os * (K.KITCHEN_DEPTH + 2500000), 80000]
 		if sim.drill.targets:
 			var soft := sim.drill.zone == Drill.ZONE_KITCHEN or sim.drill.partner
 			return [sim.drill.target_x, sim.drill.target_z, 40000 if soft else pace]

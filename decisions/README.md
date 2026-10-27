@@ -19,5 +19,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [011](ADR-011-releases.md) | Releases: semver, a changelog, the APK on GitHub |
 | [012](ADR-012-style.md) | How the practice partners look and move |
 | [013](ADR-013-focus.md) | FOCUS: a long rally dims the world |
+| [014](ADR-014-hands.md) | HANDS, the partner's fast-hands drill |
 
-Next: ADR-014.
+Next: ADR-015.

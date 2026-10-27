@@ -44,9 +44,12 @@ default.
 
 ## Practice
 
-- **DINK PARTNER:** a CPU at their kitchen line keeps a dinking rally
-  going, every ball back to you. You can set the DIFFICULTY (how low it
-  skims the net) and turn on floor TARGETS (ADR-010).
+- **PRACTICE PARTNER:** a CPU at their kitchen line.
+  - DINKS: it keeps a dinking rally going, every ball back to you. You
+    can set the DIFFICULTY (how low it skims the net) and turn on floor
+    TARGETS (ADR-010).
+  - HANDS: it volleys every ball hard back at you, out of the air;
+    DIFFICULTY is the pace (ADR-014).
 - **BALL MACHINE:** drives, dinks, lobs or a mix. You set the SPEED, the
   TARGET, where the machine stands (MACHINE AT), the RATE, RETURN TO and
   TARGETS. At your kitchen line, drives come at you through the air
