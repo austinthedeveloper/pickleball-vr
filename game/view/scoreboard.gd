@@ -5,6 +5,7 @@ extends Node3D
 
 const BOARD := Color(0.08, 0.1, 0.16)
 
+var them := "CPU"
 var score_label: Label3D
 var info_label: Label3D
 var call_label: Label3D
@@ -56,16 +57,16 @@ func _label(parent: Node3D, at: Vector3, size: int, c: Color) -> Label3D:
 func show_from(sim: Sim, delta: float) -> void:
 	var srv := sim.serving_team
 	score_label.text = "%d - %d" % [sim.score[srv], sim.score[1 - srv]]
-	var who := "CPU"
+	var who := them
 	if srv == 0:
 		who = "YOU" if sim.server_slot == 0 else "PARTNER"
 	match sim.phase:
 		K.PHASE_MATCH_RESULT:
-			info_label.text = ("YOU WIN!" if sim.match_winner == 0 else "CPU WINS") + "  A: AGAIN"
+			info_label.text = "YOU WIN!" if sim.match_winner == 0 else "%s WIN" % them
 		K.PHASE_SERVE, K.PHASE_SERVE_SETUP, K.PHASE_TOSS:
 			info_label.text = "%s TO SERVE  -  TO %d" % [who, sim.config.points_to_win]
 		_:
-			info_label.text = "%s %d   CPU %d" % ["US" if sim.config.doubles else "YOU", sim.score[0], sim.score[1]]
+			info_label.text = "%s %d   %s %d" % ["US" if sim.config.doubles else "YOU", sim.score[0], them, sim.score[1]]
 	if _call_time > 0.0:
 		_call_time -= delta
 		call_label.visible = _call_time > 0.0

@@ -7,12 +7,20 @@ extends Node3D
 
 const DT := 1.0 / K.TICK_HZ
 const MAX_TICKS_PER_FRAME := 8
+## The lobby's spectator spot: behind the near baseline, outside the fence.
+const SPECTATE := Vector3(-3.0, 0, 9.4)
+
+signal match_over(winner: int)
 
 var sim: Sim
 var bot: Bot
 var xr: XrRig
 var flat: FlatRig
 var demo := false
+var spectate := false
+var left_handed := false
+var menu: Menu3D
+var them := "CPU"
 var board: Scoreboard
 var avatars: Array[Avatar] = []
 var ball_mesh: MeshInstance3D
@@ -22,20 +30,25 @@ var input_log: Array = []            ## every tick's human input, as arrays
 var _acc := 0.0
 var _commands: Array = []
 var _last_phase := -1
-var _menu_was := false
+var _quip := RandomNumberGenerator.new()     # display only: which quip
 
 
-func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false) -> void:
+func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectating := false) -> void:
 	sim = Sim.new(cfg)
-	demo = demo_mode
+	spectate = spectating
+	demo = demo_mode or spectating
 	bot = Bot.new(sim, 0)
+	if cfg.opponent >= 0:
+		them = String(Opponents.team(cfg.opponent)["team"])
 	add_child(World.new())
 	if use_xr:
 		xr = XrRig.new()
+		xr.left_handed = left_handed
 		add_child(xr)
 	else:
 		flat = FlatRig.new()
 		flat.demo = demo
+		flat.spectate = spectate
 		add_child(flat)
 		bot.auto_move = demo
 		bot.auto_serve = demo
@@ -44,13 +57,16 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false) -> void:
 		bot.rest_forward = 600000
 	const SHIRTS := [Color(0.85, 0.15, 0.2), Color(0.95, 0.85, 0.2), Color(0.95, 0.55, 0.12), Color(0.55, 0.25, 0.75)]
 	for s in sim.active_slots():
-		if sim.players[s].cpu:
+		if sim.players[s].cpu or spectate:
 			var a := Avatar.new()
 			a.slot = s
 			a.shirt = SHIRTS[s]
+			if cfg.opponent >= 0 and s >= 2:
+				a.shirt = Opponents.shirt(cfg.opponent, s)
 			add_child(a)
 			avatars.append(a)
 	board = Scoreboard.new()
+	board.them = them
 	add_child(board)
 	ball_mesh = MeshInstance3D.new()
 	var sm := SphereMesh.new()
@@ -76,8 +92,35 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false) -> void:
 	shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(shadow)
 	_sounds()
-	if flat:
+	if spectate:
+		if flat:
+			flat.recenter(SPECTATE)
+	elif flat:
 		flat.recenter(_spot(0))
+	if cfg.opponent >= 0 and not spectate:
+		board.announce(String(Opponents.team(cfg.opponent)["intro"]), Color(1, 0.9, 0.5), 3.5)
+
+
+## Show a menu panel in front of you, pointed at with the laser or mouse.
+func show_menu(m: Menu3D) -> void:
+	if menu and menu != m:
+		menu.queue_free()
+	menu = m
+	if m.get_parent() == null:
+		add_child(m)
+	var head := xr.head_position() if xr else flat.head_position()
+	var fwd := xr.forward() if xr else flat.forward()
+	var right := fwd.cross(Vector3.UP)
+	var at := head + fwd * 1.7 + right * (0.6 if spectate else 0.0)
+	at.y = head.y - 0.1
+	m.global_position = at
+	m.look_at(at + (at - head) * Vector3(1, 0, 1), Vector3.UP)
+	m.visible = true
+
+
+func hide_menu() -> void:
+	if menu:
+		menu.visible = false
 
 
 func _sounds() -> void:
@@ -122,24 +165,35 @@ func _spot(slot: int) -> Vector3:
 func _process(delta: float) -> void:
 	if sim == null:
 		return
-	var rig_menu := false
 	if xr:
 		xr.begin_frame(delta)
-		rig_menu = xr.menu_pressed
 	else:
 		flat.begin_frame(delta)
-		rig_menu = flat.menu_pressed and not _menu_was
-		_menu_was = flat.menu_pressed
-		if flat.serve_pressed:
+		if flat.serve_pressed and not (menu and menu.visible):
 			bot.serve_now = true
-	if rig_menu and sim.phase == K.PHASE_MATCH_RESULT:
-		command([K.CMD_NEW_MATCH])
+	_drive_menu()
 	_acc = minf(_acc + delta, DT * MAX_TICKS_PER_FRAME)
 	var n := int(_acc / DT)
 	_acc -= n * DT
 	for j in n:
 		_tick(float(j + 1) / n, j == 0)
 	_draw(delta)
+
+
+func _drive_menu() -> void:
+	var on := menu != null and menu.visible
+	if xr:
+		xr.show_laser(on)
+	if not on:
+		return
+	var ray: Array[Vector3] = xr.pointer() if xr else flat.pointer()
+	var click := xr.click if xr else flat.click
+	var nav := xr.nav if xr else flat.nav
+	if nav.y != 0:
+		menu.move(nav.y)
+	if nav.x != 0:
+		menu.change(nav.x)
+	menu.point(ray[0], ray[1], click)
 
 
 func _tick(alpha: float, first: bool) -> void:
@@ -173,7 +227,7 @@ func _on_phase(p: int) -> void:
 		if xr:
 			if sim.tick <= 1:
 				xr.face_court()
-			xr.recenter(_spot(0))
+			xr.recenter(SPECTATE if spectate else _spot(0))
 		elif not demo:
 			flat.recenter(_spot(0))
 
@@ -197,9 +251,17 @@ func _on_event(e: Array) -> void:
 			if sim.last_fault == K.FAULT_NONE or sim.last_fault == K.FAULT_SECOND_BOUNCE:
 				board.announce("POINT YOU" if e[1] == 0 else "POINT CPU",
 					Color(0.5, 1, 0.5) if e[1] == 0 else Color(1, 0.8, 0.3))
+			elif e[1] == 0 and sim.config.opponent >= 0 and not spectate and _quip.randi() % 3 == 0:
+				var quips: Array = Opponents.team(sim.config.opponent)["quips"]
+				board.announce(String(quips[_quip.randi() % quips.size()]), Color(1, 0.8, 0.4), 2.2)
 		K.EVENT_MATCH:
 			_play("4_applause", Vector3(0, 2, 0))
-			board.announce("YOU WIN!" if e[1] == 0 else "CPU WINS", Color(1, 0.9, 0.2), 4.0)
+			if not spectate:
+				var line := "YOU WIN!" if e[1] == 0 else "%s WIN" % them
+				board.announce(line, Color(1, 0.9, 0.2), 4.0)
+				match_over.emit(e[1])
+			else:
+				command([K.CMD_NEW_MATCH])       # the lobby's demo plays on
 
 
 func _draw(delta: float) -> void:
@@ -216,5 +278,5 @@ func _draw(delta: float) -> void:
 	for a in avatars:
 		a.show_from(sim, delta)
 	board.show_from(sim, delta)
-	if flat and demo:
+	if flat and demo and not spectate:
 		flat.head = World.m(bot.head_x, 0, bot.head_z) + Vector3(0, FlatRig.EYE, 0)

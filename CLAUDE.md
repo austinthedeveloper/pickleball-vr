@@ -12,13 +12,14 @@ game/tools/test.sh                                   # all tests, headless (must
 godot --path game                                    # play (flat mode without a headset)
 godot --path game -- demo                            # DEMO: bot vs CPU
 godot --headless --path game -s res://tests/golden.gd   # regenerate golden traces (play changes only)
-godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <demo|play> <frames> <out.png>
-godot --headless --path game -s res://tools/rally_stats.gd -- <matches> <difficulty>
+godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play> <frames> <out.png> [doubles]
+godot --headless --path game -s res://tools/rally_stats.gd -- <matches> <difficulty> [doubles]
+python3 game/tools/import_opponents.py                # the ladder, from the port kit
 ```
 
 `design/ROADMAP.md` is the milestone sheet: keep it current with each
 branch. `design/KNOWN_ISSUES.md` lists the defects, and
-`decisions/README.md` the ADRs (next: ADR-005). `design/QUEST_SETUP.md`
+`decisions/README.md` the ADRs (next: ADR-006). `design/QUEST_SETUP.md`
 covers the headset build.
 
 **The canon bible** is `../pickleball/docs/PICKLEBALL_94_BIBLE.md`. The VR
@@ -40,6 +41,12 @@ decisions are cited as "port ADR-n", the SNES repo's as "SNES ADR-n".
   command: `MatchView.command` → `Sim.step(human, commands)`.
 - **Tests play through `step()`** with the bot, as the game does.
 - **Every OpenXR name lives in `view/xr_rig.gd`.**
+- **Menus are `Menu3D`s** (rows by id, move/change/press or point and
+  click). Tests select rows by id, never by counting.
+- **Settings live in `Settings`** (`meta/settings.gd`), and tests use
+  their own file (the runner sets `Settings.default_path`).
+- **The ladder is data:** `data/opponents.json` comes from
+  `tools/import_opponents.py`. Don't edit it by hand.
 - **Typed GDScript.** `:=` can't infer from Array elements: annotate
   (`var x: int = arr[i]`). `pass` and `call` are reserved.
 - **Behaviour changes need an ADR**, and golden traces change only on

@@ -37,6 +37,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-05 | The XR rig: paddle hand, serve hand, sticks, haptics | `feature/cld-vr-singles` | Blocked (needs the Quest set up) |
 | VR-06 | Quest build: export preset, OpenXR vendors plugin | | Blocked (needs the Quest set up) |
 | VR-07 | Doubles (ADR-004) | `feature/cld-vr-doubles` | Ready to test |
+| VR-08 | The ladder's eight teams as CPUs (ADR-005) | `feature/cld-vr-setup` | Ready to test |
+| VR-09 | The lobby and MATCH SETUP in the world (ADR-005) | `feature/cld-vr-setup` | Ready to test |
 
 ## Phase 1: singles
 
@@ -61,6 +63,15 @@ pose names, the paddle's angle in the hand, frame rate.
 `-- doubles demo`). Watch for the rotation: after your side wins a point
 you switch courts. Does the CPU partner leave your balls to you? Rally
 stats: `rally_stats.gd -- 4 1 doubles` (about 12 shots a rally).
+
+## Phase 3/4 (started): the ladder and MATCH SETUP
+
+**VR-08 / VR-09, ready to test.** `godot --path game` opens the lobby.
+Point with the mouse and click (or use the arrows and Enter): pick
+DOUBLES, VS CHAMPS, then PLAY. The team's intro is called at the start.
+At the end, REMATCH or MATCH SETUP. On the Quest, point with your
+free-hand laser and pull a trigger. Do the teams feel different?
+HENDERSON should be easy and the CHAMPS hard.
 
 ## For you
 

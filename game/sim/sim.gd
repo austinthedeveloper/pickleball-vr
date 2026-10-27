@@ -223,9 +223,9 @@ func _serve_struck(slot: int) -> void:
 func _cpu_serve(p: SimTypes.Player) -> void:
 	var recv := 1 - p.team
 	var box_sign := K.right_sign(recv) * (1 if serve_from_right() else -1)
-	var st := config.style
-	var tx := box_sign * K.COURT_HALF_WIDTH / 2 + scatter(_error() / 2)
-	var tz := K.side_sign(recv) * (K.COURT_HALF_LENGTH - 1500000 + scatter(_error() / 2))
+	var st := style(p.slot)
+	var tx := box_sign * K.COURT_HALF_WIDTH / 2 + scatter(_error(p) / 2)
+	var tz := K.side_sign(recv) * (K.COURT_HALF_LENGTH - 1500000 + scatter(_error(p) / 2))
 	ball.place(p.x - K.right_sign(p.team) * 350000, 700000, p.z - K.side_sign(p.team) * 300000)
 	var v := Aim.shot(ball.x, ball.y, ball.z, tx, tz, st.serve_pace)
 	ball.launch(v[0], v[1], v[2])
@@ -401,7 +401,7 @@ func _others_react(slot: int) -> void:
 	for s in active_slots():
 		var p := players[s]
 		if p.cpu and p.team != slot >> 1:
-			p.think_at = tick + config.style.reaction
+			p.think_at = tick + style(s).reaction
 			p.plan_tick = -1
 			p.let_go = false
 
@@ -432,8 +432,15 @@ func _hit_by(slot: int) -> void:
 
 # --- CPUs ------------------------------------------------------------------------
 
-func _error() -> int:
-	var e := config.style.error
+## A CPU's personality: its own if the config gives one (the ladder),
+## else the config's default.
+func style(slot: int) -> SimTypes.CpuStyle:
+	var st: SimTypes.CpuStyle = config.styles[slot] if slot < config.styles.size() else null
+	return st if st else config.style
+
+
+func _error(p: SimTypes.Player) -> int:
+	var e := style(p.slot).error
 	match config.difficulty:
 		0: return e * 16 / 10
 		2: return e * 55 / 100
@@ -445,7 +452,7 @@ func _home(p: SimTypes.Player) -> Array[int]:
 	var side := K.side_sign(p.team)
 	var depth := K.COURT_HALF_LENGTH - 300000
 	var waiting_return := required_bounce != K.REQUIRED_BOUNCE_NONE and p.team == serving_team
-	if not waiting_return and shots >= 2 and (p.slot * 37 + score[0] * 11 + score[1] * 7) % 100 < config.style.net_rush:
+	if not waiting_return and shots >= 2 and (p.slot * 37 + score[0] * 11 + score[1] * 7) % 100 < style(p.slot).net_rush:
 		depth = K.KITCHEN_DEPTH + 350000
 	var x := 0
 	if config.doubles:
@@ -473,7 +480,7 @@ func _cpu_think(p: SimTypes.Player) -> void:
 		p.goal_x = h[0]
 		p.goal_z = h[1]
 		return
-	var plan := Intercept.plan(self, p.team, p.x, p.z, config.style.speed)
+	var plan := Intercept.plan(self, p.team, p.x, p.z, style(p.slot).speed)
 	if plan.is_empty():
 		return
 	if not covers(p.slot, plan[1]):
@@ -491,7 +498,7 @@ func _cpu_move(p: SimTypes.Player) -> void:
 	var dx := p.goal_x - p.x
 	var dz := p.goal_z - p.z
 	var d := Fx.length(dx, 0, dz)
-	var sp := config.style.speed
+	var sp := style(p.slot).speed
 	if d <= sp:
 		p.x = p.goal_x
 		p.z = p.goal_z
@@ -538,13 +545,16 @@ func _cpu_try_hit(p: SimTypes.Player) -> bool:
 
 
 func _cpu_shot(p: SimTypes.Player) -> void:
-	var st := config.style
+	var st := style(p.slot)
 	var opp_team := 1 - p.team
 	var opp := players[opp_team * 2]
 	var os := K.side_sign(opp_team)
-	var err := _error()
+	var err := _error(p)
 	var at_net := opp.z * os < K.KITCHEN_DEPTH + 900000
 	var tx := -signi(opp.x) * (K.COURT_HALF_WIDTH - 450000) if opp.x != 0 else K.COURT_HALF_WIDTH / 2
+	# BODY aims at the player (port aim "body"); MIX now and then.
+	if st.aim == 1 or (st.aim == 2 and random(2) == 0):
+		tx = clampi(opp.x, -K.COURT_HALF_WIDTH + 450000, K.COURT_HALF_WIDTH - 450000)
 	if config.doubles:
 		var o2 := players[opp_team * 2 + 1]
 		at_net = at_net and o2.z * os < K.KITCHEN_DEPTH + 900000

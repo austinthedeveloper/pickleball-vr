@@ -50,6 +50,14 @@ class CpuStyle:
 	var lob := 10                    ## percent: lobs a player at the kitchen
 	var drive_pace := 135000         ## um/tick, 16 m/s
 	var serve_pace := 100000
+	var aim := 0                     ## 0 away from the player, 1 at them, 2 a mix
+
+	static func from_dict(d: Dictionary) -> CpuStyle:
+		var c := CpuStyle.new()
+		for k in ["speed", "reaction", "error", "net_rush", "dink", "lob", "drive_pace", "serve_pace", "aim"]:
+			if d.has(k):
+				c.set(k, int(d[k]))
+		return c
 
 	func copy() -> CpuStyle:
 		var c := CpuStyle.new()
@@ -61,6 +69,7 @@ class CpuStyle:
 		c.lob = lob
 		c.drive_pace = drive_pace
 		c.serve_pace = serve_pace
+		c.aim = aim
 		return c
 
 
@@ -75,6 +84,10 @@ class MatchConfig:
 	var seed := 1994
 	var first_server := 0            ## team
 	var style := CpuStyle.new()
+	## Per-slot styles (the ladder's players); null falls back to `style`.
+	var styles: Array = []
+	## The ladder team on the far side, for the view (the sim reads `styles`).
+	var opponent := -1
 
 
 class Player:

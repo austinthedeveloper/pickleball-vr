@@ -31,6 +31,12 @@ var _trigger_was := false
 var _turned := false
 var _menu_was := false
 var menu_pressed := false            ## A/X this frame: the match's button
+## Menus: the laser's click and the stick's steps this frame.
+var click := false
+var nav := Vector2i.ZERO
+var _click_was := false
+var _nav_was := Vector2i.ZERO
+var laser: MeshInstance3D
 
 
 func _ready() -> void:
@@ -57,6 +63,19 @@ func _ready() -> void:
 	held_ball.position = Vector3(0, 0, -0.06)
 	free_hand.add_child(held_ball)
 	held_ball.visible = false
+	laser = MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.003
+	cm.bottom_radius = 0.003
+	cm.height = 3.0
+	laser.mesh = cm
+	var lm := World.material(Color(1.0, 0.85, 0.2, 0.7))
+	lm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	laser.material_override = lm
+	laser.rotation.x = -PI / 2
+	laser.position = Vector3(0, 0, -1.5)
+	free_hand.add_child(laser)
+	laser.visible = false
 
 
 ## Locomotion and turning from the sticks, then this frame's poses.
@@ -89,6 +108,14 @@ func begin_frame(delta: float) -> void:
 	var menu := paddle_hand.is_button_pressed("ax_button") or free_hand.is_button_pressed("ax_button")
 	menu_pressed = menu and not _menu_was
 	_menu_was = menu
+	var c := trig or paddle_hand.get_float("trigger") > 0.6
+	click = c and not _click_was
+	_click_was = c
+	var stick := paddle_hand.get_vector2("primary") + free_hand.get_vector2("primary")
+	var step := Vector2i(int(signf(stick.x)) if absf(stick.x) > 0.7 else 0,
+		int(signf(stick.y)) if absf(stick.y) > 0.7 else 0)
+	nav = Vector2i(step.x if step.x != _nav_was.x else 0, -step.y if step.y != _nav_was.y else 0)
+	_nav_was = step
 
 
 ## The sim's input at `alpha` (0..1) between last frame and this one.
@@ -141,3 +168,19 @@ func show_held_ball(on: bool) -> void:
 
 func head_position() -> Vector3:
 	return camera.global_position
+
+
+## The menu laser, from the free hand.
+func pointer() -> Array[Vector3]:
+	var t := free_hand.global_transform
+	return [t.origin, -t.basis.z]
+
+
+func show_laser(on: bool) -> void:
+	laser.visible = on
+
+
+func forward() -> Vector3:
+	var f := -camera.global_transform.basis.z
+	f.y = 0
+	return f.normalized() if f.length() > 0.01 else Vector3.FORWARD

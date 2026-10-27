@@ -11,7 +11,8 @@ monitor.
 ## Run
 
 ```sh
-godot --path game                 # play (flat mode without a headset)
+godot --path game                 # the lobby and MATCH SETUP (flat mode without a headset)
+godot --path game -- play         # straight into a match
 godot --path game -- demo         # DEMO: the bot against the CPU
 godot --path game -- doubles      # doubles, with a CPU partner (ADR-004)
 game/tools/test.sh                # all tests, headless (must pass)
@@ -27,7 +28,7 @@ game/tools/test.sh                # all tests, headless (must pass)
 | Turn | right stick (45 deg snaps) | |
 | Serve | the ball is in your left hand: pull its trigger to let go, then hit it | Space |
 | Soft shot | swing gently | hold Shift |
-| New match (at the end) | A / X | Enter |
+| Menus | point the free hand's laser, pull a trigger; or the sticks | point and click the mouse; or the arrows and Enter |
 
 The **shot assist** (ADR-003) pulls a miss toward a good shot, 65% by
 default.

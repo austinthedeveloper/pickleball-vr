@@ -17,6 +17,11 @@ var soft := false
 var serve_pressed := false
 var menu_pressed := false
 var demo := false                    ## the camera rides with the bot
+var spectate := false                ## fixed camera, the mouse free for menus
+var click := false
+var nav := Vector2i.ZERO
+var _click_was := false
+var _keys_was := {}
 
 
 func _ready() -> void:
@@ -43,12 +48,18 @@ func _ready() -> void:
 	help.add_theme_font_size_override("font_size", 18)
 	help.add_theme_color_override("font_outline_color", Color.BLACK)
 	help.add_theme_constant_override("outline_size", 6)
-	help.visible = not demo
+	help.visible = not demo and not spectate
 	layer.add_child(help)
 
 
 func begin_frame(delta: float) -> void:
-	if not demo:
+	var c := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	click = c and not _click_was
+	_click_was = c
+	nav = Vector2i(int(_edge(KEY_RIGHT)) - int(_edge(KEY_LEFT)), int(_edge(KEY_DOWN)) - int(_edge(KEY_UP)))
+	if _edge(KEY_ENTER):
+		click = true
+	if not demo and not spectate:
 		var move := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 		var keys := Vector2(
 			float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A)),
@@ -65,7 +76,7 @@ func begin_frame(delta: float) -> void:
 	menu_pressed = Input.is_physical_key_pressed(KEY_ENTER)
 	camera.global_position = head
 	camera.rotation_degrees = Vector3(PITCH, 0, 0)
-	ring.visible = not demo
+	ring.visible = not demo and not spectate
 	ring.global_position = Vector3(aim.x, 0.03, aim.z)
 
 
@@ -96,3 +107,21 @@ func show_paddle(h: SimTypes.HumanInput) -> void:
 
 func head_position() -> Vector3:
 	return head
+
+
+func _edge(key: Key) -> bool:
+	var down := Input.is_physical_key_pressed(key)
+	var was: bool = _keys_was.get(key, false)
+	_keys_was[key] = down
+	return down and not was
+
+
+## The mouse's ray into the world.
+func pointer() -> Array[Vector3]:
+	var vp := get_viewport()
+	var m := vp.get_mouse_position() if vp else Vector2.ZERO
+	return [camera.project_ray_origin(m), camera.project_ray_normal(m)]
+
+
+func forward() -> Vector3:
+	return Vector3.FORWARD

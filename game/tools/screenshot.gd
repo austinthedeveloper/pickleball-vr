@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <demo|play> <frames> <out.png> [doubles]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play> <frames> <out.png> [doubles]
 extends SceneTree
 
 var frames := 240
@@ -14,6 +14,10 @@ func _initialize() -> void:
 		frames = int(args[1])
 	if args.size() > 2:
 		out = args[2]
+	if args.size() > 0 and args[0] == "lobby":
+		Settings.default_path = "user://screenshot_settings.cfg"
+		root.add_child(load("res://scenes/main.tscn").instantiate())
+		return
 	var view := MatchView.new()
 	root.add_child(view)
 	var cfg := SimTypes.MatchConfig.new()
