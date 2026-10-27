@@ -49,8 +49,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-17 | More venues: DINOSAUR, UNDERSEA, TIME of day | | Planned |
 | VR-18 | Quest performance: CPU spikes fixed, PERF timing (ADR-009) | `feature/cld-vr-quest-device` | Done (measured on the Quest 3) |
 | VR-19 | Ball machine 2: volley feeds, SPEED, MACHINE AT, real dinks (ADR-007) | `feature/cld-vr-machine-2` | Done (played) |
-| VR-20 | DINK PARTNER: a cooperative dinking CPU (ADR-010) | `feature/cld-vr-dink-partner` | Ready to test |
-| VR-21 | Floor targets, partner and machine (ADR-010) | `feature/cld-vr-dink-partner` | Ready to test |
+| VR-20 | DINK PARTNER: a cooperative dinking CPU (ADR-010) | `feature/cld-vr-dink-partner` | Done (played) |
+| VR-21 | Floor targets, partner and machine (ADR-010) | `feature/cld-vr-dink-partner` | Done (played) |
 
 ## Phase 1: singles
 
@@ -114,7 +114,7 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
 
-**VR-20 / VR-21, played (fun, worked well); fixes ready to test:** the count
+**VR-20 / VR-21, played and approved, fixes included:** the count
 is dinks in a row and resets outside their kitchen, the announcer matches
 it, PARTNER can be CROSS COURT, menus don't move you, and holding the
 Meta button recenters you down the court.
