@@ -469,7 +469,7 @@ func _on_event(e: Array) -> void:
 				announcer.say(["rally_%d_1" % e[2]], Announcer.HIGH)
 		K.EVENT_HIT:
 			var speed: int = e[2]
-			if e[1] == 0 and Perf.on:
+			if e[1] == 0 and Perf.on and not demo:     # your swings, not the lobby's bot
 				_log_swing()
 			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf())
 			if xr and e[1] == 0:

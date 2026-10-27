@@ -79,6 +79,31 @@ a frame (72-120 Hz), and a fast paddle moves 10+ cm between samples.
 
   The bot swings the speed whose curve gives what it wants
   (`K.swing_for`). The golden traces were regenerated.
+- **The swing curve levels off for an average swing** (amended 2026-10-27,
+  third session, 66 strokes; "the net play feels very close to done; the
+  normal-speed ball is still flying"). Gentle dinks landed in their
+  kitchen 36 of 46 times, as the replay predicted. But the lead's
+  average strokes (5 to 6.5 m/s at the face) came off at 8 to 9 m/s on a
+  30°+ arc and landed 2.3 to 4.3 m deep. The curve is now defined as an
+  effective speed, as straight segments that only rise
+  (`K.SWING_CURVE`, `K.swing_eff`):
+
+  | Your swing (m/s) | Counts as (m/s) | What it does |
+  |---|---|---|
+  | 2.5 | 3.05 | touch is boosted |
+  | 4.2 | 4.2 | unchanged |
+  | 6.5 | 4.6 | an average swing levels off |
+  | 9 | 5.8 | rising again |
+  | beyond 9 | +0.62 per m/s | a put-away still drives |
+
+  A first try that interpolated the multiplier dipped (a faster swing
+  hit softer), and the test caught it. Replaying sessions 2 and 3: the
+  average strokes land at about 2.4 m (their kitchen line) instead of
+  3.1 m, 11 of 15 in or at their kitchen, and the gentle dinks are
+  unchanged. Bounce-back can't do this, because dinks and average
+  strokes meet the ball at overlapping closing speeds. Steepening it cut
+  the gentle dinks from 38 to 17 to 24 of 47. Logging skips the lobby's
+  demo bot now. The golden traces were regenerated.
 - **Flat mode and DEMO** drive the same input from `Bot`, which plans a
   swing through the ball on the sim's own prediction. In flat mode you
   move and aim and the bot swings; in DEMO it does all of it.

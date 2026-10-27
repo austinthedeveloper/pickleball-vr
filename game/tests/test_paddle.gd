@@ -122,10 +122,10 @@ func test_the_swing_curve_rises_and_inverts() -> void:
 	# bot's inverse lands on the speed it asks for.
 	var last := -1
 	for s in range(0, 120000, 1500):
-		var eff := s * K.swing_gain(s) / 256
+		var eff := K.swing_eff(s)
 		check(eff >= last, "rises at %d um/tick" % s)
 		last = eff
-		near(K.swing_for(eff) * K.swing_gain(K.swing_for(eff)) / 256, eff, 2, "inverts at %d" % eff)
+		near(K.swing_eff(K.swing_for(eff)), eff, 2, "inverts at %d" % eff)
 	check(K.swing_gain(15000) > 300 and K.swing_gain(90000) < 200, "touch boosted, power trimmed")
 	if asserts > 30:
 		asserts = 30

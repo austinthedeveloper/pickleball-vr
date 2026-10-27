@@ -140,25 +140,30 @@ static func fault_text(f: int) -> String:
 
 
 ## +1 if the team's side is z > 0.
-## The swing curve (ADR-003, tuned on the lead's logged swings): a VR
-## controller weighs nothing, so touch comes out underhit and power
-## overhit. The face's speed counts x1.22 up to 2.5 m/s, x1.0 at 4.5 m/s,
-## x0.75 from 8 m/s (Q8; s um/tick). s * gain still rises with s.
-const SWING_SOFT_GAIN_256 := 312
-const SWING_HARD_GAIN_256 := 192
-const SWING_SOFT_V := 20833
-const SWING_MID_V := 37500
-const SWING_HARD_V := 66667
+## The swing curve (ADR-003, tuned on the lead's three logged sessions): a
+## VR controller weighs nothing, so touch comes out underhit and an
+## average swing overhit. The face's effective speed for the hit, as
+## straight segments through these points (m/s): 2.5 -> 3.05 (touch x1.22),
+## 4.2 -> 4.2, 6.5 -> 4.6 (an average swing levels off: a firm, controlled
+## ball), 9 -> 5.8, then +0.62 per m/s (a put-away still drives). It only
+## ever rises. um/tick.
+const SWING_CURVE := [[0, 0], [20833, 25417], [35000, 35000], [54167, 38333], [75000, 48333]]
+const SWING_TAIL_256 := 159          ## the slope past the last point, Q8
 
 
+static func swing_eff(s: int) -> int:
+	for i in range(1, SWING_CURVE.size()):
+		var a: Array = SWING_CURVE[i - 1]
+		var b: Array = SWING_CURVE[i]
+		if s <= b[0]:
+			return a[1] + (b[1] - a[1]) * (s - a[0]) / (b[0] - a[0])
+	var last: Array = SWING_CURVE[-1]
+	return last[1] + (s - last[0]) * SWING_TAIL_256 / 256
+
+
+## The curve as a multiplier, Q8.
 static func swing_gain(s: int) -> int:
-	if s <= SWING_SOFT_V:
-		return SWING_SOFT_GAIN_256
-	if s <= SWING_MID_V:
-		return SWING_SOFT_GAIN_256 - (SWING_SOFT_GAIN_256 - 256) * (s - SWING_SOFT_V) / (SWING_MID_V - SWING_SOFT_V)
-	if s <= SWING_HARD_V:
-		return 256 - (256 - SWING_HARD_GAIN_256) * (s - SWING_MID_V) / (SWING_HARD_V - SWING_MID_V)
-	return SWING_HARD_GAIN_256
+	return swing_eff(s) * 256 / s if s > 0 else 312
 
 
 ## The face speed whose swing-curved speed is `eff` (the bot swings by it).
@@ -167,7 +172,7 @@ static func swing_for(eff: int) -> int:
 	var hi := eff * 2 + 1000
 	for k in 30:
 		var mid := (lo + hi) / 2
-		if mid * swing_gain(mid) / 256 < eff:
+		if swing_eff(mid) < eff:
 			lo = mid + 1
 		else:
 			hi = mid

@@ -376,10 +376,11 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 	var mx := p.px - p.qx
 	var my := p.py - p.qy
 	var mz := p.pz - p.qz
-	var g := K.swing_gain(Fx.length(mx, my, mz))
-	var ux := mx * g / 256
-	var uy := my * g / 256
-	var uz := mz * g / 256
+	var sm := Fx.length(mx, my, mz)
+	var se := K.swing_eff(sm)
+	var ux := mx * se / maxi(sm, 1)
+	var uy := my * se / maxi(sm, 1)
+	var uz := mz * se / maxi(sm, 1)
 	var vn := Fx.dot_q14(ball.vx - ux, ball.vy - uy, ball.vz - uz, nn)
 	if vn >= 0:
 		return false                 # already leaving the face
