@@ -63,7 +63,7 @@ func _ready() -> void:
 	sm.radius = K.BALL_RADIUS / float(K.M)
 	sm.height = sm.radius * 2
 	held_ball.mesh = sm
-	held_ball.material_override = World.material(Color(0.9, 1.0, 0.1))
+	held_ball.material_override = Look.ball_material()
 	# In the fingers on the palm side (the grip pose's -x for the left hand,
 	# +x for the right), a little forward: where a held ball sits.
 	var palm := -1.0 if free_hand == left else 1.0

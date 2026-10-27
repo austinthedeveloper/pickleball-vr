@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number] [venue=NAME]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number] [venue=NAME] [cam=x,y,z look=x,y,z]
 extends SceneTree
 
 var frames := 240
@@ -40,6 +40,18 @@ func _initialize() -> void:
 	if mode == "lesson":
 		var l := Lessons.lesson(int(args[3]) if args.size() > 3 else 0)
 		view.show_lesson(String(l["title"]), l["lines"])
+	var cam = _vec(args, "cam")
+	if cam != null and view.flat:
+		view.flat.pin(cam, _vec(args, "look") if _vec(args, "look") != null else Vector3.ZERO)
+
+
+## cam=x,y,z and look=x,y,z (metres) pin the camera for a close-up.
+static func _vec(args: PackedStringArray, key: String) -> Variant:
+	for a in args:
+		if a.begins_with(key + "="):
+			var p := a.trim_prefix(key + "=").split(",")
+			return Vector3(float(p[0]), float(p[1]), float(p[2]))
+	return null
 
 
 func _process(_delta: float) -> bool:

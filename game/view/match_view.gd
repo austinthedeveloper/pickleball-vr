@@ -30,6 +30,12 @@ var paddle_tilt := 0.0               ## degrees: the paddle's angle in the hand 
 var board: Scoreboard
 var avatars: Array[Avatar] = []
 var ball_mesh: MeshInstance3D
+## The ball's trail (ADR-012): fading copies at its last few spots, shown
+## when it's moving fast enough to lose.
+const TRAIL := 7
+const TRAIL_SPEED := 7.0             ## m/s
+var _trail: MultiMeshInstance3D
+var _trail_at: Array[Vector3] = []
 var shadow: MeshInstance3D
 var sound := {}
 var input_log: Array = []            ## every tick's human input, as arrays
@@ -82,6 +88,9 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 			var a := Avatar.new()
 			a.slot = s
 			a.shirt = SHIRTS[s]
+			a.skin = Avatar.SKINS[(s * 7 + maxi(cfg.opponent, 0)) % Avatar.SKINS.size()]
+			a.hair = Avatar.HAIRS[(s * 5 + maxi(cfg.opponent, 0) * 3) % Avatar.HAIRS.size()]
+			a.cap = s % 2 == 0
 			if cfg.opponent >= 0 and s >= 2:
 				a.shirt = Opponents.shirt(cfg.opponent, s)
 			add_child(a)
@@ -96,11 +105,9 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	sm.radial_segments = 16
 	sm.rings = 8
 	ball_mesh.mesh = sm
-	var bmat := World.material(Color(0.88, 1.0, 0.12))
-	bmat.emission_enabled = true
-	bmat.emission = Color(0.3, 0.35, 0.0)
-	ball_mesh.material_override = bmat
+	ball_mesh.material_override = Look.ball_material()
 	add_child(ball_mesh)
+	_trail_init(sm.radius)
 	shadow = MeshInstance3D.new()
 	var cm := CylinderMesh.new()
 	cm.top_radius = sm.radius
@@ -518,6 +525,8 @@ func _draw(delta: float) -> void:
 		xr.show_held_ball(held_by_you)
 		ball_mesh.visible = not held_by_you
 	ball_mesh.global_position = b
+	ball_mesh.rotation += Vector3(sim.ball.wx, sim.ball.wy, sim.ball.wz) / float(K.URAD) * delta * K.TICK_HZ
+	_trail_draw(b, delta)
 	shadow.global_position = Vector3(b.x, 0.02, b.z)
 	var s := clampf(1.0 - b.y / 4.0, 0.35, 1.0)
 	shadow.scale = Vector3(s * 1.4, 1, s * 1.4)
@@ -530,3 +539,39 @@ func _draw(delta: float) -> void:
 	board.show_from(sim, delta)
 	if flat and demo and not spectate:
 		flat.head = World.m(bot.head_x, 0, bot.head_z) + Vector3(0, FlatRig.EYE, 0)
+
+
+func _trail_init(r: float) -> void:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	var sm := SphereMesh.new()
+	sm.radius = r
+	sm.height = r * 2
+	sm.radial_segments = 8
+	sm.rings = 4
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.vertex_color_use_as_albedo = true
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	sm.material = m
+	mm.mesh = sm
+	mm.instance_count = TRAIL
+	_trail = MultiMeshInstance3D.new()
+	_trail.multimesh = mm
+	_trail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_trail)
+
+
+func _trail_draw(b: Vector3, delta: float) -> void:
+	_trail_at.push_front(b)
+	if _trail_at.size() > TRAIL + 1:
+		_trail_at.pop_back()
+	var fast := sim.ball.speed() * K.TICK_HZ / float(K.M) > TRAIL_SPEED and not sim.ball.held
+	var mm := _trail.multimesh
+	for i in TRAIL:
+		var show := fast and i + 1 < _trail_at.size()
+		var f := 1.0 - float(i + 1) / (TRAIL + 1)
+		var at: Vector3 = _trail_at[i + 1] if show else Vector3(0, -10, 0)
+		mm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3.ONE * (0.4 + 0.5 * f)), at))
+		mm.set_instance_color(i, Color(Look.BALL, 0.45 * f))

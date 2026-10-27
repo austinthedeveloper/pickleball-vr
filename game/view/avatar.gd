@@ -1,77 +1,478 @@
-## A CPU player: a simple figure that stands where the sim says, faces the
-## net, and reaches its paddle to the ball. Display only: it reads the sim.
+## A CPU player (ADR-012): a person built from simple shapes on a rig of
+## joints, posed every frame. Display only: it reads the sim and never
+## writes to it.
+##
+## - Legs and arms are two-bone IK chains (hip-knee-foot, shoulder-elbow-
+##   hand) solved toward targets, so knees and elbows bend naturally.
+## - Feet stay planted and step when the body has moved off them, one at a
+##   time, so moving across the court reads as a shuffle.
+## - The paddle hand plays a swing timed to the sim's contact: a
+##   backswing, through the contact point, a follow-through; then back to
+##   ready. It syncs to the actual hit when that happens.
+## - A split step (a small hop) as the other side strikes; the head
+##   watches the ball; the torso coils into the backswing.
 class_name Avatar
 extends Node3D
 
-const SKIN := Color(0.93, 0.74, 0.58)
-const REACH_START := 1.6             ## metres: the arm starts reaching
+const SKINS := [Color(0.84, 0.6, 0.46), Color(0.7, 0.48, 0.34), Color(0.48, 0.31, 0.21)]
+const HAIRS := [Color(0.24, 0.15, 0.09), Color(0.1, 0.08, 0.07), Color(0.62, 0.42, 0.2)]
+
+# The rig, metres.
+const THIGH := 0.44
+const SHIN := 0.44
+const UPPER_ARM := 0.29
+const FOREARM := 0.27
+const HIP_W := 0.11
+const SHOULDER_W := 0.21
+const STANCE := 0.2                  ## half the feet's spread
+const STEP_AT := 0.24                ## a foot this far off its spot steps
+const STEP_TIME := 0.16
+const STEP_LIFT := 0.07
+const READY_HIPS := 0.88             ## knees bent: ready
+const TALL_HIPS := 0.94
+const BACKSWING := 0.42              ## seconds before contact the backswing starts
+const FORWARD := 0.12                ## ...and the forward swing
+const FOLLOW := 0.3
+const RECOVER := 0.35
 
 var slot := 2
 var shirt := Color(0.95, 0.55, 0.12)
 var shorts := Color(0.15, 0.18, 0.3)
+var skin := SKINS[0]
+var hair := HAIRS[0]
+var cap := true
 var paddle: PaddleMesh
-var _body: Node3D
-var _swing := 0.0                    ## seconds since a swing, for the follow-through
+
+var _parts := {}                     ## name -> MeshInstance3D (top level, posed each frame)
+var _head: Node3D
+var _root := Vector3.ZERO            ## feet's centre, smoothed
+var _face := Vector3.FORWARD         ## facing, horizontal
+var _feet: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO]
+var _step_from: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO]
+var _step_to: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO]
+var _step_t: Array[float] = [-1.0, -1.0]
+var _hand := Vector3.ZERO            ## paddle hand, smoothed
+var _look := Vector3.ZERO            ## the head's direction, smoothed
+var _off := Vector3.ZERO
+var _hop := 0.0
+var _coil := 0.0
+var _placed := false
+# The swing: contact point and time (seconds from now), and the shot's way out.
+var _swing := false
+var _contact := Vector3.ZERO
+var _until := 0.0
+var _since := -1.0                   ## seconds since the hit, or -1
+var _out := Vector3.FORWARD
+var _soft := false
+var _backhand := false
+var _plan_seen := -2
+var _last_hitter := -9
+var _last_swing := -1
 
 
 func _ready() -> void:
-	_body = Node3D.new()
-	add_child(_body)
-	for s in [-1, 1]:
-		_part(CapsuleMesh, Vector3(s * 0.1, 0.42, 0), Vector2(0.075, 0.84), shorts)
-	_part(CapsuleMesh, Vector3(0, 1.12, 0), Vector2(0.19, 0.66), shirt)
-	_part(SphereMesh, Vector3(0, 1.6, 0), Vector2(0.12, 0.27), SKIN)
-	# A long chin, the house style (see the port kit's faces).
-	_part(SphereMesh, Vector3(0, 1.5, -0.04), Vector2(0.07, 0.12), SKIN)
-	_part(SphereMesh, Vector3(0, 1.69, 0.01), Vector2(0.125, 0.16), Color(0.25, 0.16, 0.1))
-	for s in [-1, 1]:
-		_part(SphereMesh, Vector3(s * 0.045, 1.62, -0.105), Vector2(0.018, 0.036), Color(0.08, 0.08, 0.1))
-	_part(CapsuleMesh, Vector3(-0.24, 1.1, 0), Vector2(0.05, 0.55), SKIN)
+	var skin_m := _mat(skin, 0.75)
+	var shirt_m := _mat(shirt, 0.8)
+	var shorts_m := _mat(shorts, 0.85)
+	var shoe_m := _mat(Color(0.95, 0.95, 0.96), 0.6)
+	var sock_m := _mat(Color(0.98, 0.98, 0.98), 0.9)
+	# Torso: a tapered shirt, shoulders, a collar; the pelvis in shorts.
+	_part("torso", _cyl(0.19, 0.165, 0.46), shirt_m)
+	_part("chest", _sph(0.19, 0.36), shirt_m)
+	_part("pelvis", _cyl(0.17, 0.18, 0.22), shorts_m)
+	for s in ["l", "r"]:
+		_part("shoulder_" + s, _sph(0.085, 0.17), shirt_m)
+		_part("thigh_" + s, _cap(0.085, THIGH + 0.08), skin_m)
+		_part("short_" + s, _cyl(0.1, 0.095, 0.22), shorts_m)
+		_part("shin_" + s, _cap(0.065, SHIN + 0.05), skin_m)
+		_part("sock_" + s, _cyl(0.048, 0.05, 0.1), sock_m)
+		_part("shoe_" + s, _box(Vector3(0.1, 0.07, 0.27)), shoe_m)
+		_part("sole_" + s, _box(Vector3(0.105, 0.02, 0.28)), _mat(Color(0.3, 0.3, 0.32), 0.9))
+		_part("upper_" + s, _cap(0.056, UPPER_ARM + 0.05), skin_m)
+		_part("sleeve_" + s, _cyl(0.075, 0.068, 0.14), shirt_m)
+		_part("fore_" + s, _cap(0.047, FOREARM + 0.04), skin_m)
+		_part("hand_" + s, _sph(0.045, 0.1), skin_m)
+	_part("neck", _cyl(0.055, 0.06, 0.12), skin_m)
+	_build_head(skin_m)
 	paddle = PaddleMesh.new()
 	paddle.color = Color(0.85, 0.15, 0.2) if slot < 2 else Color(0.2, 0.3, 0.85)   # your side's red
 	paddle.top_level = true          # posed in world space
 	add_child(paddle)
 
 
-func _part(kind, at: Vector3, size: Vector2, c: Color) -> void:
+func _build_head(skin_m: StandardMaterial3D) -> void:
+	_head = Node3D.new()
+	_head.top_level = true
+	add_child(_head)
+	var hair_m := _mat(hair, 0.9)
+	var dark := _mat(Color(0.12, 0.1, 0.1), 0.5)
+	_head_part(_sph(0.105, 0.25), skin_m, Vector3.ZERO, Vector3(1, 1, 1.02))
+	_head_part(_sph(0.072, 0.13), skin_m, Vector3(0, -0.058, -0.012), Vector3(1.05, 0.9, 0.95))   # jaw and chin
+	for s in [-1, 1]:
+		_head_part(_sph(0.022, 0.05), skin_m, Vector3(s * 0.102, -0.005, 0.005), Vector3(0.6, 1, 1))   # ears
+		_head_part(_sph(0.016, 0.03), _mat(Color(0.97, 0.97, 0.97), 0.3), Vector3(s * 0.037, 0.018, -0.093), Vector3.ONE)
+		_head_part(_sph(0.009, 0.018), dark, Vector3(s * 0.037, 0.017, -0.105), Vector3.ONE)
+		_head_part(_box(Vector3(0.036, 0.008, 0.01)), hair_m, Vector3(s * 0.038, 0.047, -0.098), Vector3.ONE)   # brows
+	_head_part(_cap(0.012, 0.045), skin_m, Vector3(0, -0.012, -0.106), Vector3.ONE, Vector3(0.35, 0, 0))   # nose
+	_head_part(_box(Vector3(0.038, 0.008, 0.008)), _mat(Color(0.62, 0.3, 0.28), 0.6), Vector3(0, -0.052, -0.098), Vector3.ONE)
+	# Hair, and a cap with a visor (the partner's look).
+	var top := SphereMesh.new()
+	top.radius = 0.112
+	top.height = 0.13
+	top.is_hemisphere = true
+	_head_part(top, hair_m, Vector3(0, 0.02, 0.01), Vector3(1, 1, 1))
+	_head_part(_sph(0.105, 0.2), hair_m, Vector3(0, -0.005, 0.03), Vector3(1, 0.9, 0.85))   # the back of the head
+	if cap:
+		var crown := SphereMesh.new()
+		crown.radius = 0.116
+		crown.height = 0.12
+		crown.is_hemisphere = true
+		var cap_m := _mat(shirt.darkened(0.25), 0.7)
+		_head_part(crown, cap_m, Vector3(0, 0.035, 0.0), Vector3(1, 1, 1))
+		_head_part(_box(Vector3(0.17, 0.01, 0.085)), cap_m, Vector3(0, 0.03, -0.135), Vector3.ONE, Vector3(-0.1, 0, 0))
+
+
+func _head_part(mesh: Mesh, m: Material, at: Vector3, sc: Vector3, rot := Vector3.ZERO) -> void:
 	var mi := MeshInstance3D.new()
-	var mesh: PrimitiveMesh = kind.new()
-	if mesh is CapsuleMesh:
-		(mesh as CapsuleMesh).radius = size.x
-		(mesh as CapsuleMesh).height = size.y
-	else:
-		(mesh as SphereMesh).radius = size.x
-		(mesh as SphereMesh).height = size.y
 	mi.mesh = mesh
-	mi.material_override = World.material(c)
+	mi.material_override = m
 	mi.position = at
-	_body.add_child(mi)
+	mi.scale = sc
+	mi.rotation = rot
+	if mesh.get_aabb().size.length() < 0.12:
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF   # the face's small parts
+	_head.add_child(mi)
 
 
-## Place from the sim (the far side faces +z, the near side -z).
+func _part(name: String, mesh: Mesh, m: Material) -> void:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = m
+	mi.top_level = true
+	if name.begins_with("hand") or name.begins_with("sock") or name.begins_with("sole") or name.begins_with("sleeve"):
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
+	_parts[name] = mi
+
+
+static func _mat(c: Color, rough: float) -> StandardMaterial3D:
+	var m := World.material(c)
+	m.roughness = rough
+	return m
+
+
+static func _cap(r: float, h: float) -> CapsuleMesh:
+	var m := CapsuleMesh.new()
+	m.radius = r
+	m.height = h
+	m.radial_segments = 10
+	m.rings = 4
+	return m
+
+
+static func _cyl(top: float, bottom: float, h: float) -> CylinderMesh:
+	var m := CylinderMesh.new()
+	m.top_radius = top
+	m.bottom_radius = bottom
+	m.height = h
+	m.radial_segments = 12
+	return m
+
+
+static func _sph(r: float, h: float, squash := 1.0) -> SphereMesh:
+	var m := SphereMesh.new()
+	m.radius = r
+	m.height = h * squash
+	m.radial_segments = 12
+	m.rings = 6
+	return m
+
+
+static func _box(size: Vector3) -> BoxMesh:
+	var m := BoxMesh.new()
+	m.size = size
+	return m
+
+
+# --- Posing helpers ------------------------------------------------------------
+
+## A limb mesh along from -> to (its y axis), centred between them.
+func _limb(name: String, from: Vector3, to: Vector3) -> void:
+	var mi: MeshInstance3D = _parts[name]
+	mi.global_transform = Transform3D(_along(to - from), (from + to) / 2)
+
+
+## A part at `at`, its y axis along `y`, its -z toward `fwd`.
+func _place(name: String, at: Vector3, y: Vector3, fwd: Vector3) -> void:
+	var mi: MeshInstance3D = _parts[name]
+	var yy := y.normalized()
+	var z := -(fwd - yy * fwd.dot(yy))
+	if z.length() < 0.001:
+		z = yy.cross(Vector3.RIGHT)
+	z = z.normalized()
+	mi.global_transform = Transform3D(Basis(yy.cross(z), yy, z), at)
+
+
+static func _along(dir: Vector3) -> Basis:
+	var y := dir.normalized()
+	var ref := Vector3.FORWARD if absf(y.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT
+	var x := y.cross(ref).normalized()
+	return Basis(x, y, x.cross(y))
+
+
+## Two-bone IK: the middle joint for a chain root -> target with bone
+## lengths a, b, bending toward `pole` (a direction). Returns [middle, end].
+static func two_bone(root: Vector3, target: Vector3, a: float, b: float, pole: Vector3) -> Array[Vector3]:
+	var d := target - root
+	var dist := clampf(d.length(), 0.02, a + b - 0.002)
+	var dir := d.normalized() if d.length() > 0.0001 else Vector3.DOWN
+	var cos_r := clampf((a * a + dist * dist - b * b) / (2.0 * a * dist), -1.0, 1.0)
+	var ang := acos(cos_r)
+	var bend := pole - dir * pole.dot(dir)
+	bend = bend.normalized() if bend.length() > 0.0001 else dir.cross(Vector3.RIGHT).normalized()
+	var mid := root + dir * (cos(ang) * a) + bend * (sin(ang) * a)
+	return [mid, root + dir * dist]
+
+
+# --- Reading the sim -------------------------------------------------------------
+
+## The tick the sim means this player to hit at, or -1.
+func _plan_tick(sim: Sim) -> int:
+	if sim.drill and sim.drill.partner and slot == 2:
+		return sim.drill.partner_plan if sim.drill.stage == Drill.PARTNER else -1
+	var p := sim.players[slot]
+	return p.plan_tick if p.cpu else -1
+
+
+func _incoming(sim: Sim) -> bool:
+	if sim.drill:
+		return sim.drill.partner and slot == 2 and sim.drill.stage == Drill.PARTNER
+	return sim.phase == K.PHASE_LIVE and sim.last_hitter >= 0 and sim.last_hitter >> 1 != slot >> 1
+
+
+## Where the ball will be `ticks` from now (a copy flown on; display only).
+static func _ahead(sim: Sim, ticks: int) -> Vector3:
+	var b := sim.ball.copy()
+	for i in clampi(ticks, 0, 400):
+		b.step()
+	return World.m(b.x, b.y, b.z)
+
+
+## No plan from the sim (the lobby's bot as you): the first point on the
+## ball's path within reach of where this player stands.
+func _reach_point(sim: Sim, body: Vector3) -> Array:
+	var b := sim.ball.copy()
+	for i in range(1, 160):
+		b.step()
+		var at := World.m(b.x, b.y, b.z)
+		if Vector2(at.x - body.x, at.z - body.z).length() < 0.85 and at.y > 0.2 and at.y < 1.7:
+			return [i, at]
+	return []
+
+
+# --- The frame ---------------------------------------------------------------------
+
 func show_from(sim: Sim, delta: float) -> void:
 	var p := sim.players[slot]
 	var side := K.side_sign(p.team)
-	var at := World.m(p.x, 0, p.z)
-	position = at
-	_body.rotation.y = 0.0 if side > 0 else PI
-	if p.swing_tick >= 0 and sim.tick - p.swing_tick < 2:
-		_swing = 0.0
-	_swing += delta
-	# The paddle: ready by the forehand side, reaching to an incoming ball.
-	var fore := Vector3(K.right_sign(p.team) * 0.42, 1.0, -side * 0.25)
-	var ready := at + fore
+	var body := World.m(p.x, 0, p.z)
 	var ball := World.m(sim.ball.x, sim.ball.y, sim.ball.z)
-	var target := ready
-	var to_ball := Vector2(ball.x - at.x, ball.z - at.z).length()
-	var incoming := sim.phase == K.PHASE_LIVE and sim.last_hitter >> 1 != p.team
-	if incoming and to_ball < REACH_START:
-		var k := clampf(1.0 - (to_ball - 0.5) / (REACH_START - 0.5), 0.0, 1.0)
-		target = ready.lerp(ball, k * 0.85)
-	if _swing < 0.35:
-		# The follow-through: up and across toward the net.
-		var f := _swing / 0.35
-		target += Vector3(-K.right_sign(p.team) * 0.4 * f, 0.35 * sin(f * PI), -side * 0.3 * f)
-	var face_n := Vector3(0, 0.15, -side).normalized()
-	var pos := paddle.transform.origin + paddle.transform.basis * PaddleMesh.FACE_CENTER
-	paddle.pose(pos.lerp(target, clampf(delta * 14.0, 0.0, 1.0)), face_n)
+	if not _placed:
+		_placed = true
+		_root = body
+		_face = Vector3(0, 0, -side)
+		var r0 := _face.cross(Vector3.UP)
+		for i in 2:
+			_feet[i] = body + r0 * (STANCE if i == 1 else -STANCE)
+		_hand = body + Vector3(0, 1.0, -side * 0.3)
+		_off = _hand
+	_root = _root.lerp(body, clampf(delta * 12.0, 0.0, 1.0))
+	_track_swing(sim, body, ball, delta)
+	# Facing: the ball while it's coming, else the other side.
+	var want := Vector3(0, 0, -side)
+	if _incoming(sim) or _swing:
+		var to_ball := Vector3(ball.x - _root.x, 0, ball.z - _root.z)
+		if to_ball.length() > 0.3 and to_ball.dot(want) > 0.0:
+			want = to_ball.normalized().lerp(want, 0.4).normalized()
+	_face = _face.slerp(want, clampf(delta * 6.0, 0.0, 1.0)).normalized()
+	var right := _face.cross(Vector3.UP).normalized()
+	# The split step: a hop as the other side hits.
+	if sim.last_hitter != _last_hitter:
+		if sim.last_hitter >= 0 and sim.last_hitter >> 1 != p.team:
+			_hop = 1.0
+		_last_hitter = sim.last_hitter
+	_hop = maxf(_hop - delta * 6.0, 0.0)
+	var ready := _incoming(sim) or _swing
+	var hips_h: float = (READY_HIPS if ready else TALL_HIPS) + 0.06 * sin(_hop * PI) - (0.04 if _swing and _until < 0.2 else 0.0)
+	_feet_step(right, delta)
+	var pelvis := Vector3(_root.x, hips_h, _root.z) + _face * 0.03
+	# Torso: leans in when ready, coils into the backswing.
+	var coil_want := 0.0
+	if _swing and _since < 0.0:
+		coil_want = (-0.5 if not _backhand else 0.5) * clampf(1.0 - _until / BACKSWING, 0.0, 1.0)
+	elif _swing:
+		coil_want = (0.35 if not _backhand else -0.35) * clampf(1.0 - _since / FOLLOW, 0.0, 1.0)
+	_coil = lerpf(_coil, coil_want, clampf(delta * 10.0, 0.0, 1.0))
+	var t_face := _face.rotated(Vector3.UP, _coil)
+	var t_right := t_face.cross(Vector3.UP).normalized()
+	var lean := 0.18 if ready else 0.08
+	var spine := (Vector3.UP + t_face * lean).normalized()
+	var chest := pelvis + spine * 0.46
+	_place("pelvis", pelvis + Vector3(0, 0.02, 0), Vector3.UP, _face)
+	_place("torso", pelvis + spine * 0.24, spine, t_face)
+	_place("chest", chest - spine * 0.1, spine, t_face)
+	var neck := chest + spine * 0.06
+	_place("neck", neck, spine, t_face)
+	var head_at := neck + spine * 0.15
+	# Legs: hips to planted feet, knees forward.
+	for i in 2:
+		var s := "l" if i == 0 else "r"
+		var hip := pelvis + right * (HIP_W if i == 1 else -HIP_W)
+		var ankle := _feet[i] + Vector3(0, 0.09 + _lift(i), 0)
+		var leg := two_bone(hip, ankle, THIGH, SHIN, _face + right * (0.25 if i == 1 else -0.25))
+		_limb("thigh_" + s, hip, leg[0])
+		_limb("short_" + s, hip, hip.lerp(leg[0], 0.45))
+		_limb("shin_" + s, leg[0], leg[1])
+		_limb("sock_" + s, leg[1], leg[1] + (leg[0] - leg[1]).normalized() * 0.1)
+		var toe := _face.rotated(Vector3.UP, 0.25 if i == 0 else -0.25)
+		_place("shoe_" + s, leg[1] + Vector3(0, -0.055, 0) + toe * 0.05, Vector3.UP, toe)
+		_place("sole_" + s, leg[1] + Vector3(0, -0.09, 0) + toe * 0.05, Vector3.UP, toe)
+	# Arms: the paddle hand on its swing; the other out for balance.
+	var hand_want := _paddle_target(pelvis, t_face, t_right, ball)
+	var rate := 22.0 if _swing else 9.0
+	_hand = _hand.lerp(hand_want, clampf(delta * rate, 0.0, 1.0))
+	var off_want := pelvis + t_face * 0.32 - t_right * 0.26 + Vector3(0, 0.32 if ready else 0.12, 0)
+	_off = _off.lerp(off_want, clampf(delta * 8.0, 0.0, 1.0))
+	var elbow_pole := Vector3.DOWN * 0.7 - t_face * 0.3
+	var hands := [_off, _hand]
+	var paddle_fore: Array[Vector3] = []
+	for i in 2:
+		var s := "l" if i == 0 else "r"
+		var sh := chest + t_right * (SHOULDER_W if i == 1 else -SHOULDER_W) - spine * 0.03
+		var arm := two_bone(sh, hands[i], UPPER_ARM, FOREARM, elbow_pole + t_right * (0.4 if i == 1 else -0.4))
+		_place("shoulder_" + s, sh, spine, t_face)
+		_limb("upper_" + s, sh, arm[0])
+		_limb("sleeve_" + s, sh, sh.lerp(arm[0], 0.42))
+		_limb("fore_" + s, arm[0], arm[1])
+		(_parts["hand_" + s] as MeshInstance3D).global_position = arm[1]
+		if i == 1:
+			paddle_fore = [arm[0], arm[1]]
+	# The paddle: out of the hand along the forearm, tipped up, face to the shot.
+	var along := (paddle_fore[1] - paddle_fore[0]).normalized()
+	along = (along + Vector3.UP * 0.6 + t_face * 0.2).normalized()
+	var face_n := _out if _swing else t_face
+	if _backhand:
+		face_n = face_n.rotated(Vector3.UP, 0.4)
+	paddle.pose_grip(paddle_fore[1], along, face_n)
+	# The head: on the neck, watching the ball.
+	# The head: on the neck, watching the ball in play (between points, the
+	# other side), never tipped down so far the cap hides the face.
+	var look := (ball - head_at) if ready else _face
+	if look.length() < 0.1 or look.dot(_face) < -0.2:
+		look = _face
+	look = look.normalized().lerp(_face, 0.25)
+	var flat_len := Vector2(look.x, look.z).length()
+	look.y = clampf(look.y, -0.5 * flat_len, 0.6 * flat_len)
+	_look = _look.slerp(look.normalized(), clampf(delta * 10.0, 0.0, 1.0)) if _look != Vector3.ZERO else look.normalized()
+	_head.global_transform = Transform3D(Basis.looking_at(_look, Vector3.UP), head_at)
+
+
+## Where the paddle hand goes: the swing if there is one, else ready.
+func _paddle_target(pelvis: Vector3, face: Vector3, right: Vector3, ball: Vector3) -> Vector3:
+	var ready := pelvis + face * 0.38 + right * 0.24 + Vector3(0, 0.3, 0)
+	if not _swing:
+		return ready
+	var side := -1.0 if _backhand else 1.0
+	var amp := 0.22 if _soft else 0.45
+	var back := _contact - _out * amp + Vector3(0, -0.1 if _soft else -0.18, 0) + right * side * 0.12
+	var through := _contact + _out * amp + Vector3(0, 0.12 if _soft else 0.38, 0) - right * side * (0.05 if _soft else 0.25)
+	if _since >= 0.0:
+		var f := clampf(_since / FOLLOW, 0.0, 1.0)
+		if _since > FOLLOW:
+			return through.lerp(ready, clampf((_since - FOLLOW) / RECOVER, 0.0, 1.0))
+		return _contact.lerp(through, sin(f * PI / 2))
+	if _until > BACKSWING:
+		return ready
+	if _until > FORWARD:
+		return ready.lerp(back, clampf(1.0 - (_until - FORWARD) / (BACKSWING - FORWARD), 0.0, 1.0))
+	return back.lerp(_contact, clampf(1.0 - _until / FORWARD, 0.0, 1.0))
+
+
+## Plan, time and sync the swing from the sim.
+func _track_swing(sim: Sim, body: Vector3, ball: Vector3, delta: float) -> void:
+	var p := sim.players[slot]
+	var hit := p.swing_tick != _last_swing and p.swing_tick >= 0
+	if sim.last_hitter == slot and _since < 0.0 and _swing:
+		hit = true
+	if hit:
+		_last_swing = p.swing_tick
+		_swing = true
+		_since = 0.0
+		_contact = _hand.lerp(ball, 0.7)
+		var v := Vector3(sim.ball.vx, sim.ball.vy, sim.ball.vz)
+		_out = Vector3(v.x, 0, v.z).normalized() if Vector2(v.x, v.z).length() > 10 else _face
+		_soft = sim.ball.speed() < 60000
+		return
+	if _since >= 0.0:
+		_since += delta
+		if _since > FOLLOW + RECOVER:
+			_swing = false
+			_since = -1.0
+			_plan_seen = -2
+		return
+	if not _incoming(sim):
+		_swing = false
+		return
+	var plan := _plan_tick(sim)
+	if plan != _plan_seen:
+		_plan_seen = plan
+		if plan >= sim.tick:
+			_contact = _ahead(sim, plan - sim.tick)
+			_until = (plan - sim.tick) / float(K.TICK_HZ)
+		else:
+			var r := _reach_point(sim, body)
+			if r.is_empty():
+				return
+			_contact = r[1]
+			_until = r[0] / float(K.TICK_HZ)
+		_swing = true
+		var right := _face.cross(Vector3.UP)
+		_backhand = (_contact - body).dot(right) < -0.1
+		_out = Vector3(0, 0, K.side_sign(1 - p.team))
+		_soft = sim.drill != null and sim.drill.partner
+	else:
+		_until = maxf(_until - delta, 0.0)
+
+
+# --- Footwork ---------------------------------------------------------------------
+
+func _feet_step(right: Vector3, delta: float) -> void:
+	for i in 2:
+		if _step_t[i] >= 0.0:
+			_step_t[i] += delta / STEP_TIME
+			if _step_t[i] >= 1.0:
+				_step_t[i] = -1.0
+				_feet[i] = _step_to[i]
+			else:
+				_feet[i] = _step_from[i].lerp(_step_to[i], _step_t[i])
+	if _step_t[0] >= 0.0 or _step_t[1] >= 0.0:
+		return
+	# The foot furthest from where it belongs steps (one at a time).
+	var worst := -1
+	var worst_d := STEP_AT
+	for i in 2:
+		var spot := _root + right * (STANCE if i == 1 else -STANCE)
+		var d := Vector2(_feet[i].x - spot.x, _feet[i].z - spot.z).length()
+		if d > worst_d:
+			worst = i
+			worst_d = d
+	if worst >= 0:
+		var spot2 := _root + right * (STANCE if worst == 1 else -STANCE)
+		# A little past the spot, the way the body is going.
+		_step_from[worst] = _feet[worst]
+		_step_to[worst] = Vector3(spot2.x, 0, spot2.z) + (spot2 - _feet[worst]).normalized() * 0.06 * Vector3(1, 0, 1)
+		_step_t[worst] = 0.0
+
+
+func _lift(i: int) -> float:
+	return sin(_step_t[i] * PI) * STEP_LIFT if _step_t[i] >= 0.0 else 0.0

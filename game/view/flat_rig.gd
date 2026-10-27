@@ -17,6 +17,9 @@ var soft := false
 var serve_pressed := false
 var menu_pressed := false
 var demo := false                    ## the camera rides with the bot
+var _pinned := false                 ## a fixed camera (screenshots' close-ups)
+var _pin_at := Vector3.ZERO
+var _pin_look := Vector3.ZERO
 var spectate := false                ## fixed camera, the mouse free for menus
 var click := false
 var pause_pressed := false
@@ -78,6 +81,9 @@ func begin_frame(delta: float) -> void:
 	menu_pressed = Input.is_physical_key_pressed(KEY_ENTER)
 	camera.global_position = head
 	camera.rotation_degrees = Vector3(PITCH, 0, 0)
+	if _pinned:
+		camera.global_position = _pin_at
+		camera.look_at(_pin_look, Vector3.UP)
 	ring.visible = not demo and not spectate
 	ring.global_position = Vector3(aim.x, 0.03, aim.z)
 
@@ -95,6 +101,13 @@ func _aim_from_mouse() -> void:
 	var hw := K.COURT_HALF_WIDTH / float(K.M)
 	var hl := K.COURT_HALF_LENGTH / float(K.M)
 	aim = Vector3(clampf(hit.x, -hw + 0.3, hw - 0.3), 0, clampf(hit.z, -hl + 0.3, -0.3))
+
+
+## Fix the camera at `at`, looking at `look` (screenshots).
+func pin(at: Vector3, look: Vector3) -> void:
+	_pinned = true
+	_pin_at = at
+	_pin_look = look
 
 
 func recenter(at: Vector3) -> void:
