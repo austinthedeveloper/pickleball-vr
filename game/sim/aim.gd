@@ -6,6 +6,8 @@ extends RefCounted
 
 const MAX_FLIGHT := 480
 const SOLVE_PASSES := 10
+const SOLVE_TOL := 2000             ## um: close enough to stop
+const DRAG_K_Q16 := 2602            ## the drag k (0.0397 /m), per metre, Q16
 ## The solver aims the centre a millimetre under bounce height, so the
 ## bounce falls on tick n: corrections under n um round away to nothing.
 const LAND_Y := K.BALL_RADIUS - 1000
@@ -41,31 +43,51 @@ static func topspin(dx: int, dz: int, mag: int) -> Array[int]:
 
 
 ## The velocity from (x, y, z) that lands on (tx, tz) in `ticks` with spin
-## `w`, drag, Magnus and all (Newton-ish passes on the no-drag answer).
+## `w`, drag, Magnus and all. The first guess is the no-drag answer; then
+## secant steps, each axis's slope (how far its end point moved per um/tick
+## of change) measured from the last two passes, so drag doesn't make it
+## creep (ADR-009). Stops within SOLVE_TOL.
 static func solve(x: int, y: int, z: int, tx: int, tz: int, ticks: int,
 		w: Array[int] = [0, 0, 0]) -> Array[int]:
 	var n := maxi(ticks, 4)
-	var vx := (tx - x) / n
-	var vz := (tz - z) / n
+	# Drag shortens a shot by about 1 / (1 + 0.62 kD) of its no-drag reach
+	# (fitted across the game's dinks, drives and lobs), and an end point
+	# moves n / (1 + kD0) per um/tick: start the guess and the slopes there.
+	var d := Fx.length(tx - x, 0, tz - z)
+	var kd := d * DRAG_K_Q16 / K.M                  # k times the distance, Q16
+	var reach := 256 * 65536 / (65536 + kd * 62 / 100)          # Q8
+	var kd0 := kd * 256 / reach
+	var s0 := n * 256 * 65536 / (65536 + kd0)                   # Q8
+	var slope: Array[int] = [s0, s0, s0]            # end-point um per um/tick, Q8
+	var v: Array[int] = [(tx - x) * 256 / (n * reach), 0, (tz - z) * 256 / (n * reach)]
 	# Semi-implicit Euler: y_n = y + n vy - g n (n + 1) / 2.
-	var vy := (LAND_Y - y + K.GRAVITY * n * (n + 1) / 2) / n
+	v[1] = (LAND_Y - y + K.GRAVITY * n * (n + 1) / 2) / n
+	var target: Array[int] = [tx, LAND_Y, tz]
+	var last_v: Array[int] = [0, 0, 0]
+	var last_end: Array[int] = [0, 0, 0]
 	var b := Ball.new()
 	for k in SOLVE_PASSES:
 		b.place(x, y, z)
-		b.launch(vx, vy, vz)
+		b.launch(v[0], v[1], v[2])
 		b.set_spin(w[0], w[1], w[2])
-		var ex := 0
-		var ey := 0
-		var ez := 0
 		for i in n:
 			b.fly()
-		ex = tx - b.x
-		ey = LAND_Y - b.y
-		ez = tz - b.z
-		vx += ex / n
-		vy += ey / n
-		vz += ez / n
-	return [vx, vy, vz]
+		var end: Array[int] = [b.x, b.y, b.z]
+		var done := true
+		for a in 3:
+			if absi(target[a] - end[a]) > SOLVE_TOL:
+				done = false
+		if done:
+			break
+		for a in 3:
+			if k > 0 and v[a] != last_v[a]:
+				var sl := (end[a] - last_end[a]) * 256 / (v[a] - last_v[a])
+				if sl > n * 64:                  # sane (a quarter of no-drag or more): use it
+					slope[a] = sl
+			last_v[a] = v[a]
+			last_end[a] = end[a]
+			v[a] += (target[a] - end[a]) * 256 / slope[a]
+	return v
 
 
 ## A shot from (x, y, z) to (tx, tz) at about `pace` um/tick over the

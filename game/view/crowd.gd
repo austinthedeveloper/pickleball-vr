@@ -14,6 +14,7 @@ const SKINS := [Color(0.95, 0.78, 0.62), Color(0.78, 0.56, 0.4), Color(0.55, 0.3
 var bodies: MultiMeshInstance3D
 var heads: MultiMeshInstance3D
 var cheer := 0.0                     ## 0..1, how hard they're cheering now
+var last_usec := 0                   ## this frame's cost (Perf)
 var _seats: Array[Vector3] = []
 var _phase: Array[float] = []
 var _t := 0.0
@@ -82,9 +83,12 @@ func react(strength: float) -> void:
 
 
 func _process(delta: float) -> void:
+	var t0 := Time.get_ticks_usec()
 	_t += delta
 	cheer = maxf(cheer - delta * 0.45, 0.0)
 	_place(_t)
+	last_usec = Time.get_ticks_usec() - t0
+	Perf.add("crowd", last_usec)
 
 
 func _place(t: float) -> void:

@@ -4,12 +4,20 @@ class_name Fx
 extends RefCounted
 
 
+## Below 2^50 the double's correctly rounded sqrt never rounds up across
+## an integer (the gap below k is 1/2k, wider than half a double's spacing
+## there), so int(sqrt(n)) is already floor(sqrt(n)): no fix-up loops on
+## the hot path (ADR-009).
+const SQRT_EXACT := 1 << 50
+
 ## floor(sqrt(n)). The float sqrt is IEEE correctly rounded; the loops make
 ## it exact for any n a sim can produce.
 static func isqrt(n: int) -> int:
 	if n <= 0:
 		return 0
 	var r := int(sqrt(float(n)))
+	if n < SQRT_EXACT:
+		return r                     # exact here: see SQRT_EXACT
 	while r * r > n:
 		r -= 1
 	while (r + 1) * (r + 1) <= n:

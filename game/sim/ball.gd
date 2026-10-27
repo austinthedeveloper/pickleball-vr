@@ -70,16 +70,28 @@ func set_spin(nx: int, ny: int, nz: int) -> void:
 ## Gravity, drag, Magnus and the spin's decay for one tick (no net, no
 ## ground): the flight Aim solves against.
 func fly() -> void:
-	var s := Fx.length(vx, vy, vz)
-	var mx := Fx.mul_shift(wy * vz - wz * vy, K.MAGNUS_Q32, 32)
-	var my := Fx.mul_shift(wz * vx - wx * vz, K.MAGNUS_Q32, 32)
-	var mz := Fx.mul_shift(wx * vy - wy * vx, K.MAGNUS_Q32, 32)
-	vx += mx - Fx.drag(vx, s)
-	vy += my - Fx.drag(vy, s) - K.GRAVITY
-	vz += mz - Fx.drag(vz, s)
-	wx = wx * K.SPIN_DECAY_256 / 256
-	wy = wy * K.SPIN_DECAY_256 / 256
-	wz = wz * K.SPIN_DECAY_256 / 256
+	# Fx.length, Fx.drag and Fx.mul_shift, inlined: this runs thousands of
+	# times a shot when aiming (ADR-009). Same arithmetic, same results.
+	var s := int(sqrt(float(vx * vx + vy * vy + vz * vz)))
+	var dx := vx * s * K.DRAG_Q32
+	var dy := vy * s * K.DRAG_Q32
+	var dz := vz * s * K.DRAG_Q32
+	dx = -((-dx) >> 32) if dx < 0 else dx >> 32
+	dy = -((-dy) >> 32) if dy < 0 else dy >> 32
+	dz = -((-dz) >> 32) if dz < 0 else dz >> 32
+	if wx != 0 or wy != 0 or wz != 0:
+		var mx := (wy * vz - wz * vy) * K.MAGNUS_Q32
+		var my := (wz * vx - wx * vz) * K.MAGNUS_Q32
+		var mz := (wx * vy - wy * vx) * K.MAGNUS_Q32
+		dx -= -((-mx) >> 32) if mx < 0 else mx >> 32
+		dy -= -((-my) >> 32) if my < 0 else my >> 32
+		dz -= -((-mz) >> 32) if mz < 0 else mz >> 32
+		wx = wx * K.SPIN_DECAY_256 / 256
+		wy = wy * K.SPIN_DECAY_256 / 256
+		wz = wz * K.SPIN_DECAY_256 / 256
+	vx -= dx
+	vy -= dy + K.GRAVITY
+	vz -= dz
 	x += vx
 	y += vy
 	z += vz

@@ -21,7 +21,7 @@ game/tools/quest_build.sh [--check]                   # build + install + launch
 
 `design/ROADMAP.md` is the milestone sheet: keep it current with each
 branch. `design/KNOWN_ISSUES.md` lists the defects, and
-`decisions/README.md` the ADRs (next: ADR-009). `design/QUEST_SETUP.md`
+`decisions/README.md` the ADRs (next: ADR-010). `design/QUEST_SETUP.md`
 covers the headset build.
 
 **The canon bible** is `../pickleball/docs/PICKLEBALL_94_BIBLE.md`. The VR
@@ -53,6 +53,10 @@ decisions are cited as "port ADR-n", the SNES repo's as "SNES ADR-n".
   `tools/import_opponents.py`. Don't edit it by hand.
 - **Typed GDScript.** `:=` can't infer from Array elements: annotate
   (`var x: int = arr[i]`). `pass` and `call` are reserved.
+- **Mind the Quest's CPU** (ADR-009): GDScript there is several times
+  slower than on the Mac. Anything that predicts flight (`Aim`,
+  `Intercept`) must stay cheap. Debug builds log `PERF` lines
+  (`adb logcat -s godot`) to check.
 - **Behaviour changes need an ADR**, and golden traces change only on
   purpose, with the reason in the commit.
 

@@ -281,6 +281,7 @@ func _spot(slot: int) -> Vector3:
 func _process(delta: float) -> void:
 	if sim == null:
 		return
+	var t0 := Time.get_ticks_usec()
 	if xr:
 		xr.begin_frame(delta)
 		_place_xr()
@@ -295,12 +296,18 @@ func _process(delta: float) -> void:
 	if paused:
 		_draw(0.0)
 		return
+	var t1 := Time.get_ticks_usec()
+	Perf.add("input", t1 - t0)
 	_acc = minf(_acc + delta, DT * MAX_TICKS_PER_FRAME)
 	var n := int(_acc / DT)
 	_acc -= n * DT
 	for j in n:
 		_tick(float(j + 1) / n, j == 0)
+	var t2 := Time.get_ticks_usec()
 	_draw(delta)
+	var t3 := Time.get_ticks_usec()
+	Perf.add("draw", t3 - t2)
+	Perf.frame(t3 - t0 + crowd.last_usec, n, delta)
 
 
 func _drive_menu() -> void:
@@ -337,11 +344,15 @@ func _tick(alpha: float, first: bool) -> void:
 			bot.aim_x = aim[0]
 			bot.aim_z = aim[2]
 			bot.pace = 40000 if flat.soft else 105000
+		var tb := Time.get_ticks_usec()
 		h = bot.input()
+		Perf.add("bot", Time.get_ticks_usec() - tb)
 		if flat:
 			flat.show_paddle(h)
 	input_log.append(h.to_array())
+	var ts := Time.get_ticks_usec()
 	sim.step([h], _commands)
+	Perf.add("sim", Time.get_ticks_usec() - ts)
 	_commands = []
 	if sim.phase != _last_phase:
 		_on_phase(sim.phase)

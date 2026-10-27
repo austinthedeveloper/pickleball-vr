@@ -14,5 +14,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [006](ADR-006-spin-and-feel.md) | Spin, the sweet spot, and how a point sounds |
 | [007](ADR-007-practice.md) | The ball machine and HOW TO PLAY |
 | [008](ADR-008-venues.md) | Venues, rebuilt in 3D |
+| [009](ADR-009-quest-performance.md) | Quest performance: one shadow map, foveation, a fast aim solver |
 
-Next: ADR-009.
+Next: ADR-010.
