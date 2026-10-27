@@ -44,3 +44,21 @@ the lead's M1 Pro with a Quest 3, 2026-10-27.
 The export preset ("Quest" in `game/export_presets.cfg`) has XR Mode
 OpenXR, the Meta plugin on, Quest 2 / 3 / Pro, arm64 only, a Gradle
 build, and min SDK 32.
+
+## Meta Quest Developer Hub
+
+If Developer Hub is running, it keeps its own adb server, a different
+version from Homebrew's. Two adb versions kill each other's server, and
+installs then fail with "could not install *smartsocket* listener" or
+"cannot connect to daemon". `quest_build.sh` and `swings.sh` use
+Developer Hub's adb whenever it's running (`tools/adb_pick.sh`). If
+plain `adb` misbehaves, quit Developer Hub, or use its adb:
+`"/Applications/Meta Quest Developer Hub.app/Contents/Resources/bin/adb"`.
+
+## The swing log
+
+Debug builds write a line for every hit you make: the paddle's speed and
+direction, the face's angle, the contact, and where the ball would land
+raw and with the assist. It goes to a file on the headset, because the
+Quest's own log keeps only a few minutes.
+`game/tools/swings.sh` prints it; `--clear` empties it afterwards.
