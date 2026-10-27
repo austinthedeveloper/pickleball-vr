@@ -469,6 +469,8 @@ func _on_event(e: Array) -> void:
 				announcer.say(["rally_%d_1" % e[2]], Announcer.HIGH)
 		K.EVENT_HIT:
 			var speed: int = e[2]
+			if e[1] == 0 and Perf.on:
+				_log_swing()
 			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf())
 			if xr and e[1] == 0:
 				# Crisp from the sweet spot, a duller, longer buzz off the rim.
@@ -575,3 +577,36 @@ func _trail_draw(b: Vector3, delta: float) -> void:
 		var at: Vector3 = _trail_at[i + 1] if show else Vector3(0, -10, 0)
 		mm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3.ONE * (0.4 + 0.5 * f)), at))
 		mm.set_instance_color(i, Color(Look.BALL, 0.45 * f))
+
+
+## Debug builds: one line per human hit, for tuning the paddle to real
+## swings (`adb logcat -s godot | grep SWING`). Forward is toward the net.
+func _log_swing() -> void:
+	var c := sim.last_contact
+	if c.size() < 14:
+		return
+	var fwd := -K.side_sign(0)             # the near side faces -z
+	var u := Vector3(c[0], c[1], c[2]) * K.TICK_HZ / float(K.M)
+	var n := Vector3(c[3], c[4], c[5]) / float(K.Q14)
+	var vin := Vector3(c[6], c[7], c[8]) * K.TICK_HZ / float(K.M)
+	var raw := Vector3(c[9], c[10], c[11]) * K.TICK_HZ / float(K.M)
+	var out := Vector3(sim.ball.vx, sim.ball.vy, sim.ball.vz) * K.TICK_HZ / float(K.M)
+	var probe := sim.ball.copy()
+	probe.launch(c[9], c[10], c[11])
+	var lr: Array[int] = Aim.landing(probe)
+	var la: Array[int] = Aim.landing(sim.ball)
+	print("SWING paddle %.1f m/s (fwd %.1f up %.1f side %.1f) face open %d yaw %d | at %.2f m high, %.1f m from net | in %.1f m/s | raw out %.1f m/s at %d deg -> %s | assisted -> %s" % [
+		u.length(), u.z * fwd, u.y, u.x, roundi(rad_to_deg(asin(clampf(n.y, -1, 1)))),
+		roundi(rad_to_deg(atan2(n.x, n.z * fwd))), c[12] / 1e6, absf(c[13]) / 1e6, vin.length(),
+		raw.length(), roundi(rad_to_deg(atan2(raw.y, Vector2(raw.x, raw.z).length()))), _where(lr), _where(la)])
+
+
+func _where(l: Array[int]) -> String:
+	if l[3] == 1:
+		return "NET"
+	var d := -l[2] / 1e6
+	if d < 0.0:
+		return "SHORT (own side)"
+	if not K.in_court(l[1], l[2]):
+		return "OUT %.1f m" % d
+	return "IN %.1f m" % d

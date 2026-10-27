@@ -28,6 +28,11 @@ var shots := 0                       ## hits this rally
 ## The last human contact's distance from the face's centre (um): the
 ## view's haptics and sound read it.
 var last_offset := 0
+## The last human contact, for the view's swing log (debug builds; not
+## state: never read back by the sim): [paddle vx, vy, vz, normal x, y, z
+## (Q14, toward where it pushes), ball in vx, vy, vz, raw out vx, vy, vz
+## (before the assist), y, z].
+var last_contact: Array[int] = []
 var rng := 1
 var events: Array = []
 var drill: Drill                     ## practice (ADR-007); null in a match
@@ -407,6 +412,7 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 	ball.y = maxi(cy + ty + reach * nn[1] / K.Q14, K.BALL_RADIUS)
 	ball.z = cz + tz + reach * nn[2] / K.Q14
 	ball.set_spin(swx, swy, swz)
+	last_contact = [ux, uy, uz, nn[0], nn[1], nn[2], ball.vx, ball.vy, ball.vz, vx, vy, vz, ball.y, ball.z]
 	var v := _assist(p.team, [vx, vy, vz])
 	ball.launch(v[0], v[1], v[2])
 	return true
