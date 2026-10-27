@@ -13,6 +13,7 @@ godot --path game                                    # play (flat mode without a
 godot --path game -- demo                            # DEMO: bot vs CPU
 godot --headless --path game -s res://tests/golden.gd   # regenerate golden traces (play changes only)
 godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson] [venue=NAME]
+game/tools/shots.sh [filter]                          # the standard screenshots into shots/ (git-ignored, for looking)
 godot --headless --path game -s res://tools/rally_stats.gd -- <matches> <difficulty> [doubles]
 python3 game/tools/import_opponents.py                # the ladder, from the port kit
 game/tools/fetch_openxr_vendors.sh                    # Meta's OpenXR loader into game/addons (pinned, git-ignored)

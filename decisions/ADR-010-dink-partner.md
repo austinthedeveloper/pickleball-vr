@@ -40,6 +40,27 @@ bonus, they asked for floor targets to aim at.
   scoreboard. The bot aims at the target when there is one, so the
   demo and the tests use it.
 
+## Amended 2026-10-27: after the first session with the partner
+
+- **The counter is dinks in a row,** in their kitchen. A ball outside it
+  starts the count again; the rally goes on. It used to show the rally
+  (any ball in court), which kept counting through misses.
+- **The announcer says the board's number.** The port kit's rally clips
+  count shots by both players ("Ten shots!"). Now it calls the clips that
+  say the number (rally_10_1, rally_15_1, rally_20_1, rally_25,
+  rally_30_1) when the streak reaches it, so the call and the board
+  agree.
+- **PARTNER: ACROSS or CROSS COURT.** Cross court puts you in your right
+  court and the partner diagonally across (their right). Its targets sit
+  in its half of the kitchen. Its dinks still come to you.
+- **Changing an option no longer moves you** (MatchView, ADR-001's rig).
+  The lobby rebuilds its demo, and with it the rig. The new rig takes the
+  old play space as it was and only moves you when the view stands you
+  somewhere new.
+- **The Quest's recenter** (hold the Meta button) now faces you down the
+  court again where you stand (OpenXR's `pose_recentered`). Before, the
+  game ignored it.
+
 ## Consequences
 
 - The partner is pure sim like everything else: seeded, deterministic,

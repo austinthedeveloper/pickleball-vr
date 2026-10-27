@@ -107,6 +107,7 @@ var zone := ZONE_ANY
 var rules := 0
 var partner := false                 ## DINK PARTNER instead of the machine
 var partner_pace := 1
+var cross := false                   ## the partner stands diagonally across, not straight
 var targets := false                 ## floor targets on
 var goal := 0                        ## good returns to finish; 0 runs forever
 ## The spot you start on (a lesson's), um; x, z.
@@ -141,6 +142,7 @@ func copy_settings_from(o: Drill) -> void:
 	rate = o.rate
 	partner = o.partner
 	partner_pace = o.partner_pace
+	cross = o.cross
 	targets = o.targets
 	speed = o.speed
 	machine_at = o.machine_at
@@ -179,7 +181,7 @@ func reset(sim: Sim) -> void:
 	rally = 0
 	if partner:
 		var q := sim.players[2]
-		q.x = 0
+		q.x = partner_home_x(spot_x)
 		q.z = PARTNER_Z
 		q.swing_tick = -1
 		sim.ball.place(0, 500000, PARTNER_Z)
@@ -511,10 +513,19 @@ func _partner(sim: Sim) -> void:
 		_partner_dink(sim, b.x, b.y, b.z)
 
 
-## Between shots the partner squares up to you along its kitchen line.
+## Between shots the partner squares up to you along its kitchen line:
+## straight across, or diagonally (CROSS COURT: the other half).
 func _partner_home(sim: Sim) -> void:
-	var q := sim.players[2]
-	_partner_step(q, clampi(sim.players[0].x, -K.COURT_HALF_WIDTH / 2, K.COURT_HALF_WIDTH / 2), PARTNER_Z)
+	_partner_step(sim.players[2], partner_home_x(sim.players[0].x), PARTNER_Z)
+
+
+func partner_home_x(you_x: int) -> int:
+	var x := clampi(you_x, -K.COURT_HALF_WIDTH / 2, K.COURT_HALF_WIDTH / 2)
+	if cross:
+		# You on the near side's right (+x) face a partner on their right (+x
+		# for them is -x): the diagonal.
+		return -signi(x if x != 0 else 1) * K.COURT_HALF_WIDTH / 2
+	return x
 
 
 func _partner_step(q: SimTypes.Player, gx: int, gz: int) -> void:
@@ -540,6 +551,11 @@ func _new_target(sim: Sim) -> void:
 	var xlo := -hw
 	var xhi := hw
 	var z2 := zone if not partner else ZONE_KITCHEN
+	if partner and cross:
+		# Cross court: in the partner's half of their kitchen.
+		var px := partner_home_x(spot_x)
+		xlo = 400000 if px > 0 else -hw
+		xhi = hw if px > 0 else -400000
 	match z2:
 		ZONE_KITCHEN:
 			lo = 500000

@@ -114,7 +114,12 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
 
-**VR-20 / VR-21, ready to test.** MAIN > DINK PARTNER > START. Stand
+**VR-20 / VR-21, played (fun, worked well); fixes ready to test:** the count
+is dinks in a row and resets outside their kitchen, the announcer matches
+it, PARTNER can be CROSS COURT, menus don't move you, and holding the
+Meta button recenters you down the court.
+
+**VR-20 / VR-21, first notes.** MAIN > DINK PARTNER > START. Stand
 at your kitchen line and dink. Does the partner feel like a patient
 practice partner? Do its dinks land where you'd want them? Try EASY,
 MEDIUM and HARD, and aim for the gold circle (TARGETS). On the BALL

@@ -84,6 +84,9 @@ func say(line: Array, priority := MID, queue := false) -> void:
 
 func _pick(family: String) -> String:
 	if not families.has(family):
+		for f in families:                 # an exact clip ("rally_15_1": the one that says the number)
+			if (families[f] as Array).has(family):
+				return family
 		return ""
 	var options: Array = families[family]
 	var id: String = options[rng.randi() % options.size()]

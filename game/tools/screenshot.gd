@@ -29,6 +29,7 @@ func _initialize() -> void:
 	if mode == "partner":
 		var st := Settings.new()
 		st.partner_targets = true
+		st.partner_cross = args.has("cross")
 		cfg.drill = st.partner_config().drill
 	elif mode == "machine":
 		cfg.drill = Drill.new()

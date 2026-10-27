@@ -44,6 +44,8 @@ var lesson_label: Label3D
 var zone_mesh: MeshInstance3D
 var paused := false                  ## the sim isn't stepped while a pause menu is up
 var _placed := false                 ## XR: turned to the court and moved to the start, once tracked
+var _inherited := false              ## XR: the play space came over from the last view
+var _stay := false                   ## ...and you're on the same spot (the lobby, rebuilt)
 
 
 func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectating := false) -> void:
@@ -61,6 +63,9 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		xr.left_handed = left_handed
 		xr.paddle_tilt = paddle_tilt
 		add_child(xr)
+		var openxr := XRServer.find_interface("OpenXR")
+		if openxr and openxr.has_signal("pose_recentered"):
+			openxr.pose_recentered.connect(_on_recentered)
 	else:
 		flat = FlatRig.new()
 		flat.demo = demo
@@ -189,8 +194,37 @@ func _place_xr() -> void:
 	if _placed or not xr.tracking():
 		return
 	_placed = true
+	if _inherited:
+		# Facing the court already: only move if this view stands you
+		# somewhere new (into a match, back to the lobby), never when the
+		# lobby rebuilds for a changed option.
+		if not _stay:
+			xr.recenter(SPECTATE if spectate else _start_spot())
+		return
 	xr.face_court()
 	xr.recenter(SPECTATE if spectate else _start_spot())
+
+
+## The play space as the last view left it (main passes it on), so a new
+## view doesn't turn or move you. `stay`: and keep you where you are.
+func inherit_rig(t: Transform3D, stay: bool) -> void:
+	if xr == null:
+		return
+	xr.global_transform = t
+	_inherited = true
+	_stay = stay
+
+
+## The headset's own recenter (hold the Meta button): the runtime moved
+## your play space, so face the court again and stand where you were.
+func _on_recentered() -> void:
+	if xr == null:
+		return
+	xr.face_court()
+	if spectate:
+		xr.recenter(SPECTATE)
+	else:
+		xr.recenter(World.m(sim.players[0].x, 0, sim.players[0].z))
 
 
 ## Show a menu panel in front of you, pointed at with the laser or mouse.
@@ -407,10 +441,12 @@ func _on_event(e: Array) -> void:
 			var r: int = e[1]
 			var rallying := sim.drill.partner and r == Drill.RESULT_GOOD
 			if rallying:
-				var n := sim.drill.rally
-				if n in [10, 15, 20, 30]:
-					announcer.say(["rally_%d" % n], Announcer.HIGH)
-					crowd.react(0.6)
+				# The clips that say the number, so the call matches the board.
+				const COUNT_CALLS := {10: "rally_10_1", 15: "rally_15_1", 20: "rally_20_1",
+					25: "rally_25", 30: "rally_30_1"}
+				var n: int = e[2]                # the streak
+				if COUNT_CALLS.has(n):
+					announcer.say([COUNT_CALLS[n]], Announcer.HIGH)
 			else:
 				board.announce(Drill.RESULT_TEXT[r], Color(0.5, 1, 0.5) if r == Drill.RESULT_GOOD else Color(1, 0.5, 0.35), 1.2)
 			const CALLS := {Drill.RESULT_OUT: "out", Drill.RESULT_NET: "net", Drill.RESULT_KITCHEN: "kitchen",
@@ -422,8 +458,8 @@ func _on_event(e: Array) -> void:
 				announcer.say(["winner"], Announcer.TOP)
 				board.announce("LESSON COMPLETE!", Color(1, 0.9, 0.2), 4.0)
 				drill_done.emit()
-			elif r == Drill.RESULT_GOOD and e[2] > 0 and e[2] % 10 == 0:
-				announcer.say(["rally_%d" % mini(e[2], 30)] if e[2] in [10, 20, 30] else ["winner"], Announcer.HIGH)
+			elif r == Drill.RESULT_GOOD and e[2] in [10, 20, 30]:
+				announcer.say(["rally_%d_1" % e[2]], Announcer.HIGH)
 		K.EVENT_HIT:
 			var speed: int = e[2]
 			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf())

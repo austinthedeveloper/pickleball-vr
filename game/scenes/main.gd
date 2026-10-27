@@ -37,8 +37,18 @@ func _ready() -> void:
 		lobby()
 
 
+var _rig_t := Transform3D()          ## the XR play space the last view left
+var _rig_from_lobby := false
+var _has_rig := false
+
+
 func _new_view() -> MatchView:
+	_has_rig = false
 	if view:
+		if view.xr:
+			_rig_t = view.xr.global_transform
+			_rig_from_lobby = view.spectate
+			_has_rig = true
 		view.queue_free()
 		remove_child(view)
 	menu = null
@@ -62,6 +72,7 @@ func lobby(to := "") -> void:
 	elif page == "partner":
 		demo_cfg = settings.partner_config()
 	_new_view().setup(demo_cfg, use_xr, true, true)
+	_inherit()
 	menu = _page(page)
 	menu.changed.connect(_on_changed)
 	menu.pressed.connect(_on_pressed)
@@ -102,6 +113,7 @@ func _page(id: String) -> Menu3D:
 		"partner":
 			m.title = "DINK PARTNER   BEST %d" % settings.partner_best
 			m.add_row("level", "DIFFICULTY", Drill.PACE_NAMES, settings.partner_level)
+			m.add_row("side", "PARTNER", ["ACROSS", "CROSS COURT"], 1 if settings.partner_cross else 0)
 			m.add_row("ptargets", "TARGETS", OFF_ON, 1 if settings.partner_targets else 0)
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
 			m.add_row("pstart", "START")
@@ -144,9 +156,10 @@ func _on_changed(id: String, index: int) -> void:
 		"targets": settings.machine_targets = index == 1
 		"level": settings.partner_level = index
 		"ptargets": settings.partner_targets = index == 1
+		"side": settings.partner_cross = index == 1
 	settings.save()
 	if id in ["mode", "vs", "venue", "hand", "angle", "shot", "target", "zone", "machine_at", "speed",
-			"targets", "level", "ptargets"]:
+			"targets", "level", "ptargets", "side"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
 
@@ -179,6 +192,7 @@ func _on_pressed(id: String) -> void:
 
 func _start(cfg: SimTypes.MatchConfig, demo: bool) -> void:
 	_new_view().setup(cfg, use_xr, demo)
+	_inherit()
 	view.match_over.connect(_on_match_over)
 	view.drill_done.connect(_on_drill_done)
 	view.pause_requested.connect(_on_pause)
@@ -189,6 +203,13 @@ func _start_lesson(i: int) -> void:
 	lesson = clampi(i, 0, Lessons.count() - 1)
 	var l := Lessons.lesson(lesson)
 	view.show_lesson(String(l["title"]), l["lines"])
+
+
+## Hand the play space on to the new view: no turn, and no move at all
+## when the lobby rebuilds itself.
+func _inherit() -> void:
+	if _has_rig:
+		view.inherit_rig(_rig_t, _rig_from_lobby and view.spectate)
 
 
 ## The page a session goes back to.
@@ -205,8 +226,8 @@ func _keep_best() -> void:
 	if view == null or view.sim.drill == null or view.sim.drill.goal > 0:
 		return
 	var d := view.sim.drill
-	if d.partner and d.best_rally > settings.partner_best:
-		settings.partner_best = d.best_rally
+	if d.partner and d.best > settings.partner_best:
+		settings.partner_best = d.best
 	elif not d.partner and d.best > settings.machine_best:
 		settings.machine_best = d.best
 	settings.save()

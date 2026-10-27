@@ -109,8 +109,51 @@ func test_dink_partner_menu_flow() -> void:
 	eq(main.settings.partner_level, 2, "HARD")
 	main._start(main.settings.partner_config(), false)
 	check(main.view.floor_target != null and main.view.machine == null, "a target, no machine")
-	main.view.sim.drill.best_rally = 9
+	main.view.sim.drill.best = 9
 	main._on_pause()
 	main._on_pressed("lobby")
 	eq(main.settings.partner_best, 9, "best rally kept")
 	main.queue_free()
+
+
+func test_cross_court_partner_stands_diagonal() -> void:
+	var s := Settings.new()
+	s.partner_cross = true
+	s.partner_targets = true
+	var sim := Sim.new(s.partner_config())
+	var bot := Bot.new(sim, 0)
+	check(sim.players[0].x > 0, "you start in your right court")
+	check(sim.players[2].x < 0, "the partner diagonally across (their right is -x): %d" % sim.players[2].x)
+	var near := 0
+	for i in 6000:
+		sim.step([bot.input()])
+		check(sim.drill.target_x < 0, "targets in the partner's half")
+		if asserts > 40:
+			asserts = 40
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_BOUNCE and e[2] > 0 and sim.drill.stage == Drill.FLY \
+					and absi(e[1] - sim.players[0].x) < 1200000:
+				near += 1
+	check(near >= 8, "its dinks still come to you: %d" % near)
+	check(sim.drill.best_rally >= 5, "cross-court rallies: %d" % sim.drill.best_rally)
+
+
+func test_a_ball_outside_their_kitchen_resets_the_count_but_not_the_rally() -> void:
+	var sim := Sim.new(Settings.new().partner_config())
+	var d := sim.drill
+	d.streak = 7
+	d.stage = Drill.RETURN
+	sim.ball.place(0, 30000, -4 * K.M)       # in court, past their kitchen
+	sim.ball.launch(0, -5000, -20000)
+	sim.step([null])
+	eq(d.last_result, Drill.RESULT_ZONE, "missed the zone")
+	eq(d.streak, 0, "the count starts again")
+	eq(d.stage, Drill.PARTNER, "but the partner still plays it")
+
+
+func test_announcer_says_the_number() -> void:
+	var a := Announcer.new()
+	runner.root.add_child(a)
+	a.say(["rally_15_1"], Announcer.HIGH)
+	eq(a.said, ["rally_15_1"] as Array[String], "the clip that says FIFTEEN, exactly")
+	a.queue_free()

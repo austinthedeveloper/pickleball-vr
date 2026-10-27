@@ -18,6 +18,12 @@ godot --path game -- doubles      # doubles, with a CPU partner (ADR-004)
 game/tools/test.sh                # all tests, headless (must pass)
 ```
 
+## Screenshots
+
+`game/tools/shots.sh` renders the standard views (lobby, matches, the
+ball machine, the dink partner, a lesson, every venue) into `shots/` at
+the repo root. Git ignores the folder; it's for looking.
+
 ## Controls
 
 | | Quest | Flat mode |

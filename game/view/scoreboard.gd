@@ -60,8 +60,9 @@ func show_from(sim: Sim, delta: float) -> void:
 		var d := sim.drill
 		var tgt := "   TARGETS %d" % d.target_hits if d.targets else ""
 		if d.partner:
-			score_label.text = "%d" % d.rally
-			info_label.text = "RALLY   BEST %d%s" % [d.best_rally, tgt]
+			# Dinks in their kitchen in a row: a ball outside it starts again.
+			score_label.text = "%d" % d.streak
+			info_label.text = "DINKS IN A ROW   BEST %d%s" % [d.best, tgt]
 		elif d.goal > 0:
 			score_label.text = "%d / %d" % [mini(d.good, d.goal), d.goal]
 			info_label.text = "LESSON" if d.stage != Drill.DONE else "DONE!"

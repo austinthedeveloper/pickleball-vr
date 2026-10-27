@@ -34,6 +34,7 @@ var machine_targets := false
 ## DINK PARTNER (ADR-010)
 var partner_level := 1
 var partner_targets := true
+var partner_cross := false
 var partner_best := 0
 
 
@@ -62,6 +63,7 @@ func load_settings() -> void:
 	partner_level = c.get_value("partner", "level", partner_level)
 	partner_targets = c.get_value("partner", "targets", partner_targets)
 	partner_best = c.get_value("partner", "best", partner_best)
+	partner_cross = c.get_value("partner", "cross", partner_cross)
 
 
 func save() -> void:
@@ -88,6 +90,7 @@ func save() -> void:
 	c.set_value("partner", "level", partner_level)
 	c.set_value("partner", "targets", partner_targets)
 	c.set_value("partner", "best", partner_best)
+	c.set_value("partner", "cross", partner_cross)
 	c.save(path)
 
 
@@ -137,7 +140,10 @@ func partner_config() -> SimTypes.MatchConfig:
 	d.targets = partner_targets
 	d.zone = Drill.ZONE_KITCHEN
 	d.rules = Drill.RULE_KITCHEN
+	d.cross = partner_cross
 	d.spot_z = K.KITCHEN_DEPTH + 300000
+	if partner_cross:
+		d.spot_x = K.COURT_HALF_WIDTH / 2      # your right court, the partner diagonal
 	cfg.drill = d
 	return cfg
 
