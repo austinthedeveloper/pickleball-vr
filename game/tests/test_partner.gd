@@ -186,8 +186,15 @@ func test_dinks_reach_you_cross_court_too() -> void:
 	for cross in [false, true]:
 		var p := _passes(cross)
 		check(p.size() >= 6, "fed: %d" % p.size())
+		var wide := 0
+		var sides := {}
 		for d in p:
-			check(absi(d) <= 450000, "%s: within reach, %.2f m to the side" % ["CROSS" if cross else "ACROSS", d / 1e6])
+			check(absi(d) <= 900000, "%s: within reach, %.2f m to the side" % ["CROSS" if cross else "ACROSS", d / 1e6])
+			if absi(d) > 250000:
+				wide += 1
+				sides[signi(d)] = true
+		# NORMAL spread: mostly to a side, both sides, not dead centre each time.
+		check(wide * 2 >= p.size() and sides.size() == 2, "%s spread: %s" % ["CROSS" if cross else "ACROSS", str(p)])
 
 
 func test_the_partner_moves_before_your_ball_bounces() -> void:

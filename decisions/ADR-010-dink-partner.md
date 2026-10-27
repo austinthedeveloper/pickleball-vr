@@ -76,6 +76,14 @@ bonus, they asked for floor targets to aim at.
   (`test_the_partner_moves_before_your_ball_bounces`). The person's
   swing follows that early plan too.
 
+## Amended a third time: SPREAD
+
+The 30 cm scatter felt like every ball came dead centre. Now each dink
+goes to your forehand or backhand by a reach that SPREAD sets: TIGHT
+10 to 35 cm, NORMAL 25 to 75 cm, WIDE 50 cm to 1.2 m. About one in seven
+comes straight at you. It still aims along the line to you, so the reach
+holds cross court.
+
 ## Consequences
 
 - The partner is pure sim like everything else: seeded, deterministic,

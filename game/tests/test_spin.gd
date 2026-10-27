@@ -103,3 +103,41 @@ func test_the_sweet_spot_is_livelier() -> void:
 	check(-centre.ball.vz > -edge.ball.vz + 2000, "centre %d faster than rim %d" % [-centre.ball.vz, -edge.ball.vz])
 	check(edge.last_offset > 80000 and centre.last_offset < 40000,
 		"offsets reported: %d, %d" % [edge.last_offset, centre.last_offset])
+
+
+## Where a dink-like ball goes off a face tilted `open_deg` up, swung `up`
+## m/s up and `fwd` m/s forward, with no assist: [vy m/s, horizontal m/s].
+func _lift(open_deg: float, up: float, fwd: float) -> Array:
+	var cfg := SimTypes.MatchConfig.new()
+	cfg.assist = K.ASSIST_OFF
+	var sim := Sim.new(cfg)
+	sim.phase = K.PHASE_LIVE
+	sim.last_hitter = 2
+	sim.ball.held = false
+	var a := deg_to_rad(open_deg)
+	var n := Vector3(0, sin(a), -cos(a))
+	var contact := Vector3(0, 0.45, 2.3) * 1e6
+	sim.ball.place(int(contact.x), int(contact.y + 10 * 12500), int(contact.z - 10 * 33333))
+	sim.ball.launch(0, -12500, 33333)
+	for t in 30:
+		var h := SimTypes.HumanInput.new()
+		h.head_z = 3300000
+		var pc := contact - n * 45000 + Vector3(0, up, -fwd) * 1e6 / 120.0 * (t - 10)
+		h.paddle_x = int(pc.x)
+		h.paddle_y = int(pc.y)
+		h.paddle_z = int(pc.z)
+		h.normal = [int(n.x * K.Q14), int(n.y * K.Q14), int(n.z * K.Q14)]
+		sim.step([h])
+		if sim.last_hitter == 0:
+			return [sim.ball.vy * 120 / 1e6, Vector2(sim.ball.vx, sim.ball.vz).length() * 120 / 1e6]
+	return []
+
+
+func test_a_low_to_high_swing_lifts_the_ball() -> void:
+	# The face grips: lifting the paddle through the ball lifts the ball,
+	# as with a real paddle (it used to only make spin).
+	var flat := _lift(15.0, 0.0, 2.0)
+	var lift := _lift(15.0, 2.0, 1.5)
+	check(lift[0] > flat[0] + 0.8, "lifting adds %.1f m/s up (flat %.1f)" % [lift[0] - flat[0], flat[0]])
+	var big := _lift(30.0, 3.5, 1.0)
+	check(big[0] > 2.5, "an open face lifted hard: %.1f m/s up" % big[0])

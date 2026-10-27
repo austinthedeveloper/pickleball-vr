@@ -39,6 +39,15 @@ a frame (72-120 Hz), and a fast paddle moves 10+ cm between samples.
   at LOW. You aim; the game judges length, the hardest thing to feel in
   a headset. The bot's deliberate misses now go wide, since long misses
   are always saved.
+- **The face grips the ball** (amended 2026-10-27, after the lead, a real
+  player, hit 80% into the net with no assist). The contact gave the ball
+  only the face's push along its normal. The face sliding across the ball
+  (the low-to-high lift of every dink and drive) made spin but no lift:
+  a lifted swing left the ball rising at 0.1 m/s, the same as a flat
+  push. Now the face takes half the slide between them out
+  (`PADDLE_GRIP`, a hollow ball rolling without slip would lose 60%), so
+  lifting the paddle lifts the ball (`test_a_low_to_high_swing_lifts_the_ball`).
+  The bot plans for it. The golden traces were regenerated for it.
 - **Flat mode and DEMO** drive the same input from `Bot`, which plans a
   swing through the ball on the sim's own prediction. In flat mode you
   move and aim and the bot swings; in DEMO it does all of it.

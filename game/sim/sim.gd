@@ -387,6 +387,12 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 	bx -= bn * nn[0] / K.Q14
 	by -= bn * nn[1] / K.Q14
 	bz -= bn * nn[2] / K.Q14
+	# Grip (ADR-003 amended): the face drags the ball along with it, taking
+	# PADDLE_GRIP of the slide between them. A low-to-high swing lifts the
+	# ball, as it does with a real paddle; the rest of the slide is spin.
+	vx += bx * K.PADDLE_GRIP_256 / 256
+	vy += by * K.PADDLE_GRIP_256 / 256
+	vz += bz * K.PADDLE_GRIP_256 / 256
 	var k := K.URAD / 100 * K.SPIN_BRUSH_PCT / K.BALL_RADIUS
 	var keep := K.SPIN_KEEP_ON_HIT_PCT
 	var swx := (by * nn[2] - bz * nn[1]) / K.Q14 * k + ball.wx * keep / 100

@@ -114,6 +114,7 @@ func _page(id: String) -> Menu3D:
 			m.title = "DINK PARTNER   BEST %d" % settings.partner_best
 			m.add_row("level", "DIFFICULTY", Drill.PACE_NAMES, settings.partner_level)
 			m.add_row("side", "PARTNER", ["ACROSS", "CROSS COURT"], 1 if settings.partner_cross else 0)
+			m.add_row("spread", "SPREAD", Drill.SPREAD_NAMES, settings.partner_spread)
 			m.add_row("ptargets", "TARGETS", OFF_ON, 1 if settings.partner_targets else 0)
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
 			m.add_row("pstart", "START")
@@ -157,9 +158,10 @@ func _on_changed(id: String, index: int) -> void:
 		"level": settings.partner_level = index
 		"ptargets": settings.partner_targets = index == 1
 		"side": settings.partner_cross = index == 1
+		"spread": settings.partner_spread = index
 	settings.save()
 	if id in ["mode", "vs", "venue", "hand", "angle", "shot", "target", "zone", "machine_at", "speed",
-			"targets", "level", "ptargets", "side"]:
+			"targets", "level", "ptargets", "side", "spread"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
 

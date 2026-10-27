@@ -35,6 +35,19 @@ are untouched.
   - A conventional face: eyes, brows, nose, mouth, ears, hair, and a cap
     with a visor. Skin and hair vary by player; the shirts are the ladder
     teams' colours.
+- **The feet carry the body** (amended after the first look: "dragged
+  around by his torso, the legs along for the ride"). The hips used to
+  glide with the sim while the feet stepped after them. Running sideways
+  at 3.5 m/s, the feet trailed the body by about 1 m in 5 steps. Now:
+  - each step lands where the body will be (led by its velocity);
+  - steps quicken with speed and overlap when running;
+  - sideways, the lead foot goes first;
+  - the hips ride between the feet, leaning only a little ahead, and dip
+    as a foot swings through;
+  - the free arm swings with the stride.
+
+  At the same run, the feet lag 0.35 m and take 9 steps
+  (`test_avatar.gd`).
 - **The ball machine** (`view/machine.gd`):
   - A wheeled base with a handle and an accent band.
   - A clear hopper whose balls empty one per feed (and refill).

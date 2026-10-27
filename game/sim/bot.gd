@@ -223,25 +223,38 @@ func _maybe_plan() -> void:
 	var dx: int = v[0] - b.vx
 	var dy: int = v[1] - b.vy
 	var dz: int = v[2] - b.vz
-	_n = Fx.unit_q14(dx, dy, dz)
-	var dl := Fx.length(dx, dy, dz)
-	var s := dl * 256 / (256 + K.PADDLE_E_256) + Fx.dot_q14(b.vx, b.vy, b.vz, _n)
-	_ux = s * _n[0] / K.Q14
-	_uy = s * _n[1] / K.Q14
-	_uz = s * _n[2] / K.Q14
-	# Brush up the back of a drive (topspin), down under a dink (backspin):
-	# across the face, so the shot's pace and line don't change (ADR-006).
+	# Brush up the back of a drive (topspin), down under a dink (backspin),
+	# across the face. The face grips (ADR-003): the brush also carries the
+	# ball PADDLE_GRIP of its way, so the normal swing makes up the rest.
 	var brush := 26000 if target[2] >= 80000 else -9000
-	var ty := K.Q14 - _n[1] * _n[1] / K.Q14         # up, less its part along the normal
-	_ux += brush * (-_n[1] * _n[0] / K.Q14) / K.Q14
-	_uy += brush * ty / K.Q14
-	_uz += brush * (-_n[1] * _n[2] / K.Q14) / K.Q14
+	var n0 := Fx.unit_q14(dx, dy, dz)
+	var bt := _across_up(n0, brush)
+	dx -= bt[0] * K.PADDLE_GRIP_256 / 256
+	dy -= bt[1] * K.PADDLE_GRIP_256 / 256
+	dz -= bt[2] * K.PADDLE_GRIP_256 / 256
+	_n = Fx.unit_q14(dx, dy, dz)
+	bt = _across_up(_n, brush)
+	var dl := Fx.length(dx, dy, dz)
+	var vin_n := Fx.dot_q14(b.vx, b.vy, b.vz, _n)
+	var s := dl * 256 / (256 + K.PADDLE_E_256) + vin_n
+	# The face moves with the ball across itself (so the grip adds only
+	# the brush), and into it along the normal.
+	_ux = s * _n[0] / K.Q14 + (b.vx - vin_n * _n[0] / K.Q14) + bt[0]
+	_uy = s * _n[1] / K.Q14 + (b.vy - vin_n * _n[1] / K.Q14) + bt[1]
+	_uz = s * _n[2] / K.Q14 + (b.vz - vin_n * _n[2] / K.Q14) + bt[2]
 	var rel := Fx.dot_q14(b.vx - _ux, b.vy - _uy, b.vz - _uz, _n)   # < 0: closing
 	var gap := K.BALL_RADIUS + K.PADDLE_HALF_THICK + rel / 2
 	_px = b.x - gap * _n[0] / K.Q14
 	_py = b.y - gap * _n[1] / K.Q14
 	_pz = b.z - gap * _n[2] / K.Q14
 	_plan_tick = sim.tick + i
+
+
+## `amount` um/tick up across a face with normal `n` (up, less its part
+## along the normal).
+static func _across_up(n: Array[int], amount: int) -> Array[int]:
+	return [amount * (-n[1] * n[0] / K.Q14) / K.Q14, amount * (K.Q14 - n[1] * n[1] / K.Q14) / K.Q14,
+		amount * (-n[1] * n[2] / K.Q14) / K.Q14]
 
 
 func _scatter(r: int) -> int:

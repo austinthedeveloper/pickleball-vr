@@ -87,7 +87,9 @@ const PARTNER_REACT := 22            ## ticks after your hit it starts moving (0
 const PARTNER_CLEAR := [600000, 300000, K.NET_CLEAR]
 const PARTNER_PACE := [30000, 38000, 46000]
 const PACE_NAMES := ["EASY", "MEDIUM", "HARD"]
-const PARTNER_SCATTER := 300000      ## how far from you its dinks wander
+## SPREAD: how far to your side its dinks come, um: [nearest, furthest].
+const SPREADS := [[100000, 350000], [250000, 750000], [500000, 1200000]]
+const SPREAD_NAMES := ["TIGHT", "NORMAL", "WIDE"]
 ## Floor targets: a circle on their side; land in it for a TARGET HIT.
 const TARGET_RADIUS := 450000
 
@@ -109,6 +111,7 @@ var rules := 0
 var partner := false                 ## DINK PARTNER instead of the machine
 var partner_pace := 1
 var cross := false                   ## the partner stands diagonally across, not straight
+var spread := 1
 var targets := false                 ## floor targets on
 var goal := 0                        ## good returns to finish; 0 runs forever
 ## The spot you start on (a lesson's), um; x, z.
@@ -145,6 +148,7 @@ func copy_settings_from(o: Drill) -> void:
 	partner = o.partner
 	partner_pace = o.partner_pace
 	cross = o.cross
+	spread = o.spread
 	targets = o.targets
 	speed = o.speed
 	machine_at = o.machine_at
@@ -468,7 +472,13 @@ func _partner_dink(sim: Sim, x: int, y: int, z: int) -> void:
 	# after the bounce the ball carries on to you, cross court too (a
 	# bounce at your x would drift on past you, ADR-010 amended).
 	var tz := clampi(p.z - 1000000 + sim.scatter(250000), 600000, K.KITCHEN_DEPTH * 85 / 100)
-	var want_x := p.x + sim.scatter(PARTNER_SCATTER)
+	# SPREAD: mostly to your forehand or backhand at a reach, now and then
+	# at you (a target, never dead centre every time).
+	var r: Array = SPREADS[clampi(spread, 0, SPREADS.size() - 1)]
+	var off: int = r[0] + sim.random(r[1] - r[0] + 1)
+	if sim.random(100) < 15:
+		off = sim.random(150001)
+	var want_x := p.x + (off if sim.random(2) == 0 else -off)
 	var tx := clampi(x + (want_x - x) * (tz - z) / maxi(p.z - z, 1), -K.COURT_HALF_WIDTH + 300000,
 		K.COURT_HALF_WIDTH - 300000)
 	var level := clampi(partner_pace, 0, 2)

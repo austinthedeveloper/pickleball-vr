@@ -53,6 +53,8 @@ var _step_to: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO]
 var _step_t: Array[float] = [-1.0, -1.0]
 var _hand := Vector3.ZERO            ## paddle hand, smoothed
 var _look := Vector3.ZERO            ## the head's direction, smoothed
+var _vel := Vector3.ZERO             ## the body's velocity, smoothed
+var _gait := 0.0                     ## the stride's phase (arm swing)
 var _off := Vector3.ZERO
 var _hop := 0.0
 var _coil := 0.0
@@ -287,7 +289,12 @@ func show_from(sim: Sim, delta: float) -> void:
 			_feet[i] = body + r0 * (STANCE if i == 1 else -STANCE)
 		_hand = body + Vector3(0, 1.0, -side * 0.3)
 		_off = _hand
-	_root = _root.lerp(body, clampf(delta * 12.0, 0.0, 1.0))
+	# Where the sim has the player, and how fast they're going there: the
+	# feet go after it, and the hips ride between the feet (they used to
+	# glide with the sim, dragging the legs along).
+	if delta > 0.0:
+		_vel = _vel.lerp((body - _root) / delta, clampf(delta * 10.0, 0.0, 1.0))
+	_root = body
 	_track_swing(sim, body, ball, delta)
 	# Facing: the ball while it's coming, else the other side.
 	var want := Vector3(0, 0, -side)
@@ -304,9 +311,20 @@ func show_from(sim: Sim, delta: float) -> void:
 		_last_hitter = sim.last_hitter
 	_hop = maxf(_hop - delta * 6.0, 0.0)
 	var ready := _incoming(sim) or _swing
-	var hips_h: float = (READY_HIPS if ready else TALL_HIPS) + 0.06 * sin(_hop * PI) - (0.04 if _swing and _until < 0.2 else 0.0)
-	_feet_step(right, delta)
-	var pelvis := Vector3(_root.x, hips_h, _root.z) + _face * 0.03
+	var speed := Vector2(_vel.x, _vel.z).length()
+	_feet_step(right, delta, speed)
+	# The hips: between the feet, leaning a little toward where they're going,
+	# dipping as a foot swings through (a stride's bob).
+	var feet_mid := (_feet[0] + _feet[1]) / 2
+	var ahead := Vector3(_root.x - feet_mid.x, 0, _root.z - feet_mid.z).limit_length(0.18)
+	var bob := 0.0
+	for i in 2:
+		if _step_t[i] >= 0.0:
+			bob = maxf(bob, sin(_step_t[i] * PI))
+	var hips_h: float = (READY_HIPS if ready or speed > 1.0 else TALL_HIPS) + 0.06 * sin(_hop * PI) \
+		- (0.04 if _swing and _until < 0.2 else 0.0) - 0.03 * bob
+	var pelvis := Vector3(feet_mid.x, hips_h, feet_mid.z) + ahead + _face * 0.03
+	_gait += speed * delta * 4.0
 	# Torso: leans in when ready, coils into the backswing.
 	var coil_want := 0.0
 	if _swing and _since < 0.0:
@@ -317,7 +335,7 @@ func show_from(sim: Sim, delta: float) -> void:
 	var t_face := _face.rotated(Vector3.UP, _coil)
 	var t_right := t_face.cross(Vector3.UP).normalized()
 	var lean := 0.18 if ready else 0.08
-	var spine := (Vector3.UP + t_face * lean).normalized()
+	var spine := (Vector3.UP + t_face * lean + (_vel * Vector3(1, 0, 1) * 0.05).limit_length(0.2)).normalized()
 	var chest := pelvis + spine * 0.46
 	_place("pelvis", pelvis + Vector3(0, 0.02, 0), Vector3.UP, _face)
 	_place("torso", pelvis + spine * 0.24, spine, t_face)
@@ -342,7 +360,8 @@ func show_from(sim: Sim, delta: float) -> void:
 	var hand_want := _paddle_target(pelvis, t_face, t_right, ball)
 	var rate := 22.0 if _swing else 9.0
 	_hand = _hand.lerp(hand_want, clampf(delta * rate, 0.0, 1.0))
-	var off_want := pelvis + t_face * 0.32 - t_right * 0.26 + Vector3(0, 0.32 if ready else 0.12, 0)
+	var off_want := pelvis + t_face * (0.32 + 0.12 * sin(_gait) * clampf(speed / 2.5, 0.0, 1.0)) \
+		- t_right * 0.26 + Vector3(0, 0.32 if ready else 0.12, 0)
 	_off = _off.lerp(off_want, clampf(delta * 8.0, 0.0, 1.0))
 	var elbow_pole := Vector3.DOWN * 0.7 - t_face * 0.3
 	var hands := [_off, _hand]
@@ -447,32 +466,41 @@ func _track_swing(sim: Sim, body: Vector3, ball: Vector3, delta: float) -> void:
 
 # --- Footwork ---------------------------------------------------------------------
 
-func _feet_step(right: Vector3, delta: float) -> void:
+func _feet_step(right: Vector3, delta: float, speed: float) -> void:
+	# Quicker steps the faster it's going; a step may start before the
+	# other lands (running), and lands where the body will be.
+	var step_time := clampf(STEP_TIME + 0.06 - speed * 0.035, 0.1, STEP_TIME + 0.06)
+	var reach := 0.13 if speed > 0.6 else STEP_AT
 	for i in 2:
 		if _step_t[i] >= 0.0:
-			_step_t[i] += delta / STEP_TIME
+			_step_t[i] += delta / step_time
 			if _step_t[i] >= 1.0:
 				_step_t[i] = -1.0
 				_feet[i] = _step_to[i]
 			else:
-				_feet[i] = _step_from[i].lerp(_step_to[i], _step_t[i])
-	if _step_t[0] >= 0.0 or _step_t[1] >= 0.0:
-		return
-	# The foot furthest from where it belongs steps (one at a time).
-	var worst := -1
-	var worst_d := STEP_AT
+				var f := _step_t[i]
+				_feet[i] = _step_from[i].lerp(_step_to[i], f * f * (3.0 - 2.0 * f))
+	var lead := Vector3(_vel.x, 0, _vel.z) * step_time * 1.2
+	var best := -1
+	var best_d := reach
 	for i in 2:
-		var spot := _root + right * (STANCE if i == 1 else -STANCE)
+		if _step_t[i] >= 0.0:
+			continue
+		var other := 1 - i
+		if _step_t[other] >= 0.0 and _step_t[other] < 0.55:
+			continue                     # one foot at a time, overlapping when running
+		var spot := _root + right * (STANCE if i == 1 else -STANCE) + lead
 		var d := Vector2(_feet[i].x - spot.x, _feet[i].z - spot.z).length()
-		if d > worst_d:
-			worst = i
-			worst_d = d
-	if worst >= 0:
-		var spot2 := _root + right * (STANCE if worst == 1 else -STANCE)
-		# A little past the spot, the way the body is going.
-		_step_from[worst] = _feet[worst]
-		_step_to[worst] = Vector3(spot2.x, 0, spot2.z) + (spot2 - _feet[worst]).normalized() * 0.06 * Vector3(1, 0, 1)
-		_step_t[worst] = 0.0
+		# Sideways, the foot on the side it's going leads (a shuffle, no crossing).
+		var leads := speed > 0.6 and (right * (1.0 if i == 1 else -1.0)).dot(_vel) > 0.0
+		if d > best_d or (leads and d > reach * 0.7 and best < 0):
+			best = i
+			best_d = d
+	if best >= 0:
+		var spot2 := _root + right * (STANCE if best == 1 else -STANCE) + lead
+		_step_from[best] = _feet[best]
+		_step_to[best] = Vector3(spot2.x, 0, spot2.z)
+		_step_t[best] = 0.0
 
 
 func _lift(i: int) -> float:

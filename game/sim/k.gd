@@ -52,6 +52,9 @@ const PADDLE_FACE_RADIUS := 115000
 const PADDLE_HALF_THICK := 8000
 const PADDLE_E_256 := 128            ## paddle-ball restitution 0.5, at the sweet spot
 const PADDLE_EDGE_LOSS_PCT := 40     ## at the face's rim, 40% of that is lost (ADR-006)
+## The face grips the ball: half the slide between them is taken out
+## (a hollow ball rolling without slip would lose 60%). ADR-003 amended.
+const PADDLE_GRIP_256 := 128
 const PADDLE_COOLDOWN := 15          ## ticks before a paddle can hit again
 const Q14 := 16384                   ## unit vectors are Q14
 
