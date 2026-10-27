@@ -6,3 +6,5 @@ build/
 *.aab
 game/addons/godotopenxrvendors/
 game/android/
+game/tests/_*.gd
+game/tests/_*.gd.uid
