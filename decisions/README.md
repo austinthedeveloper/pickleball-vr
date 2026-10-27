@@ -17,5 +17,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [009](ADR-009-quest-performance.md) | Quest performance: one shadow map, foveation, a fast aim solver |
 | [010](ADR-010-dink-partner.md) | DINK PARTNER and floor targets |
 | [011](ADR-011-releases.md) | Releases: semver, a changelog, the APK on GitHub |
+| [012](ADR-012-style.md) | How the practice partners look and move |
 
-Next: ADR-012.
+Next: ADR-013.

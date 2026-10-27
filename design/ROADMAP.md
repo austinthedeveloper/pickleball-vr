@@ -58,6 +58,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-21 | Floor targets, partner and machine (ADR-010) | `feature/cld-vr-dink-partner` | Done (played) |
 | VR-22 | Releases: version.py, release.py, CHANGELOG (ADR-011) | `main` | Done |
 | VR-23 | CI: tests on every push and pull request (ADR-011) | `feature/cld-vr-ci` | Done (green on GitHub) |
+| VR-24 | Style: the person, the machine, the paddle, the ball (ADR-012) | `feature/cld-vr-style` | Ready to test |
 
 ## Phase 1: singles
 
@@ -120,6 +121,11 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-24, ready to test.** DINK PARTNER: watch the partner split-step,
+shuffle, and swing through your ball. BALL MACHINE: the head turns to
+each feed, a ball rolls into it first, and the light blinks just before.
+Does it all feel smooth at 72 fps?
 
 **VR-20 / VR-21, played and approved, fixes included:** the count
 is dinks in a row and resets outside their kitchen, the announcer matches
