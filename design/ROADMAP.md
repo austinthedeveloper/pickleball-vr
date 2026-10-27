@@ -57,6 +57,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-20 | DINK PARTNER: a cooperative dinking CPU (ADR-010) | `feature/cld-vr-dink-partner` | Done (played) |
 | VR-21 | Floor targets, partner and machine (ADR-010) | `feature/cld-vr-dink-partner` | Done (played) |
 | VR-22 | Releases: version.py, release.py, CHANGELOG (ADR-011) | `main` | Done |
+| VR-23 | CI: tests on every push and pull request (ADR-011) | `feature/cld-vr-ci` | Done (green on GitHub) |
 
 ## Phase 1: singles
 

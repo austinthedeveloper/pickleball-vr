@@ -24,7 +24,11 @@ game/tools/quest_build.sh [--check]                   # build + install + launch
 ```
 
 Releases are semver with tags `vX.Y.Z`, `CHANGELOG.md` and an APK on the
-GitHub release (`design/RELEASING.md`, ADR-011).
+GitHub release (`design/RELEASING.md`, ADR-011). GitHub Actions runs
+`test.sh` and the release self-test on every push and pull request
+(`.github/workflows/ci.yml`), without the OpenXR plugin (keep the tests
+plugin-free). Godot's version and SHA-512s are pinned in
+`.github/actions/setup-godot/action.yml`, the same pin as the port kit's.
 
 `design/ROADMAP.md` is the milestone sheet: keep it current with each
 branch. `design/KNOWN_ISSUES.md` lists the defects, and

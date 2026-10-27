@@ -36,5 +36,9 @@ that only the lead's Mac has.
 
 - Every release is reproducible from its tag, with the plugin pinned by
   `fetch_openxr_vendors.sh`.
-- No CI builds yet, and no CI tests on push. Both are worth adding: the
-  tests need only a pinned Godot on a runner, as in the port kit.
+- **CI tests** (added the same day): GitHub Actions runs `test.sh` and
+  `test_release.py` on every push and pull request. It runs on Linux
+  with the port kit's pinned Godot 4.7.2, and without the plugin. The
+  first run passed all 81 tests in 31 s, with the golden traces identical
+  to the Mac's, which shows the sim is deterministic across platforms.
+- No CI builds yet: the APK is still built on the Mac.

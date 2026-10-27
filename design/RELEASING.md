@@ -68,14 +68,24 @@ python3 game/tools/version.py set 0.2.0
 `python3 game/tools/test_release.py` tests the version and CHANGELOG tools
 on throwaway copies.
 
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs every Godot test and the
+release tools' self-test on each push and pull request. It uses Linux
+with the pinned, hash-checked Godot 4.7.2
+(`.github/actions/setup-godot`), and takes about half a minute. Check that
+`main` is green before cutting a release. CI has no OpenXR plugin, so the
+tests must not need it.
+
 ## Why the APK is built on the Mac
 
 A Quest build needs Java 17, the Android SDK, Godot's Android build
 template and the OpenXR Vendors plugin (`design/QUEST_SETUP.md`). They're
 set up on the lead's Mac, not on GitHub's runners, so `release.py` builds
 locally and uploads the APK itself. Building in CI on a tag (as the port
-kit does) is possible later. The setup would be the same steps in a
-workflow, with the keystore as a secret.
+kit does) is possible later: the same steps as `design/QUEST_SETUP.md`
+in a workflow, with `fetch_openxr_vendors.sh` for the plugin and the
+keystore as a secret. The tests already run there (see CI above).
 
 ## Signing
 

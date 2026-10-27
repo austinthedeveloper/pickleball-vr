@@ -1,5 +1,7 @@
 # Pickleball '94 VR
 
+[![CI](https://github.com/austinthedeveloper/pickleball-vr/actions/workflows/ci.yml/badge.svg)](https://github.com/austinthedeveloper/pickleball-vr/actions/workflows/ci.yml)
+
 First-person pickleball in VR, the next artifact of *Pickleball '94* after
 the Godot remaster (`../pickleball-port-kit`). You hold the paddle; the
 rules, the CPUs' personalities and the park come from the port kit.
