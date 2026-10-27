@@ -25,6 +25,8 @@ var venue := 0                       ## 0 is HOME (the team's); then Venues.NAME
 var machine_shot := Drill.SHOT_DRIVE
 var machine_target := Drill.TARGET_AT_YOU
 var machine_rate := 1
+var machine_speed := 1
+var machine_at := Drill.AT_AUTO
 var machine_zone := Drill.ZONE_ANY
 var machine_best := 0
 var lessons_done: Array = []         ## lesson ids
@@ -46,6 +48,8 @@ func load_settings() -> void:
 	machine_shot = c.get_value("machine", "shot", machine_shot)
 	machine_target = c.get_value("machine", "target", machine_target)
 	machine_rate = c.get_value("machine", "rate", machine_rate)
+	machine_speed = c.get_value("machine", "speed", machine_speed)
+	machine_at = c.get_value("machine", "at", machine_at)
 	machine_zone = c.get_value("machine", "zone", machine_zone)
 	machine_best = c.get_value("machine", "best", machine_best)
 	lessons_done = c.get_value("lessons", "done", lessons_done)
@@ -66,6 +70,8 @@ func save() -> void:
 	c.set_value("machine", "shot", machine_shot)
 	c.set_value("machine", "target", machine_target)
 	c.set_value("machine", "rate", machine_rate)
+	c.set_value("machine", "speed", machine_speed)
+	c.set_value("machine", "at", machine_at)
 	c.set_value("machine", "zone", machine_zone)
 	c.set_value("machine", "best", machine_best)
 	c.set_value("lessons", "done", lessons_done)
@@ -96,6 +102,8 @@ func machine_config() -> SimTypes.MatchConfig:
 	d.shot = machine_shot
 	d.target = machine_target
 	d.rate = machine_rate
+	d.speed = machine_speed
+	d.machine_at = machine_at
 	d.zone = machine_zone
 	if d.shot == Drill.SHOT_SERVE:
 		var sp := d.serve_spot()

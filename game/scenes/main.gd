@@ -86,7 +86,9 @@ func _page(id: String) -> Menu3D:
 		"machine":
 			m.title = "BALL MACHINE   BEST %d" % settings.machine_best
 			m.add_row("shot", "SHOT", Drill.SHOT_NAMES.slice(0, 4), settings.machine_shot)
+			m.add_row("speed", "SPEED", Drill.SPEED_NAMES, settings.machine_speed)
 			m.add_row("target", "TARGET", Drill.TARGET_NAMES, settings.machine_target)
+			m.add_row("machine_at", "MACHINE AT", Drill.AT_NAMES, settings.machine_at)
 			m.add_row("rate", "RATE", Drill.RATE_NAMES, settings.machine_rate)
 			m.add_row("zone", "RETURN TO", Drill.ZONE_NAMES, settings.machine_zone)
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
@@ -123,9 +125,11 @@ func _on_changed(id: String, index: int) -> void:
 		"shot": settings.machine_shot = index
 		"target": settings.machine_target = index
 		"rate": settings.machine_rate = index
+		"speed": settings.machine_speed = index
+		"machine_at": settings.machine_at = index
 		"zone": settings.machine_zone = index
 	settings.save()
-	if id in ["mode", "vs", "venue", "hand", "angle", "shot", "target", "zone"]:
+	if id in ["mode", "vs", "venue", "hand", "angle", "shot", "target", "zone", "machine_at", "speed"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
 

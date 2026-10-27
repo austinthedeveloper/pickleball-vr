@@ -48,6 +48,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-16 | Venues: PARK, LAKESIDE, SUNSET, GYM, SPACE (ADR-008) | `feature/cld-vr-practice` | Ready to test |
 | VR-17 | More venues: DINOSAUR, UNDERSEA, TIME of day | | Planned |
 | VR-18 | Quest performance: CPU spikes fixed, PERF timing (ADR-009) | `feature/cld-vr-quest-device` | Done (measured on the Quest 3) |
+| VR-19 | Ball machine 2: volley feeds, SPEED, MACHINE AT, real dinks (ADR-007) | `feature/cld-vr-machine-2` | Ready to test |
 
 ## Phase 1: singles
 
@@ -110,6 +111,11 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-19, ready to test.** BALL MACHINE: DRIVE, SPEED FAST, MACHINE AT
+KITCHEN, RATE RAPID, and stand at your kitchen line: balls should come at
+you waist-high and fast. Then DINK with RETURN TO KITCHEN: the machine
+moves to their kitchen, and soft returns should count.
 
 **VR-16, ready to test.** MATCH SETUP > VENUE: try each one, and HOME
 against different teams (the GOTH CLUB play in SPACE). In the headset,

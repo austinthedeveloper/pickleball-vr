@@ -42,6 +42,41 @@ takes reps before a match is any fun.
   lesson, offering RESUME, RESTART or MENU. The sim isn't stepped while
   paused.
 
+## Amended 2026-10-27: after the first practice in the headset
+
+The lead's verdict: practice is where they'll spend most of their time.
+They want fast balls at the kitchen line for reflexes. Two things were
+broken:
+
+- **Drives at the kitchen line came as lobs.** Every feed aimed to bounce
+  2.2 m in front of you. From the kitchen line that spot is just over the
+  net, which a machine on the far baseline can only reach with a 4.6 m
+  lob (3.7 m/s when it got to you).
+- **Dinks were all called OUT.** A "dink" from the far baseline was a
+  5.7 m lob taking 3.1 s, and the machine gave up 3.5 s after the feed, so
+  any return still in the air was called OUT.
+
+Changes:
+
+- **Volley feeds:** within 1.6 m behind the kitchen line (or under a
+  VOLLEY rule), a drive aimed at you, your forehand or your backhand comes
+  through the air to about 1.0 m high where you stand
+  (`Aim.through`, lifted 10 cm at a time until it clears the tape).
+- **SPEED:** SLOW, MEDIUM, FAST or BLAZING, drives at 8 to 17 m/s, with
+  dinks and lobs scaled to it.
+- **MACHINE AT:** AUTO, BASELINE or KITCHEN. AUTO feeds dinks from the far
+  kitchen line and everything else from the baseline. KITCHEN with
+  BLAZING gives you 0.30 s to react, the hands battle.
+- **Dinks land in your kitchen,** about a metre in front of you, with an
+  apex of 1.2 to 1.5 m.
+- **RATE** gains RAPID (a feed about every 1.1 s).
+- **The give-up timer** runs from your hit (4 s), not the feed. A feed
+  nobody hits gives up after 5 s.
+- **The assist's rescue for a soft shot into the net** is a drop into
+  their kitchen, not a ball to mid-court, so a dink stays a dink. This
+  changes matches too, rarely; the golden traces were regenerated (only
+  the doubles trace moved).
+
 ## Consequences
 
 - Match play and its golden traces are unchanged: drills don't touch the

@@ -48,7 +48,7 @@ static func topspin(dx: int, dz: int, mag: int) -> Array[int]:
 ## of change) measured from the last two passes, so drag doesn't make it
 ## creep (ADR-009). Stops within SOLVE_TOL.
 static func solve(x: int, y: int, z: int, tx: int, tz: int, ticks: int,
-		w: Array[int] = [0, 0, 0]) -> Array[int]:
+		w: Array[int] = [0, 0, 0], ty := LAND_Y) -> Array[int]:
 	var n := maxi(ticks, 4)
 	# Drag shortens a shot by about 1 / (1 + 0.62 kD) of its no-drag reach
 	# (fitted across the game's dinks, drives and lobs), and an end point
@@ -61,8 +61,8 @@ static func solve(x: int, y: int, z: int, tx: int, tz: int, ticks: int,
 	var slope: Array[int] = [s0, s0, s0]            # end-point um per um/tick, Q8
 	var v: Array[int] = [(tx - x) * 256 / (n * reach), 0, (tz - z) * 256 / (n * reach)]
 	# Semi-implicit Euler: y_n = y + n vy - g n (n + 1) / 2.
-	v[1] = (LAND_Y - y + K.GRAVITY * n * (n + 1) / 2) / n
-	var target: Array[int] = [tx, LAND_Y, tz]
+	v[1] = (ty - y + K.GRAVITY * n * (n + 1) / 2) / n
+	var target: Array[int] = [tx, ty, tz]
 	var last_v: Array[int] = [0, 0, 0]
 	var last_end: Array[int] = [0, 0, 0]
 	var b := Ball.new()
@@ -110,4 +110,30 @@ static func shot(x: int, y: int, z: int, tx: int, tz: int, pace: int,
 			return v
 		ticks = ticks * 9 / 8 + 2
 		v = solve(x, y, z, tx, tz, ticks, w)
+	return v
+
+
+## A ball from (x, y, z) that passes (tx, ty, tz) in the air at about
+## `pace` um/tick (the ball machine's volley feed, ADR-007): raised 10 cm
+## at a time until it clears the tape by NET_CLEAR. Returns the velocity.
+static func through(x: int, y: int, z: int, tx: int, ty: int, tz: int, pace: int,
+		w: Array[int] = [0, 0, 0]) -> Array[int]:
+	var ticks := clampi(Fx.length(tx - x, ty - y, tz - z) / maxi(pace, 1000), 6, 300)
+	var v := solve(x, y, z, tx, tz, ticks, w, ty)
+	var b := Ball.new()
+	for k in 8:
+		b.place(x, y, z)
+		b.launch(v[0], v[1], v[2])
+		b.set_spin(w[0], w[1], w[2])
+		var clear := K.M
+		for i in ticks:
+			var pz := b.z
+			b.fly()
+			if (pz > 0) != (b.z > 0):
+				clear = b.y - K.BALL_RADIUS - K.net_height(b.x)
+				break
+		if clear >= K.NET_CLEAR:
+			return v
+		ty += 100000
+		v = solve(x, y, z, tx, tz, ticks, w, ty)
 	return v

@@ -10,7 +10,7 @@ var _yaw := 0.0
 
 
 func _ready() -> void:
-	position = World.m(0, 0, Drill.MACHINE_Z)
+	position = World.m(0, 0, Drill.BASELINE_Z)
 	_box(Vector3(0, 0.35, 0), Vector3(0.55, 0.5, 0.45), Color(0.25, 0.3, 0.38))
 	_box(Vector3(0, 0.7, 0.05), Vector3(0.5, 0.22, 0.4), Color(0.85, 0.82, 0.2))   # the hopper
 	for i in 9:
@@ -61,7 +61,8 @@ func _box(at: Vector3, size: Vector3, c: Color) -> void:
 ## Turn toward the drill's aim; kick on a feed.
 func show_from(sim: Sim, delta: float) -> void:
 	var d := sim.drill
-	var target := atan2(d.aim_x / float(K.M), absf(Drill.MACHINE_Z) / float(K.M) * 1.5)
+	position.z = d.machine_z / float(K.M)          # the baseline, or the kitchen line
+	var target := atan2(d.aim_x / float(K.M), absf(d.machine_z) / float(K.M) * 1.5)
 	_yaw = lerpf(_yaw, target, clampf(delta * 6.0, 0.0, 1.0))
 	_kick = maxf(_kick - delta * 5.0, 0.0)
 	nozzle.rotation.y = -_yaw

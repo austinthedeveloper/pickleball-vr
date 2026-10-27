@@ -8,7 +8,7 @@ extends RefCounted
 const EVERY := 2.0
 const SLOW_US := 11000               ## a frame's CPU time that risks a 72 Hz deadline
 
-static var on := OS.is_debug_build()
+static var on := OS.is_debug_build() and DisplayServer.get_name() != "headless"
 static var _sum := {}                ## section -> usec this period
 static var _max := {}                ## section -> worst single usec this period
 static var _frames := 0

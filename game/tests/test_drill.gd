@@ -114,3 +114,83 @@ func test_every_lesson_can_be_passed() -> void:
 			t += 1
 		eq(sim.drill.stage, Drill.DONE, "the bot passes %s (%d good of %d fed)" % [
 			Lessons.lesson(i)["id"], sim.drill.good, sim.drill.feeds])
+
+
+## Where a feed reaches you: [seconds after the feed, m/s, height m, apex m]
+## at z = pz, or the bounce [seconds, z m, apex m] with `bounce`.
+func _feed_reach(shot: int, pz: int, speed: int, at: int, bounce := false) -> Array:
+	var d := Drill.new()
+	d.shot = shot
+	d.spot_z = pz
+	d.speed = speed
+	d.machine_at = at
+	var cfg := SimTypes.MatchConfig.new()
+	cfg.drill = d
+	var sim := Sim.new(cfg)
+	var h := SimTypes.HumanInput.new()
+	h.head_z = pz
+	h.paddle_z = 9 * K.M
+	var fed := -1
+	var top := 0
+	for i in 900:
+		sim.step([h])
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_FEED:
+				fed = sim.tick
+			elif bounce and e[0] == K.EVENT_BOUNCE and fed > 0:
+				return [(sim.tick - fed) / 120.0, e[2] / 1e6, top / 1e6]
+		if fed > 0:
+			top = maxi(top, sim.ball.y)
+			if not bounce and sim.ball.z >= pz:
+				return [(sim.tick - fed) / 120.0, sim.ball.speed() * 120 / 1e6, sim.ball.y / 1e6, top / 1e6]
+	return []
+
+
+func test_drives_at_the_net_come_through_the_air_fast() -> void:
+	var r := _feed_reach(Drill.SHOT_DRIVE, 2500000, 1, Drill.AT_AUTO)
+	check(r[1] > 9.0, "MEDIUM reaches you fast: %.1f m/s" % r[1])
+	check(r[2] > 0.7 and r[2] < 1.4, "waist to chest high: %.2f m" % r[2])
+	check(r[3] < 2.2, "not a lob: apex %.2f m" % r[3])
+	var b := _feed_reach(Drill.SHOT_DRIVE, 2500000, 3, Drill.AT_KITCHEN)
+	check(b[0] < 0.4, "BLAZING from the kitchen: %.2f s to react" % b[0])
+	var back := _feed_reach(Drill.SHOT_DRIVE, 6200000, 1, Drill.AT_AUTO)
+	check(back[2] < 1.0, "at the baseline it still bounces up to you: %.2f m" % back[2])
+
+
+func test_dinks_come_from_the_kitchen_and_land_in_yours() -> void:
+	var d := Drill.new()
+	d.shot = Drill.SHOT_DINK
+	eq(d.machine_spot(), Drill.KITCHEN_Z, "AUTO: dinks from the far kitchen line")
+	d.shot = Drill.SHOT_DRIVE
+	eq(d.machine_spot(), Drill.BASELINE_Z, "AUTO: drives from the baseline")
+	var r := _feed_reach(Drill.SHOT_DINK, 2500000, 1, Drill.AT_AUTO, true)
+	check(r[1] > 0.5 and r[1] < K.KITCHEN_DEPTH / 1e6, "lands in your kitchen: z %.2f" % r[1])
+	check(r[2] < 1.7, "a dink's arc: apex %.2f m" % r[2])
+
+
+func test_a_slow_return_still_counts() -> void:
+	# The bug: the machine gave up 3.5 s after the feed, so a slow dink
+	# rally was called OUT before the return came down.
+	var m := _drill(Drill.SHOT_DINK, Drill.TARGET_AT_YOU)
+	var sim: Sim = m[0]
+	var bot: Bot = m[1]
+	sim.drill.spot_z = 2500000
+	bot.head_z = 2500000
+	sim.drill.zone = Drill.ZONE_KITCHEN
+	bot.miss = 0                     # no deliberate wide ones: only the timer could call OUT
+	var r := _results(sim, bot, 5000)
+	check(not r.has(Drill.RESULT_OUT), "no dink called OUT: %s" % str(r))
+	check(r.count(Drill.RESULT_GOOD) * 10 >= r.size() * 6, "mostly good dinks: %s" % str(r))
+
+
+func test_a_netted_soft_shot_is_rescued_into_their_kitchen() -> void:
+	var cfg := SimTypes.MatchConfig.new()
+	cfg.assist = K.ASSIST_MID
+	var sim := Sim.new(cfg)
+	sim.phase = K.PHASE_LIVE
+	sim.ball.held = false
+	sim.ball.place(0, 300000, 2 * K.M)
+	var v := sim._assist(0, [0, 5000, -35000])     # a soft push, straight into the net
+	sim.ball.launch(v[0], v[1], v[2])
+	var l: Array[int] = Aim.landing(sim.ball)
+	check(l[3] == 0 and l[2] < 0 and -l[2] <= K.KITCHEN_DEPTH, "drops into their kitchen: %s" % str(l))

@@ -406,6 +406,9 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 	return true
 
 
+## Slower than this over the ground (6 m/s), a shot is soft: a dink or a drop.
+const SOFT_PACE := 50000
+
 ## The shot assist (ADR-003): the human's shot pulled `config.assist`
 ## percent of the way to the same shot landed safely in.
 func _assist(team: int, v: Array[int]) -> Array[int]:
@@ -418,14 +421,16 @@ func _assist(team: int, v: Array[int]) -> Array[int]:
 	var m := K.ASSIST_MARGIN
 	var tx: int = clampi(l[1], -K.COURT_HALF_WIDTH + m, K.COURT_HALF_WIDTH - m)
 	var depth: int = l[2] * opp
+	var pace := maxi(Fx.length(v[0], 0, v[2]), 30000)
 	if l[3] != 0 or depth <= 0:
-		depth = K.KITCHEN_DEPTH + 1500000   # into the net or short: mid-court
+		# Into the net or short: a soft shot is rescued as a drop into their
+		# kitchen (a dink stays a dink), anything firmer to mid-court.
+		depth = K.KITCHEN_DEPTH * 7 / 10 if pace < SOFT_PACE else K.KITCHEN_DEPTH + 1500000
 	depth = clampi(depth, m, K.COURT_HALF_LENGTH - m)
 	if phase == K.PHASE_TOSS:
 		var box := K.right_sign(1 - team) * (1 if serve_from_right() else -1)
 		tx = box * clampi(tx * box, m, K.COURT_HALF_WIDTH - m)
 		depth = clampi(depth, K.KITCHEN_DEPTH + m, K.COURT_HALF_LENGTH - m)
-	var pace := maxi(Fx.length(v[0], 0, v[2]), 30000)
 	var ideal := Aim.shot(ball.x, ball.y, ball.z, tx, depth * opp, pace, [ball.wx, ball.wy, ball.wz])
 	# Aim (the line over the ground) is pulled `assist`; depth (the pace
 	# over the ground and the arc) twice as hard (MID: all of it), since a swing's

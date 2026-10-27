@@ -21,8 +21,27 @@ const TARGET_DEEP := 4
 const TARGET_RANDOM := 5
 const TARGET_NAMES := ["AT YOU", "FOREHAND", "BACKHAND", "KITCHEN", "DEEP", "RANDOM"]
 
-const RATE_TICKS := [380, 270, 190]  ## SLOW, NORMAL, FAST: feed to feed
-const RATE_NAMES := ["SLOW", "NORMAL", "FAST"]
+const RATE_TICKS := [380, 270, 190, 130]   ## feed to feed
+const RATE_NAMES := ["SLOW", "NORMAL", "FAST", "RAPID"]
+
+## How hard the machine feeds (ADR-007): a drive's pace over the ground,
+## um/tick (8 to 17 m/s); dinks and lobs scale with it.
+const SPEED_PACE := [70000, 95000, 120000, 145000]
+const SPEED_NAMES := ["SLOW", "MEDIUM", "FAST", "BLAZING"]
+
+## Where the machine stands: AUTO puts it at the far kitchen line for
+## dinks (a dink from the baseline is a lob) and on the baseline otherwise.
+const AT_AUTO := 0
+const AT_BASELINE := 1
+const AT_KITCHEN := 2
+const AT_NAMES := ["AUTO", "BASELINE", "KITCHEN"]
+const BASELINE_Z := -(K.COURT_HALF_LENGTH + 300000)
+const KITCHEN_Z := -(K.KITCHEN_DEPTH + 500000)
+
+## At the net (this close to it, or under a VOLLEY rule), drives come
+## through the air at this height where you stand: volleys, not bounces.
+const NET_ZONE := K.KITCHEN_DEPTH + 1600000
+const VOLLEY_Y := 1000000
 
 ## Where a return must land to count, on the machine's side.
 const ZONE_ANY := 0
@@ -56,17 +75,19 @@ const RETURN := 2                    ## you hit it, going back
 const SERVING := 3                   ## SERVE: the ball in your hand or tossed
 const DONE := 4                      ## the lesson's goal is met
 
-## The machine: on the far baseline, centred, the nozzle at 90 cm.
-const MACHINE_Z := -(K.COURT_HALF_LENGTH + 300000)
+## The machine: centred, the nozzle at 90 cm.
 const MACHINE_Y := 900000
 const FIRST_FEED := 150
 const MIN_GAP := 70                  ## after a result, before the next feed
-const GIVE_UP := 420                 ## a feed that never resolves
+const GIVE_UP := 600                 ## a feed nobody hits, from the feed
+const RETURN_GIVE_UP := 480          ## a return that never comes down, from the hit
 
 ## Settings (from Settings or a lesson).
 var shot := SHOT_DRIVE
 var target := TARGET_AT_YOU
 var rate := 1
+var speed := 1
+var machine_at := AT_AUTO
 var zone := ZONE_ANY
 var rules := 0
 var goal := 0                        ## good returns to finish; 0 runs forever
@@ -86,12 +107,16 @@ var streak := 0
 var best := 0
 var last_result := -1
 var aim_x := 0                       ## where the last feed was aimed (the nozzle turns)
+var hit_at := 0
+var machine_z := BASELINE_Z
 
 
 func copy_settings_from(o: Drill) -> void:
 	shot = o.shot
 	target = o.target
 	rate = o.rate
+	speed = o.speed
+	machine_at = o.machine_at
 	zone = o.zone
 	rules = o.rules
 	goal = o.goal
@@ -99,7 +124,16 @@ func copy_settings_from(o: Drill) -> void:
 	spot_z = o.spot_z
 
 
+## Where the machine stands for these settings.
+func machine_spot() -> int:
+	match machine_at:
+		AT_KITCHEN: return KITCHEN_Z
+		AT_BASELINE: return BASELINE_Z
+	return KITCHEN_Z if shot == SHOT_DINK else BASELINE_Z
+
+
 func reset(sim: Sim) -> void:
+	machine_z = machine_spot()
 	stage = WAIT
 	next_feed = sim.tick + FIRST_FEED
 	feeds = 0
@@ -107,7 +141,7 @@ func reset(sim: Sim) -> void:
 	streak = 0
 	last_result = -1
 	sim.ball.held = true
-	sim.ball.place(0, MACHINE_Y, MACHINE_Z)
+	sim.ball.place(0, MACHINE_Y, machine_z)
 	sim.phase = K.PHASE_LIVE
 	sim.serving_team = 1
 	sim.server_slot = 2
@@ -161,36 +195,47 @@ func _feed(sim: Sim) -> void:
 	var t := target
 	if t == TARGET_RANDOM:
 		t = sim.random(5)
-	# Land a stride or two in front of you (the ball comes up to you).
-	var lead := 2200000 if fed_shot != SHOT_LOB else 600000
-	if rules & RULE_VOLLEY:
-		lead = -1800000              # to volley: it lands behind you, passing you in the air
-	var tz := clampi(p.z - lead, 400000, K.COURT_HALF_LENGTH - 300000)
+	var mz := machine_z
+	var drive: int = SPEED_PACE[clampi(speed, 0, 3)]
 	var tx := p.x
 	match t:
 		TARGET_FOREHAND: tx = p.x + 900000
 		TARGET_BACKHAND: tx = p.x - 900000
-		TARGET_KITCHEN:
-			tz = K.KITCHEN_DEPTH * 6 / 10
-		TARGET_DEEP:
-			tz = K.COURT_HALF_LENGTH - 800000
 	tx = clampi(tx + sim.scatter(250000), -K.COURT_HALF_WIDTH + 300000, K.COURT_HALF_WIDTH - 300000)
-	var pace := 95000
-	var spin := 450000
-	match fed_shot:
-		SHOT_DINK:
-			pace = 38000
-			spin = -200000
-			if t != TARGET_DEEP:
-				tz = mini(tz, K.KITCHEN_DEPTH * 7 / 10)
-		SHOT_LOB:
-			pace = 50000
-			spin = 300000
 	aim_x = tx
 	var b := sim.ball
-	b.place(0, MACHINE_Y, MACHINE_Z)
-	var w := Aim.topspin(tx, tz - MACHINE_Z, spin)
-	var v := Aim.shot(0, MACHINE_Y, MACHINE_Z, tx, tz, pace, w)
+	b.place(0, MACHINE_Y, mz)
+	var at_you := t != TARGET_KITCHEN and t != TARGET_DEEP
+	var volley := fed_shot == SHOT_DRIVE and at_you and (p.z <= NET_ZONE or rules & RULE_VOLLEY)
+	var w: Array[int]
+	var v: Array[int]
+	if volley:
+		# At the net: straight at you through the air, waist to chest high.
+		var ty := VOLLEY_Y + sim.scatter(150000)
+		w = Aim.topspin(tx, p.z - mz, 300000)
+		v = Aim.through(0, MACHINE_Y, mz, tx, ty, p.z, drive, w)
+	else:
+		# Land a stride or two in front of you (the ball comes up to you).
+		var lead := 2200000 if fed_shot != SHOT_LOB else 600000
+		var tz := clampi(p.z - lead, 400000, K.COURT_HALF_LENGTH - 300000)
+		if t == TARGET_KITCHEN:
+			tz = K.KITCHEN_DEPTH * 6 / 10
+		elif t == TARGET_DEEP:
+			tz = K.COURT_HALF_LENGTH - 800000
+		var pace: int = drive
+		var spin := 450000
+		match fed_shot:
+			SHOT_DINK:
+				pace = 34000 + drive / 10    # 5 to 6 m/s over the ground
+				spin = -200000
+				if t != TARGET_DEEP:
+					# In your kitchen, about a metre in front of you.
+					tz = clampi(p.z - 1100000, 900000, K.KITCHEN_DEPTH * 85 / 100)
+			SHOT_LOB:
+				pace = 30000 + drive / 4
+				spin = 300000
+		w = Aim.topspin(tx, tz - mz, spin)
+		v = Aim.shot(0, MACHINE_Y, mz, tx, tz, pace, w)
 	b.launch(v[0], v[1], v[2])
 	b.set_spin(w[0], w[1], w[2])
 	# The two-bounce rule's machinery stands in for NO_VOLLEY: the bot and
@@ -203,7 +248,7 @@ func _feed(sim: Sim) -> void:
 	feeds += 1
 	fed_at = sim.tick
 	stage = FLY
-	sim.emit(K.EVENT_FEED, tx, tz, fed_shot)
+	sim.emit(K.EVENT_FEED, tx, 1 if volley else 0, fed_shot)
 
 
 func _fly(sim: Sim, p: SimTypes.Player) -> void:
@@ -222,6 +267,7 @@ func _fly(sim: Sim, p: SimTypes.Player) -> void:
 	if p.cooldown > 0 or not sim.paddle_contact(p, bx, by, bz):
 		return
 	var volley := bounces == 0
+	hit_at = sim.tick
 	p.cooldown = K.PADDLE_COOLDOWN
 	sim.emit(K.EVENT_HIT, 0, sim.ball.speed(), 1 if volley else 0)
 	sim.last_hitter = 0
@@ -243,7 +289,7 @@ func _return(sim: Sim) -> void:
 		_result(sim, RESULT_NET)
 		return
 	if not (ev & Ball.EV_BOUNCE):
-		if sim.tick - fed_at > GIVE_UP:
+		if sim.tick - hit_at > RETURN_GIVE_UP:
 			_result(sim, RESULT_OUT)
 		return
 	var x := sim.ball.ev_x
@@ -338,8 +384,9 @@ func _result(sim: Sim, r: int) -> void:
 		next_feed = sim.tick + MIN_GAP
 		return
 	stage = WAIT
-	next_feed = maxi(fed_at + RATE_TICKS[clampi(rate, 0, 2)], sim.tick + MIN_GAP)
+	next_feed = maxi(fed_at + RATE_TICKS[clampi(rate, 0, 3)], sim.tick + MIN_GAP)
 
 
 func snapshot() -> Array:
-	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x]
+	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
+		hit_at, machine_z]
