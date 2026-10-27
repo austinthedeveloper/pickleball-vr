@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands] [venue=NAME] [cam=x,y,z look=x,y,z] [focus=0..0.62]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands] [venue=NAME] [cam=x,y,z look=x,y,z] [focus=0..0.88]
 extends SceneTree
 
 var frames := 240

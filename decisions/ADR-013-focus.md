@@ -35,6 +35,15 @@ Display only; the sim and its golden traces are untouched.
   not from the sky. Otherwise darkening the sky dimmed everything it lit:
   your paddle went near black in the first test render.
 
+## Amendment (2026-10-27): deeper and sooner
+
+In the headset the lead didn't notice it ("if the darken has been in
+place for a bit, i didn't notice. increase it"). A 13% step is too soft
+in a headset that adapts to the light, and 62% still left the trees and
+sky plainly visible. Now: the first step at 10 shots (5 in a row in
+practice), one more every 4 (every 2 in a row), 18% each, down to 88%:
+nearly black around a lit court by 13 in a row. The easing is unchanged.
+
 ## Consequences
 
 - `test_focus.gd` covers the thresholds, practice's doubling, the world
