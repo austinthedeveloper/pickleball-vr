@@ -80,10 +80,12 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-40 | CALL THE SPOT, LINE AND CROSS, VOLLEY DINKS, ATTACK OR DINK (ADR-017) | `feature/cld-vr-drills` | Ready to test |
 | VR-41 | The swing log by mode, and swings_report.py (ADR-017) | `feature/cld-vr-drills` | Ready to test |
 | VR-42 | Rigged bodies for the partner and CPU players (ADR-018) | `feature/cld-vr-body` | Played: "looks ridiculous, the shirt looks painted on" |
-| VR-43 | Cloth shells: a real shirt and shorts (ADR-018) | `feature/cld-vr-body` | Ready to test |
-| VR-44 | Dartboard targets: rings and points (ADR-019) | `feature/cld-vr-dartboard` | Ready to test |
+| VR-43 | Cloth shells: a real shirt and shorts (ADR-018) | `feature/cld-vr-body` | Played: "looks better" |
+| VR-44 | Dartboard targets: rings and points (ADR-019) | `feature/cld-vr-dartboard` | Played: "look good" |
 | VR-45 | Practice: leaning over the kitchen line isn't a fault (ADR-019) | `feature/cld-vr-dartboard` | Ready to test |
 | VR-46 | TUNING pages (debug builds) and tune.sh sync (ADR-020) | `feature/cld-vr-tuning` | Ready to test |
+| VR-47 | Paddle profiles: TURN, a full TWIST, ANGLE +-90 (ADR-015) | `feature/cld-vr-tuning` | Ready to test |
+| VR-48 | DINKS: the target follows you across (ADR-019) | `feature/cld-vr-tuning` | Ready to test |
 
 ## Phase 1: singles
 

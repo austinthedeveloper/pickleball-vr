@@ -60,6 +60,7 @@ func _new_view() -> MatchView:
 	view.paddle_tilt = pose[0]
 	view.paddle_twist = pose[1]
 	view.paddle_reach = pose[2]
+	view.paddle_turn = pose[3]
 	add_child(view)
 	return view
 
@@ -137,6 +138,8 @@ func _page(id: String) -> Menu3D:
 			else:
 				m.add_row("angle", "ANGLE", _degrees(Settings.PROFILE_ANGLES),
 					maxi(Settings.PROFILE_ANGLES.find(p["angle"]), 0))
+				m.add_row("turn", "TURN", _degrees(Settings.PROFILE_TURNS),
+					maxi(Settings.PROFILE_TURNS.find(p["turn"]), 0))
 				m.add_row("twist", "TWIST", _degrees(Settings.PROFILE_TWISTS),
 					maxi(Settings.PROFILE_TWISTS.find(p["twist"]), 0))
 				m.add_row("reach", "REACH", Settings.PROFILE_REACHES.map(func(c: int) -> String: return "%d CM" % c),
@@ -190,6 +193,7 @@ func _on_changed(id: String, index: int) -> void:
 				settings.profile()["angle"] = Settings.PROFILE_ANGLES[index]
 		"profile": settings.paddle_profile = index
 		"twist": settings.profile()["twist"] = Settings.PROFILE_TWISTS[index]
+		"turn": settings.profile()["turn"] = Settings.PROFILE_TURNS[index]
 		"reach": settings.profile()["reach"] = Settings.PROFILE_REACHES[index]
 		"shot": settings.machine_shot = index
 		"target": settings.machine_target = index
@@ -205,7 +209,7 @@ func _on_changed(id: String, index: int) -> void:
 		"drill": settings.partner_drill = index
 		"lane": settings.partner_lane = index
 	settings.save()
-	if id in ["mode", "vs", "venue", "hand", "angle", "profile", "twist", "reach", "shot", "target", "zone", "machine_at", "speed",
+	if id in ["mode", "vs", "venue", "hand", "angle", "profile", "twist", "turn", "reach", "shot", "target", "zone", "machine_at", "speed",
 			"targets", "level", "ptargets", "side", "spread", "drill", "lane"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
@@ -228,6 +232,7 @@ func _on_pressed(id: String) -> void:
 			# The profile back to the DEFAULT paddle: its angle, no twist or reach.
 			settings.profile()["angle"] = int(settings.tilt())
 			settings.profile()["twist"] = 0
+			settings.profile()["turn"] = 0
 			settings.profile()["reach"] = 0
 			settings.save()
 			lobby.call_deferred()

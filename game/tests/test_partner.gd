@@ -408,3 +408,28 @@ func test_every_feed_has_a_lead_in() -> void:
 			check(t >= 90 and t <= 130, "%s: shown %.2f s before it's hit" % [Settings.PARTNER_DRILLS[drill], t / 120.0])
 		if asserts > 60:
 			asserts = 60
+
+
+## The lead switched sides in DINKS and the target stayed behind: it sits
+## in front of the partner and follows you across (ADR-019).
+func test_the_target_follows_you_across() -> void:
+	for cross in [false, true]:
+		var s := Settings.new()
+		s.partner_targets = true
+		s.partner_cross = cross
+		var sim := Sim.new(s.partner_config())
+		var d := sim.drill
+		var h := SimTypes.HumanInput.new()
+		h.head_x = sim.players[0].x
+		h.head_z = sim.players[0].z
+		h.paddle_z = 9 * K.M             # the paddle well out of the way
+		for i in 30:
+			sim.step([h])
+		var side0 := d.target_side
+		eq(signi(d.target_x), side0, "%s: the target in the partner's half" % ("CROSS" if cross else "ACROSS"))
+		# You walk to the other side: across from it (ACROSS), or level with it (CROSS).
+		h.head_x = -side0 * 1500000 if not cross else side0 * 1500000
+		for i in 60:
+			sim.step([h])
+		eq(d.target_side, -side0, "it moved to the other half")
+		eq(signi(d.target_x), -side0, "the board with it")

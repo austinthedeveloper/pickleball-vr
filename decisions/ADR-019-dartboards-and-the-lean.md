@@ -52,3 +52,11 @@ has it.
   boards). The golden traces are unchanged: they don't play spot drills.
 - Matches still judge the kitchen from the head. If that bothers the
   lead in a match, the same lean could apply to the human player there.
+
+## Amendment (2026-10-28): the target follows you
+
+In DINKS, the lead switched sides and the target stayed where it was. It
+only moved after a hit. A partner drill's floor target now sits in the
+partner's half of their kitchen: straight across from you, or the
+diagonal on CROSS COURT. If you cross to the other side, more than
+40 cm past the middle, it moves to the new half before the next feed.

@@ -171,6 +171,8 @@ const SPREADS := [[100000, 350000], [250000, 750000], [500000, 1200000]]
 const SPREAD_NAMES := ["TIGHT", "NORMAL", "WIDE"]
 ## Floor targets: a dartboard on their side; land on it for points.
 static var TARGET_RADIUS := 800000
+## You've crossed to the other side once you're this far past the middle.
+const SIDE_SWITCH := 400000
 
 ## The machine: centred, the nozzle at 90 cm.
 const MACHINE_Y := 900000
@@ -231,6 +233,7 @@ var read_at := 0                     ## when the partner reads your shot
 var target_x := 0
 var target_z := 0
 var target_hits := 0
+var target_side := 0                 ## the half (sign of x) a partner drill's target is in
 var points := 0                      ## dartboard points (spots and floor targets)
 var last_ring := 0                   ## the ring the last ball landed in (0 off the board)
 var last_off := -1                   ## how far it landed from the board's centre, um (-1: no board)
@@ -827,8 +830,13 @@ func _partner(sim: Sim) -> void:
 
 ## Between shots the partner squares up to you along its kitchen line:
 ## straight across, or diagonally (CROSS COURT: the other half).
+## A floor target sits in front of the partner, so when you cross to the
+## other side (well past the middle), it follows.
 func _partner_home(sim: Sim) -> void:
 	_partner_step(sim.players[2], partner_home_x(sim.players[0].x), PARTNER_Z)
+	var you_x := sim.players[0].x
+	if targets and absi(you_x) > SIDE_SWITCH and signi(partner_home_x(you_x)) != target_side:
+		_new_target(sim)
 
 
 func partner_home_x(you_x: int) -> int:
@@ -1009,11 +1017,14 @@ func _new_target(sim: Sim) -> void:
 	var xlo := -hw
 	var xhi := hw
 	var z2 := zone if not partner else ZONE_KITCHEN
-	if partner and cross:
-		# Cross court: in the partner's half of their kitchen.
-		var px := partner_home_x(spot_x)
-		xlo = 400000 if px > 0 else -hw
-		xhi = hw if px > 0 else -400000
+	if partner:
+		# The partner's half of their kitchen: across from you, or the
+		# diagonal (CROSS COURT); wherever you are now.
+		var you_x := sim.players[0].x
+		var px := partner_home_x(you_x if you_x != 0 else spot_x)
+		target_side = signi(px) if px != 0 else 1
+		xlo = 400000 if target_side > 0 else -hw
+		xhi = hw if target_side > 0 else -400000
 	match z2:
 		ZONE_KITCHEN:
 			lo = 500000
@@ -1036,4 +1047,4 @@ func snapshot() -> Array:
 	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
 		hit_at, machine_z, partner_plan, read_at, target_x, target_z, target_hits, rally, best_rally,
 		1 if partner else 0, kind, lane, toss_at, 1 if spot_lit else 0, spot_i, 1 if lane_cross else 0,
-		1 if high_ball else 0, 1 if you_fast else 0, points, last_ring, last_off]
+		1 if high_ball else 0, 1 if you_fast else 0, points, last_ring, last_off, target_side]

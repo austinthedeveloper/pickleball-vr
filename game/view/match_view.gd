@@ -29,6 +29,7 @@ var announcer: Announcer
 var paddle_tilt := 0.0               ## degrees: the paddle's angle in the hand (XR)
 var paddle_twist := 0.0              ## degrees, about the handle (paddle profiles, ADR-015)
 var paddle_reach := 0.0              ## metres along the handle
+var paddle_turn := 0.0               ## degrees, swung left or right
 var popup_line: MeshInstance3D       ## RESETS: how high a reset may cross the net
 var board: Scoreboard
 var avatars: Array[Avatar] = []
@@ -74,6 +75,7 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		xr.paddle_tilt = paddle_tilt
 		xr.paddle_twist = paddle_twist
 		xr.paddle_reach = paddle_reach
+		xr.paddle_turn = paddle_turn
 		add_child(xr)
 		var openxr := XRServer.find_interface("OpenXR")
 		if openxr and openxr.has_signal("pose_recentered"):

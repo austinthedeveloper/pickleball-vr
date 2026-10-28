@@ -7,21 +7,21 @@ func test_default_is_the_paddle_angle() -> void:
 	var s := Settings.new()
 	eq(s.paddle_profile, 0, "DEFAULT to start")
 	s.paddle_angle = 2
-	eq(s.paddle_pose(), [30.0, 0.0, 0.0] as Array[float], "DEFAULT: the PADDLE ANGLE, no twist or reach")
+	eq(s.paddle_pose(), [30.0, 0.0, 0.0, 0.0] as Array[float], "DEFAULT: the PADDLE ANGLE, no twist or reach")
 	s.paddle_profile = 2
-	s.profiles[1] = {"angle": -20, "twist": 15, "reach": 12}
-	eq(s.paddle_pose(), [-20.0, 15.0, 0.12] as Array[float], "a profile overrides it")
+	s.profiles[1] = {"angle": -20, "turn": 35, "twist": 15, "reach": 12}
+	eq(s.paddle_pose(), [-20.0, 15.0, 0.12, 35.0] as Array[float], "a profile overrides it")
 
 
 func test_profiles_are_saved() -> void:
 	var s := Settings.new()
 	s.paddle_profile = 3
-	s.profiles[2] = {"angle": 60, "twist": -10, "reach": 30}
+	s.profiles[2] = {"angle": 60, "turn": -30, "twist": -150, "reach": 30}
 	s.save()
 	var t := Settings.new()
 	t.load_settings()
 	eq(t.paddle_profile, 3, "the profile in use")
-	eq(t.profiles[2], {"angle": 60, "twist": -10, "reach": 30}, "its numbers")
+	eq(t.profiles[2], {"angle": 60, "turn": -30, "twist": -150, "reach": 30}, "its numbers")
 	eq(t.profiles[0], Settings.new_profile(), "the others untouched")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))
 
@@ -69,6 +69,27 @@ func test_the_paddle_page() -> void:
 	main.menu.change(-4)
 	eq(main.settings.profiles[0]["angle"], -5, "an angle the DEFAULT can't")
 	main._on_pressed("reset")
-	eq(main.settings.profiles[0], {"angle": 15, "twist": 0, "reach": 0}, "RESET: the DEFAULT paddle")
+	eq(main.settings.profiles[0], {"angle": 15, "turn": 0, "twist": 0, "reach": 0}, "RESET: the DEFAULT paddle")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(main.settings.path))
 	main.queue_free()
+
+
+func test_any_way_round() -> void:
+	# A paddle accessory can hold the controller any way: a full turn of
+	# TWIST, ANGLE and TURN to 90 either way (the lead's needed more than 45).
+	check(Settings.PROFILE_TWISTS.has(-180) and Settings.PROFILE_TWISTS.has(180), "TWIST: a full turn")
+	check(Settings.PROFILE_ANGLES.has(-90) and Settings.PROFILE_ANGLES.has(90), "ANGLE: +-90")
+	check(Settings.PROFILE_TURNS.has(-90) and Settings.PROFILE_TURNS.has(90), "TURN: +-90")
+	var t := XrRig.grip(0.0, 0.0, 0.0, 90.0)
+	check(t.basis.x.is_equal_approx(Vector3.FORWARD), "TURN 90 swings the face a quarter turn")
+	check(t.basis.y.is_equal_approx(Vector3.UP), "about the controller's up")
+	check(XrRig.grip(15.0, 20.0, 0.0, 0.0).is_equal_approx(XrRig.grip(15.0, 20.0, 0.0)), "TURN 0: as before")
+	# A profile saved before TURN loads with none.
+	var s := Settings.new()
+	var c := ConfigFile.new()
+	c.set_value("paddle", "profiles", [{"angle": 30, "twist": 40, "reach": 4}])
+	c.save(s.path)
+	s.load_settings()
+	eq(s.profiles[0]["turn"], 0, "no turn")
+	eq(s.profiles[0]["twist"], 40, "its twist kept")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))

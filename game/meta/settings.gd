@@ -11,9 +11,12 @@ const ANGLES := [0, 15, 30, 45]
 ## controller at another angle or further from the face. DEFAULT is the
 ## PADDLE ANGLE above; the others override angle, twist and reach.
 const PROFILE_NAMES := ["DEFAULT", "PROFILE 1", "PROFILE 2", "PROFILE 3"]
-const PROFILE_ANGLES := [-30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
-	65, 70, 75, 80, 85, 90]
-const PROFILE_TWISTS := [-45, -40, -35, -30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45]
+## Degrees in 5s: ANGLE tips the face back (-90..90), TURN swings it left
+## or right (-90..90), TWIST rolls it about the handle (a full turn): any
+## way an accessory holds the controller.
+static var PROFILE_ANGLES := range(-90, 95, 5)
+static var PROFILE_TURNS := range(-90, 95, 5)
+static var PROFILE_TWISTS := range(-180, 185, 5)
 const PROFILE_REACHES := [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40]   ## cm
 
 ## Tests point this at their own file (the runner does), never the player's.
@@ -141,7 +144,7 @@ func tilt() -> float:
 
 
 static func new_profile() -> Dictionary:
-	return {"angle": 15, "twist": 0, "reach": 0}
+	return {"angle": 15, "turn": 0, "twist": 0, "reach": 0}
 
 
 ## The profile in use, or null for DEFAULT.
@@ -151,12 +154,13 @@ func profile() -> Variant:
 	return profiles[paddle_profile - 1]
 
 
-## The paddle in the hand: [angle, twist] in degrees and reach in metres.
+## The paddle in the hand: [angle, twist] in degrees, reach in metres, turn
+## in degrees.
 func paddle_pose() -> Array[float]:
 	var p: Variant = profile()
 	if p == null:
-		return [tilt(), 0.0, 0.0]
-	return [float(p["angle"]), float(p["twist"]), float(p["reach"]) / 100.0]
+		return [tilt(), 0.0, 0.0, 0.0]
+	return [float(p["angle"]), float(p["twist"]), float(p["reach"]) / 100.0, float(p["turn"])]
 
 
 func match_config() -> SimTypes.MatchConfig:

@@ -20,6 +20,7 @@ var left_handed := false
 var paddle_tilt := 0.0               ## degrees, the face tipped forward in the hand
 var paddle_twist := 0.0              ## degrees, the face turned about the handle (profiles, ADR-015)
 var paddle_reach := 0.0              ## metres, the paddle slid out along its handle
+var paddle_turn := 0.0               ## degrees, the face swung left or right (profiles)
 
 var _prev_head := Vector3.ZERO
 var _head := Vector3.ZERO
@@ -58,7 +59,7 @@ func _ready() -> void:
 	paddle_hand = left if left_handed else right
 	free_hand = right if left_handed else left
 	paddle = PaddleMesh.new()
-	paddle.transform = grip(paddle_tilt, paddle_twist, paddle_reach)
+	paddle.transform = grip(paddle_tilt, paddle_twist, paddle_reach, paddle_turn)
 	paddle_hand.add_child(paddle)
 	held_ball = MeshInstance3D.new()
 	var sm := SphereMesh.new()
@@ -90,8 +91,9 @@ func _ready() -> void:
 ## The paddle's place in the hand: tipped forward by `tilt` about the
 ## normal's axis (the face stays square), turned by `twist` about the
 ## handle, and slid `reach` out along it (an accessory's longer grip).
-static func grip(tilt: float, twist: float, reach: float) -> Transform3D:
-	var b := Basis(Vector3.RIGHT, -deg_to_rad(tilt)) * Basis(Vector3.BACK, deg_to_rad(twist))
+static func grip(tilt: float, twist: float, reach: float, turn := 0.0) -> Transform3D:
+	var b := Basis(Vector3.UP, deg_to_rad(turn)) * Basis(Vector3.RIGHT, -deg_to_rad(tilt)) \
+		* Basis(Vector3.BACK, deg_to_rad(twist))
 	return Transform3D(b, b * Vector3(0, 0, -reach))
 
 

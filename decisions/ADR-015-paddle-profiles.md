@@ -43,3 +43,17 @@ or 45 degrees, so it couldn't be set from practice at all.
   the face as they say, and the page flow.
 - A profile per accessory needs a name later (typed names need a
   keyboard). The lead can say what their accessories need first.
+
+## Amendment (2026-10-28): any way round
+
+With a real paddle accessory, the lead could put the paddle in the right
+place but not turn its face right. That accessory holds the controller
+only one way, so the sensors still track it, and "45 and -45 weren't
+enough". The profile now covers every orientation:
+- **TWIST** (about the handle) goes a full turn, -180 to 180.
+- **ANGLE** goes from -90 to 90.
+- **TURN** is new: it swings the face left or right about the
+  controller's up axis, -90 to 90.
+
+Every step is 5°. A grip is TURN, then ANGLE, then TWIST. TURN 0 is the
+grip as before, and a profile saved without TURN loads with none.

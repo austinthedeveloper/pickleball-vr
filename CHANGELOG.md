@@ -16,6 +16,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
   the scoreboard keeps your POINTS.
 
 ### Changed
+- **Paddle profiles turn any way:** TWIST goes a full turn, ANGLE runs
+  from -90 to 90, and a new TURN swings the face left or right. That
+  covers paddle accessories that only hold the controller one way.
+- **The DINKS target follows you:** it sits in front of the partner and
+  moves to the other half when you switch sides.
 - **Leaning over the kitchen line isn't a fault in practice:** you're
   only in when your head is 45 cm past the line.
 - **Four new kitchen drills** on PRACTICE PARTNER:
