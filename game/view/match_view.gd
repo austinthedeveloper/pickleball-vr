@@ -152,8 +152,11 @@ func _practice_court() -> void:
 	else:
 		machine = Machine.new()
 		add_child(machine)
-	if sim.drill.targets:
+	if sim.drill.targets or sim.drill.spots:
 		floor_target = FloorTarget.new()
+		floor_target.spot = sim.drill.spots
+		if sim.drill.spots:
+			floor_target.radius = sim.drill.spot_radius()
 		add_child(floor_target)
 	crowd.visible = false
 	crowd.process_mode = Node.PROCESS_MODE_DISABLED
@@ -168,6 +171,8 @@ func _practice_court() -> void:
 			Drill.ZONE_KITCHEN:
 				var dz := Drill.DINK_ZONE / float(K.M)
 				r = Rect2(-hw, -dz, hw * 2, dz)
+				if d.lanes:
+					r = Rect2(0, -dz, hw, dz)    # one lane; it moves to the lane in play
 			Drill.ZONE_DEEP: r = Rect2(-hw, -hl, hw * 2, hl / 3)
 			Drill.ZONE_LEFT: r = Rect2(-hw, -hl, hw, hl)
 			Drill.ZONE_RIGHT: r = Rect2(0, -hl, hw, hl)
@@ -467,6 +472,8 @@ func _on_event(e: Array) -> void:
 			_play("4_applause", World.m(e[1], 0, e[2]), 1.3, -10.0)
 		K.EVENT_DRILL:
 			var r: int = e[1]
+			if Perf.on and not demo:
+				_log_line("RESULT %s | streak %d" % [Drill.RESULT_TEXT[r], e[2]])
 			var rallying := sim.drill.partner and r == Drill.RESULT_GOOD
 			if rallying:
 				# The clips that say the number, so the call matches the board.
@@ -560,6 +567,8 @@ func _draw(delta: float) -> void:
 		machine.show_from(sim, delta)
 	if floor_target:
 		floor_target.show_from(sim, delta)
+	if zone_mesh and sim.drill and sim.drill.lanes:
+		zone_mesh.position.x = sim.drill.target_x / float(K.M)
 	board.show_from(sim, delta)
 	if flat and demo and not spectate:
 		flat.head = World.m(bot.head_x, 0, bot.head_z) + Vector3(0, FlatRig.EYE, 0)
@@ -603,7 +612,9 @@ func _trail_draw(b: Vector3, delta: float) -> void:
 
 ## Debug builds: one line per human hit, for tuning the paddle to real
 ## swings, to the log and to SWING_LOG on the device (game/tools/swings.sh
-## reads it). Forward is toward the net.
+## reads it, tools/swings_report.py sums it up by mode). Forward is toward
+## the net. Each line says the mode it was played in, and each drill result
+## gets a RESULT line (ADR-017).
 const SWING_LOG := "user://swings.log"
 func _log_swing() -> void:
 	var c := sim.last_contact
@@ -623,13 +634,25 @@ func _log_swing() -> void:
 		c[14] / 1000, c[15] / 256.0, u.length(), u.z * fwd, u.y, u.x, roundi(rad_to_deg(asin(clampf(n.y, -1, 1)))),
 		roundi(rad_to_deg(atan2(n.x, n.z * fwd))), c[12] / 1e6, absf(c[13]) / 1e6, vin.length(),
 		raw.length(), roundi(rad_to_deg(atan2(raw.y, Vector2(raw.x, raw.z).length()))), _where(lr), _where(la)])
+	_log_line(line)
+
+
+## The mode this is: the drill and its level, or a match.
+func _mode() -> String:
+	if sim.drill:
+		return sim.drill.mode_name()
+	return "DOUBLES" if sim.config.doubles else "SINGLES"
+
+
+func _log_line(line: String) -> void:
 	print(line)
 	# Also to a file: the Quest's log buffer is only minutes long.
 	# Read it with game/tools/swings.sh.
 	var f := FileAccess.open(SWING_LOG, FileAccess.READ_WRITE if FileAccess.file_exists(SWING_LOG) else FileAccess.WRITE)
 	if f:
 		f.seek_end()
-		f.store_line("%s assist=%d %s" % [Time.get_datetime_string_from_system(), sim.config.assist, line])
+		f.store_line("%s assist=%d mode=%s | %s" % [Time.get_datetime_string_from_system(), sim.config.assist,
+			_mode(), line])
 
 
 func _where(l: Array[int]) -> String:

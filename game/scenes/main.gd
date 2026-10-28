@@ -114,6 +114,8 @@ func _page(id: String) -> Menu3D:
 		"partner":
 			m.title = "PRACTICE PARTNER   BEST %d" % settings.partner_best
 			m.add_row("drill", "DRILL", Settings.PARTNER_DRILLS, settings.partner_drill)
+			if settings.partner_drill == Drill.KIND_LANES:
+				m.add_row("lane", "LANE", Drill.LANE_NAMES, settings.partner_lane)
 			m.add_row("level", "DIFFICULTY", Drill.PACE_NAMES, settings.partner_level)
 			m.add_row("side", "PARTNER", ["ACROSS", "CROSS COURT"], 1 if settings.partner_cross else 0)
 			m.add_row("spread", "SPREAD", Drill.SPREAD_NAMES, settings.partner_spread)
@@ -188,9 +190,10 @@ func _on_changed(id: String, index: int) -> void:
 		"side": settings.partner_cross = index == 1
 		"spread": settings.partner_spread = index
 		"drill": settings.partner_drill = index
+		"lane": settings.partner_lane = index
 	settings.save()
 	if id in ["mode", "vs", "venue", "hand", "angle", "profile", "twist", "reach", "shot", "target", "zone", "machine_at", "speed",
-			"targets", "level", "ptargets", "side", "spread", "drill"]:
+			"targets", "level", "ptargets", "side", "spread", "drill", "lane"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
 

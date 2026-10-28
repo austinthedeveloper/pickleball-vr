@@ -18,6 +18,9 @@ const PROFILE_REACHES := [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28,
 
 ## Tests point this at their own file (the runner does), never the player's.
 static var default_path := "user://settings.cfg"
+## Tests pin the seed (the runner does): a match's is the clock's otherwise,
+## and a test that passes on one second and fails on the next is no test.
+static var seed_override := -1
 
 var path := default_path
 var doubles := false
@@ -47,8 +50,9 @@ var partner_level := 1
 var partner_targets := true
 var partner_cross := false
 var partner_spread := 1
-const PARTNER_DRILLS := ["DINKS", "HANDS", "RESETS"]
-var partner_drill := 0               ## DRILL: DINKS, HANDS (ADR-014) or RESETS (ADR-016)
+const PARTNER_DRILLS := Drill.KIND_NAMES
+var partner_drill := 0               ## DRILL: a Drill.KIND_* (ADR-014, 016, 017)
+var partner_lane := Drill.LANE_ALTERNATE   ## LINE AND CROSS: LANE
 var partner_hands: bool:
 	get: return partner_drill == 1
 	set(v): partner_drill = 1 if v else 0
@@ -90,6 +94,7 @@ func load_settings() -> void:
 	partner_spread = c.get_value("partner", "spread", partner_spread)
 	# An older save kept HANDS as a flag.
 	partner_drill = c.get_value("partner", "drill", 1 if c.get_value("partner", "hands", false) else 0)
+	partner_lane = c.get_value("partner", "lane", partner_lane)
 
 
 func save() -> void:
@@ -121,6 +126,7 @@ func save() -> void:
 	c.set_value("partner", "cross", partner_cross)
 	c.set_value("partner", "spread", partner_spread)
 	c.set_value("partner", "drill", partner_drill)
+	c.set_value("partner", "lane", partner_lane)
 	c.save(path)
 
 
@@ -154,7 +160,7 @@ func match_config() -> SimTypes.MatchConfig:
 	cfg.assist = ASSISTS[clampi(assist, 0, 3)]
 	cfg.points_to_win = POINTS[clampi(points, 0, 3)]
 	cfg.win_by_2 = win_by_2
-	cfg.seed = int(Time.get_unix_time_from_system()) & 0x7fffffff
+	cfg.seed = seed_override if seed_override >= 0 else int(Time.get_unix_time_from_system()) & 0x7fffffff
 	Opponents.apply(cfg, opponent)
 	cfg.venue = Venues.resolve(venue, opponent)
 	return cfg
@@ -191,14 +197,21 @@ func partner_config() -> SimTypes.MatchConfig:
 	d.rules = Drill.RULE_KITCHEN
 	d.cross = partner_cross
 	d.spread = partner_spread
-	d.hands = partner_hands
-	d.resets = partner_drill == 2
-	if partner_hands:
+	d.kind = clampi(partner_drill, 0, Drill.KIND_NAMES.size() - 1)
+	d.lane = partner_lane
+	if d.hands:
 		d.zone = Drill.ZONE_ANY          # a volley that lands anywhere in counts too
-		d.targets = false                # no placing: volleys, not dinks
+	if d.kind != Drill.KIND_DINKS and d.kind != Drill.KIND_RESETS:
+		d.targets = false                # their own spots, lanes or none
+	if d.kind == Drill.KIND_VOLLEYS:
+		d.rules = Drill.RULE_VOLLEY | Drill.RULE_KITCHEN
 	d.spot_z = Drill.RESET_SPOT_Z if d.resets else K.KITCHEN_DEPTH + 300000
-	if partner_cross:
-		d.spot_x = K.COURT_HALF_WIDTH / 2      # your right court, the partner diagonal
+	if partner_cross or d.lanes:
+		# Your right court; the partner diagonal, or (LINE AND CROSS) across,
+		# so the line and the cross are each half their kitchen.
+		d.spot_x = K.COURT_HALF_WIDTH / 2
+	if d.lanes:
+		d.cross = false
 	cfg.drill = d
 	return cfg
 

@@ -70,8 +70,45 @@ const RESULT_BOUNCE := 6             ## let it bounce under VOLLEY
 const RESULT_KITCHEN := 7
 const RESULT_SPIN := 8               ## no topspin under TOPSPIN
 const RESULT_POPUP := 9              ## RESETS: it crossed the net too high
+const RESULT_SPOT := 10              ## CALL THE SPOT: in their kitchen, off the spot
+const RESULT_LANE := 11              ## LINE AND CROSS: the other lane
+const RESULT_ATTACK := 12            ## ATTACK OR DINK: you dinked a ball to put away
+const RESULT_PATIENT := 13           ## ATTACK OR DINK: you sped up a ball to dink
 const RESULT_TEXT := ["GOOD!", "NET", "OUT", "MISSED THE ZONE", "MISSED", "LET IT BOUNCE",
-	"VOLLEY IT", "KITCHEN!", "MORE TOPSPIN", "POP-UP!"]
+	"VOLLEY IT", "KITCHEN!", "MORE TOPSPIN", "POP-UP!", "MISSED THE SPOT", "WRONG LANE",
+	"ATTACK THAT!", "BE PATIENT"]
+
+## The partner's drills (ADR-010, 014, 016, 017).
+const KIND_DINKS := 0
+const KIND_HANDS := 1
+const KIND_RESETS := 2
+const KIND_SPOTS := 3                ## CALL THE SPOT: dink to the spot that lights
+const KIND_LANES := 4                ## LINE AND CROSS: only one half of their kitchen counts
+const KIND_VOLLEYS := 5              ## VOLLEY DINKS: take floaters out of the air, to a spot
+const KIND_ATTACK := 6               ## ATTACK OR DINK: speed up the high ones, dink the rest
+const KIND_NAMES := ["DINKS", "HANDS", "RESETS", "CALL THE SPOT", "LINE AND CROSS", "VOLLEY DINKS",
+	"ATTACK OR DINK"]
+const KIND_COUNTS := ["DINKS", "HANDS", "RESETS", "SPOTS", "LANES", "VOLLEYS", "GOOD CALLS"]
+## CALL THE SPOT: the spot's radius, and when it lights: EASY as they hit,
+## MEDIUM as the ball crosses the net, HARD as it bounces on your side.
+const SPOT_RADIUS := [600000, 450000, 350000]
+## LINE AND CROSS: which lane counts.
+const LANE_LINE := 0
+const LANE_CROSS := 1
+const LANE_ALTERNATE := 2
+const LANE_NAMES := ["LINE", "CROSS", "ALTERNATE"]
+## VOLLEY DINKS: a floater through your kitchen line at this height, slow.
+const FLOAT_Y := [850000, 750000, 650000]
+const FLOAT_PACE := [36000, 42000, 48000]
+## ATTACK OR DINK: 30% come up high, landing in your kitchen to sit up at
+## your line.
+## DIFFICULTY is how little higher they are than the rest (over the net:
+## 1 m against 30 cm on EASY, 55 against 12 on HARD). A speed-up is a ball
+## you send back at 7 m/s or more over the ground.
+const ATTACK_HIGH_PCT := 30
+const ATTACK_HIGH_CLEAR := [1000000, 750000, 550000]
+const ATTACK_LOW_CLEAR := [300000, 200000, K.NET_CLEAR]
+const SPEEDUP_V := 58333
 
 const WAIT := 0
 const FLY := 1                       ## fed, coming to you
@@ -143,8 +180,21 @@ var rules := 0
 var partner := false                 ## DINK PARTNER instead of the machine
 var partner_pace := 1
 var cross := false                   ## the partner stands diagonally across, not straight
-var hands := false                   ## HANDS (ADR-014): volleys at each other, not dinks
-var resets := false                  ## RESETS (ADR-016): drives at you; reset them into the kitchen
+var kind := KIND_DINKS               ## which partner drill (KIND_*)
+var lane := LANE_ALTERNATE           ## LINE AND CROSS: which lane counts
+## HANDS (ADR-014): volleys at each other, not dinks.
+var hands: bool:
+	get: return kind == KIND_HANDS
+## RESETS (ADR-016): drives at you; reset them into the kitchen.
+var resets: bool:
+	get: return kind == KIND_RESETS
+## A spot lights on their side for each of the partner's shots.
+var spots: bool:
+	get: return kind == KIND_SPOTS or kind == KIND_VOLLEYS
+var lanes: bool:
+	get: return kind == KIND_LANES
+var attack: bool:
+	get: return kind == KIND_ATTACK
 var spread := 1
 var targets := false                 ## floor targets on
 var goal := 0                        ## good returns to finish; 0 runs forever
@@ -172,6 +222,11 @@ var target_x := 0
 var target_z := 0
 var target_hits := 0
 var toss_at := 0                     ## SETUP: when the held ball is dropped
+var spot_lit := false                ## CALL THE SPOT: the spot (target_x, target_z) is showing
+var spot_i := -1                     ## which spot
+var lane_cross := false              ## LINE AND CROSS: this ball's lane is the cross one
+var high_ball := false               ## ATTACK OR DINK: this one is up to put away
+var you_fast := false                ## ATTACK OR DINK: your last ball was a speed-up
 var rally := 0                       ## DINK PARTNER: your hits back this rally
 var best_rally := 0
 
@@ -183,8 +238,8 @@ func copy_settings_from(o: Drill) -> void:
 	partner = o.partner
 	partner_pace = o.partner_pace
 	cross = o.cross
-	hands = o.hands
-	resets = o.resets
+	kind = o.kind
+	lane = o.lane
 	spread = o.spread
 	targets = o.targets
 	speed = o.speed
@@ -353,6 +408,8 @@ func _fly(sim: Sim, p: SimTypes.Player) -> void:
 		bounces += 1
 		sim.bounce_count = bounces
 		sim.emit(K.EVENT_BOUNCE, sim.ball.ev_x, sim.ball.ev_z, 0)
+	if spots and not spot_lit:
+		spot_lit = bounces > 0 if partner_pace >= 2 else bz <= 0 and sim.ball.z > 0
 	if bounces >= 2 or sim.ball.rolling or sim.ball.z > K.COURT_HALF_LENGTH + 4 * K.M \
 			or sim.tick - fed_at > GIVE_UP:
 		_result(sim, RESULT_MISSED)
@@ -361,6 +418,8 @@ func _fly(sim: Sim, p: SimTypes.Player) -> void:
 		return
 	var volley := bounces == 0
 	hit_at = sim.tick
+	spot_lit = spot_lit or spots         # too late to call it now: show it
+	you_fast = Fx.length(sim.ball.vx, 0, sim.ball.vz) >= SPEEDUP_V
 	p.cooldown = K.PADDLE_COOLDOWN
 	sim.emit(K.EVENT_HIT, 0, sim.ball.speed(), 1 if volley else 0)
 	sim.last_hitter = 0
@@ -409,12 +468,14 @@ func _return(sim: Sim) -> void:
 		sim.emit(K.EVENT_TARGET, x, z, target_hits)
 		_new_target(sim)
 	var r := RESULT_GOOD
-	if not in_zone(x, z):
+	if partner:
+		r = _placed(x, z)
+	elif not in_zone(x, z):
 		r = RESULT_ZONE
 	elif rules & RULE_TOPSPIN and not _topspin(sim.ball):
 		r = RESULT_SPIN
-	if resets:
-		_result(sim, r)                  # the partner feeds a fresh drive
+	if resets or attack and you_fast:
+		_result(sim, r)                  # a fresh ball: a reset's a feed loop, a speed-up ends it
 		return
 	if partner:
 		rally += 1
@@ -571,12 +632,34 @@ func _partner_dink(sim: Sim, x: int, y: int, z: int) -> void:
 	if resets:
 		_partner_drive(sim, x, y, z)
 		return
+	var level := clampi(partner_pace, 0, 2)
+	var clear: int = PARTNER_CLEAR[level]
 	var p := sim.players[0]
-	var q := sim.players[2]
 	# Bounce about a metre in front of you on the line from here to you, so
 	# after the bounce the ball carries on to you, cross court too (a
 	# bounce at your x would drift on past you, ADR-010 amended).
 	var tz := clampi(p.z - 1000000 + sim.scatter(250000), 600000, K.KITCHEN_DEPTH * 85 / 100)
+	match kind:
+		KIND_VOLLEYS:
+			_partner_floater(sim, x, y, z)
+			_call_spot(sim)
+			return
+		KIND_SPOTS:
+			_call_spot(sim)
+		KIND_LANES:
+			_call_lane(sim)
+		KIND_ATTACK:
+			high_ball = sim.random(100) < ATTACK_HIGH_PCT
+			clear = ATTACK_HIGH_CLEAR[level] if high_ball else ATTACK_LOW_CLEAR[level]
+			if high_ball:
+				tz = K.KITCHEN_DEPTH - 600000 + sim.scatter(100000)   # sits up at your line
+	_partner_shot(sim, x, y, z, tz, clear)
+
+
+## The dink itself: to land at depth `tz` on your side, `clear` over the tape.
+func _partner_shot(sim: Sim, x: int, y: int, z: int, tz: int, clear: int) -> void:
+	var p := sim.players[0]
+	var q := sim.players[2]
 	# SPREAD: mostly to your forehand or backhand at a reach, now and then
 	# at you (a target, never dead centre every time).
 	var r: Array = SPREADS[clampi(spread, 0, SPREADS.size() - 1)]
@@ -589,7 +672,7 @@ func _partner_dink(sim: Sim, x: int, y: int, z: int) -> void:
 	var level := clampi(partner_pace, 0, 2)
 	var pace: int = PARTNER_PACE[level]
 	var w := Aim.topspin(tx - x, tz - z, -150000)
-	var v := Aim.shot(x, y, z, tx, tz, pace, w, PARTNER_CLEAR[level])
+	var v := Aim.shot(x, y, z, tx, tz, pace, w, clear)
 	var b := sim.ball
 	b.place(x, maxi(y, K.BALL_RADIUS), z)
 	b.launch(v[0], v[1], v[2])
@@ -780,6 +863,101 @@ func _partner_drive(sim: Sim, x: int, y: int, z: int) -> void:
 	sim.emit(K.EVENT_HIT, 2, b.speed(), 0)
 
 
+## VOLLEY DINKS: a soft floater that passes you about waist high at your
+## kitchen line (it would land behind you): take it out of the air.
+func _partner_floater(sim: Sim, x: int, y: int, z: int) -> void:
+	var p := sim.players[0]
+	var q := sim.players[2]
+	var level := clampi(partner_pace, 0, 2)
+	var r: Array = SPREADS[clampi(spread, 0, SPREADS.size() - 1)]
+	var off: int = r[0] + sim.random(r[1] - r[0] + 1)
+	if sim.random(100) < 20:
+		off = sim.random(150001)
+	var tx := clampi(p.x + (off if sim.random(2) == 0 else -off), -K.COURT_HALF_WIDTH + 300000,
+		K.COURT_HALF_WIDTH - 300000)
+	var ty: int = FLOAT_Y[level] + sim.scatter(100000)
+	var w := Aim.topspin(tx - x, p.z - z, -100000)
+	var v := Aim.through(x, maxi(y, 300000), z, tx, ty, p.z, FLOAT_PACE[level], w)
+	var b := sim.ball
+	b.place(x, maxi(y, 300000), z)
+	b.launch(v[0], v[1], v[2])
+	b.set_spin(w[0], w[1], w[2])
+	aim_x = tx
+	sim.required_bounce = K.REQUIRED_BOUNCE_NONE
+	sim.last_hitter = 2
+	sim.bounce_count = 0
+	bounces = 0
+	feeds += 1
+	fed_at = sim.tick
+	q.swing_tick = sim.tick
+	stage = FLY
+	sim.emit(K.EVENT_HIT, 2, b.speed(), 0)
+
+
+## CALL THE SPOT: one of four spots on their side for this ball: their
+## left or right corner of the kitchen, the middle, or at their feet. It
+## lights as they hit (EASY), as it crosses the net (MEDIUM) or as it
+## bounces on your side (HARD); VOLLEY DINKS light it as they hit.
+func _call_spot(sim: Sim) -> void:
+	var q := sim.players[2]
+	var kd := K.KITCHEN_DEPTH
+	var wx := K.COURT_HALF_WIDTH - 700000
+	var at: Array = [[-wx, -kd * 55 / 100], [wx, -kd * 55 / 100], [0, -kd * 40 / 100],
+		[clampi(q.x, -wx, wx), -(kd - 350000)]]
+	var i := sim.random(at.size() - 1)
+	if i >= spot_i and spot_i >= 0:
+		i += 1                           # never the same spot twice running
+	spot_i = i
+	target_x = at[i][0]
+	target_z = at[i][1]
+	spot_lit = partner_pace <= 0 or kind == KIND_VOLLEYS
+
+
+func spot_radius() -> int:
+	return SPOT_RADIUS[clampi(partner_pace, 0, 2)]
+
+
+## LINE AND CROSS: the lane for this ball, half their dink zone: straight
+## ahead of you (LINE) or the diagonal (CROSS).
+func _call_lane(sim: Sim) -> void:
+	match lane:
+		LANE_LINE: lane_cross = false
+		LANE_CROSS: lane_cross = true
+		_: lane_cross = not lane_cross
+	var you := signi(sim.players[0].x) if sim.players[0].x != 0 else 1
+	var s := -you if lane_cross else you
+	target_x = s * K.COURT_HALF_WIDTH / 2
+	target_z = -DINK_ZONE / 2
+	spot_lit = true
+
+
+## Where this drill's ball counts: GOOD, or why not (it landed in court on
+## their side at (x, z)).
+func _placed(x: int, z: int) -> int:
+	if attack:
+		if you_fast:
+			return RESULT_GOOD if high_ball else RESULT_PATIENT
+		if high_ball:
+			return RESULT_ATTACK
+	if not in_zone(x, z):
+		return RESULT_ZONE
+	if spots and Fx.length(x - target_x, 0, z - target_z) > spot_radius():
+		return RESULT_SPOT
+	if lanes and signi(x) != signi(target_x):
+		return RESULT_LANE
+	return RESULT_GOOD
+
+
+## The mode and level, for the swing log (ADR-017).
+func mode_name() -> String:
+	if partner:
+		var n: String = KIND_NAMES[kind] + " " + PACE_NAMES[clampi(partner_pace, 0, 2)]
+		return n + " " + LANE_NAMES[lane] if lanes else n
+	if goal > 0:
+		return "LESSON"
+	return "MACHINE %s %s" % [SHOT_NAMES[shot], SPEED_NAMES[clampi(speed, 0, SPEED_NAMES.size() - 1)]]
+
+
 ## A new target in the return zone (their kitchen for a partner), not on
 ## top of the last one.
 func _new_target(sim: Sim) -> void:
@@ -815,4 +993,5 @@ func _new_target(sim: Sim) -> void:
 func snapshot() -> Array:
 	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
 		hit_at, machine_z, partner_plan, read_at, target_x, target_z, target_hits, rally, best_rally,
-		1 if partner else 0, 1 if hands else 0, 1 if resets else 0, toss_at]
+		1 if partner else 0, kind, lane, toss_at, 1 if spot_lit else 0, spot_i, 1 if lane_cross else 0,
+		1 if high_ball else 0, 1 if you_fast else 0]

@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands | resets] [venue=NAME] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N]
 extends SceneTree
 
 var frames := 240
@@ -41,6 +41,9 @@ func _initialize() -> void:
 		st.partner_targets = true
 		st.partner_cross = args.has("cross")
 		st.partner_hands = args.has("hands")
+		for a in args:
+			if a.begins_with("drill="):
+				st.partner_drill = Drill.KIND_NAMES.find(a.trim_prefix("drill=").replace("_", " "))
 		if args.has("resets"):
 			st.partner_drill = 2
 		cfg.drill = st.partner_config().drill

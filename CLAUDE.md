@@ -12,7 +12,7 @@ game/tools/test.sh                                   # all tests, headless (must
 godot --path game                                    # play (flat mode without a headset)
 godot --path game -- demo                            # DEMO: bot vs CPU
 godot --headless --path game -s res://tests/golden.gd   # regenerate golden traces (play changes only)
-godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson] [venue=NAME]
+godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson] [drill=CALL_THE_SPOT...] [venue=NAME] [tick=N]
 python3 game/tools/version.py [set X.Y.Z]            # the version, everywhere (design/RELEASING.md)
 python3 game/tools/release.py X.Y.Z --dry-run         # cut a release: checks, bump, tests, tag, APK (--push: GitHub release)
 python3 game/tools/test_release.py                    # the release tools' self-test
@@ -21,6 +21,8 @@ godot --headless --path game -s res://tools/rally_stats.gd -- <matches> <difficu
 python3 game/tools/import_opponents.py                # the ladder, from the port kit
 game/tools/fetch_openxr_vendors.sh                    # Meta's OpenXR loader into game/addons (pinned, git-ignored)
 game/tools/quest_build.sh [--check]                   # build + install + launch on the Quest (design/QUEST_SETUP.md)
+game/tools/swings.sh > s.log                          # the headset's swing log (debug builds)
+python3 game/tools/swings_report.py s.log [--since HH:MM]   # that log summed up per mode (ADR-017)
 ```
 
 Releases are semver with tags `vX.Y.Z`, `CHANGELOG.md` and an APK on the
@@ -32,7 +34,7 @@ plugin-free). Godot's version and SHA-512s are pinned in
 
 `design/ROADMAP.md` is the milestone sheet: keep it current with each
 branch. `design/KNOWN_ISSUES.md` lists the defects, and
-`decisions/README.md` the ADRs (next: ADR-017). `design/QUEST_SETUP.md`
+`decisions/README.md` the ADRs (next: ADR-018). `design/QUEST_SETUP.md`
 covers the headset build.
 
 **The canon bible** is `../pickleball/docs/PICKLEBALL_94_BIBLE.md`. The VR
