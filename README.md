@@ -54,6 +54,8 @@ default.
     DIFFICULTY is the pace (ADR-014).
   - RESETS: from mid-court, block its drives soft into its kitchen,
     under the pop-up line (ADR-016).
+  - CALL THE SPOT, LINE AND CROSS, VOLLEY DINKS and ATTACK OR DINK:
+    placing drills (ADR-017).
 - **BALL MACHINE:** drives, dinks, lobs or a mix. You set the SPEED, the
   TARGET, where the machine stands (MACHINE AT), the RATE, RETURN TO and
   TARGETS. At your kitchen line, drives come at you through the air

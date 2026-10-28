@@ -7,6 +7,14 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ## [Unreleased]
 
 ### Added
+- **Four new kitchen drills** on PRACTICE PARTNER:
+  - **CALL THE SPOT:** a green spot lights on their side for each ball;
+    dink onto it. It lights later and gets smaller the harder you set it.
+  - **LINE AND CROSS:** only one half of their kitchen counts, straight
+    ahead, cross court, or alternating.
+  - **VOLLEY DINKS:** soft floaters at your kitchen line; volley them
+    onto the spot without stepping in.
+  - **ATTACK OR DINK:** speed up the dinks that sit up, dink the rest.
 - **Every partner feed has a lead-in:** the partner holds the next ball
   up, drops it and hits it as it falls, so you see where it's coming
   from and when.

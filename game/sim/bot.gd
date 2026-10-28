@@ -145,7 +145,9 @@ func _move() -> void:
 		if key != _move_for or sim.tick >= _move_at:
 			_move_for = key
 			_move_at = sim.tick + 12
-			var plan := Intercept.plan(sim, team, head_x, head_z, speed, -1, MIN_LEAD)
+			var put_away := sim.drill != null and sim.drill.attack and sim.drill.high_ball
+			var plan := Intercept.plan(sim, team, head_x, head_z, speed, -1, MIN_LEAD,
+				Drill.HANDS_HIGH if put_away else Intercept.COMFORT_HIGH, 700000 if put_away else K.REACH_LOW)
 			if plan.is_empty():
 				# Nothing to plan yet (the ball's not on its way): home, not a
 				# stale goal (it used to walk to (0, 0), the middle of the net).
@@ -204,8 +206,11 @@ func _maybe_plan() -> void:
 		return
 	var reach := -1 if auto_move else K.REACH
 	var lead := SERVE_WAIT / 2 if sim.phase == K.PHASE_TOSS else MIN_LEAD
-	var high := Drill.HANDS_HIGH if hands else Intercept.COMFORT_HIGH
-	var plan := Intercept.plan(sim, team, head_x, head_z, speed, reach, lead, high)
+	var put_away := sim.drill != null and sim.drill.attack and sim.drill.high_ball
+	var high := Drill.HANDS_HIGH if hands or put_away else Intercept.COMFORT_HIGH
+	# A ball to put away is taken as it sits up, 70 cm or more.
+	var plan := Intercept.plan(sim, team, head_x, head_z, speed, reach, lead, high,
+		700000 if put_away else K.REACH_LOW)
 	if plan.is_empty():
 		return
 	if sim.phase == K.PHASE_LIVE and not sim.covers(slot, plan[1]):
@@ -300,6 +305,12 @@ func _target(b: Ball) -> Array[int]:
 	if sim.drill:
 		# Practice: at the floor target if there is one, else to the zone
 		# the drill asks for.
+		if sim.drill.attack and sim.drill.high_ball:
+			# ATTACK OR DINK: put the high one away, at their feet.
+			var qa := sim.players[2]
+			return [qa.x, os * (K.KITCHEN_DEPTH + 900000), 95000]
+		if sim.drill.spots or sim.drill.lanes:
+			return [sim.drill.target_x, sim.drill.target_z, 40000]
 		if sim.drill.hands:
 			# HANDS: a firm volley at the partner (it passes them waist high).
 			var q := sim.players[2]

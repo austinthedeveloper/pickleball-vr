@@ -7,7 +7,7 @@ partner feeds and you have to put the ball somewhere. Each one reuses
 what's built: the partner (ADR-010), HANDS (ADR-014), floor targets,
 zones, the streak and FOCUS.
 
-## 1. CALL THE SPOT
+## 1. CALL THE SPOT (built: ADR-017)
 
 The partner dinks to you. As each ball crosses the net, a spot on their
 side lights up: their forehand or backhand corner of the kitchen, at
@@ -19,7 +19,7 @@ their feet, or down the middle. Put your dink there.
 - Why it's better than moving targets: you choose after you see the ball,
   like a real point.
 
-## 2. LINE AND CROSS
+## 2. LINE AND CROSS (built: ADR-017)
 
 Skinny dinking. The partner stands across or cross court; only half
 their kitchen counts, as in skinny singles. A setting picks the lane:
@@ -46,7 +46,7 @@ hard and low, like a speed-up. Block it soft into their kitchen.
   sees them put it away.
 - It builds on the block physics just added.
 
-## 5. ATTACK OR DINK
+## 5. ATTACK OR DINK (built: ADR-017)
 
 The partner dinks, but some come up high. Speed up the high ones (hard
 at their body) and dink the low ones.
@@ -54,7 +54,7 @@ at their body) and dink the low ones.
   glows for a moment, so you learn what one looks like.
 - Teaches: patience, the hardest kitchen skill.
 
-## 6. VOLLEY DINKS
+## 6. VOLLEY DINKS (built: ADR-017)
 
 The partner dinks a little higher, landing near your kitchen line. Take
 each one out of the air (no bounce, and not from inside the kitchen)

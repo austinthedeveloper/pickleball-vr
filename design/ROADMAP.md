@@ -77,6 +77,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-37 | RESETS: block speed-ups into the kitchen (ADR-016) | `feature/cld-vr-resets` | Played: "the right idea" |
 | VR-38 | Partner feeds have a lead-in: hold, drop, strike (ADR-016) | `feature/cld-vr-resets` | Ready to test |
 | VR-39 | Menus: click < to step back, > to step on | `feature/cld-vr-resets` | Ready to test |
+| VR-40 | CALL THE SPOT, LINE AND CROSS, VOLLEY DINKS, ATTACK OR DINK (ADR-017) | `feature/cld-vr-drills` | Ready to test |
+| VR-41 | The swing log by mode, and swings_report.py (ADR-017) | `feature/cld-vr-drills` | Ready to test |
 
 ## Phase 1: singles
 
@@ -139,6 +141,11 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-40 / VR-41, ready to test.** PRACTICE PARTNER > DRILL: try CALL
+THE SPOT, LINE AND CROSS, VOLLEY DINKS and ATTACK OR DINK, a few
+minutes each, in one session. Then `game/tools/swings.sh > s.log` and
+`python3 game/tools/swings_report.py s.log` gives a report per mode.
 
 **VR-38 / VR-39, ready to test.** Every partner feed now starts with the
 ball held up in their hand, then dropped and struck: about 0.85 s to see
@@ -206,8 +213,7 @@ does the SUNSET's low sun get in your eyes too much?
 
 ## For you
 
-- **Kitchen drills:** RESETS is built (VR-37). Which of
-  design/KITCHEN_DRILLS.md next? The suggestion is CALL THE SPOT.
+- **Kitchen drills:** all but THIRD SHOT DROPS are built (VR-37, VR-40).
 
 1. **The first session in the headset** (VR-05): wake the controllers, open
    Library > Unknown Sources > Pickleball '94 VR, and check the paddle in
