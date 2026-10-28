@@ -23,5 +23,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [015](ADR-015-paddle-profiles.md) | Paddle profiles for paddle accessories |
 | [016](ADR-016-resets.md) | RESETS, blocking speed-ups into the kitchen |
 | [017](ADR-017-kitchen-drills.md) | Four kitchen drills, and the swing log by mode |
+| [018](ADR-018-rigged-bodies.md) | Rigged bodies for the partner and the CPU players |
 
-Next: ADR-018.
+Next: ADR-019.

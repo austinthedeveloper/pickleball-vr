@@ -7,6 +7,9 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ## [Unreleased]
 
 ### Added
+- **The partner and the CPU players have real bodies:** a full 3D person
+  instead of shapes, with a shirt, shorts, shoes and hair, moving just
+  as before. In doubles, the ladder's players are men and women.
 - **Four new kitchen drills** on PRACTICE PARTNER:
   - **CALL THE SPOT:** a green spot lights on their side for each ball;
     dink onto it. It lights later and gets smaller the harder you set it.

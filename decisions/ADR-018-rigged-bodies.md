@@ -1,0 +1,77 @@
+# ADR-018: Rigged bodies for the partner and the CPU players
+
+**Status:** Accepted (2026-10-28)
+
+## Context
+
+The partner and the CPU players (ADR-012) were built from about thirty
+capsules, spheres and boxes, placed each frame from joints the Avatar
+works out: two-bone IK for the legs and arms, planted feet, a timed
+swing. The lead asked how to make the partner "not just shapes". The
+outline was what read as shapes: capsules meeting at the elbows and
+knees. Textures on the same primitives wouldn't change that. The lead
+picked a rigged CC0 model.
+
+## Decision
+
+**The model.** Quaternius' *Universal Base Characters* (free Standard
+pack, CC0; `game/assets/people/LICENSE.txt`): a male and a female base
+body, about 7k vertices each, with a 65-bone humanoid skeleton (the
+Unreal Engine mannequin's bone names), and six hairstyles skinned to the
+head. The glTFs are stripped of their embedded textures, and the
+textures are scaled to 1024 px. The pack's hair normal maps aren't used.
+
+**Posed from the same joints.** `Body` (`view/body.gd`) wraps the
+skeleton. The Avatar keeps all its footwork, swing timing and IK. Where
+it used to place shapes, it now says per bone:
+- `orient`: the T-pose turned to a forward and up. Used for the pelvis,
+  spine, neck, head and feet.
+- `aim`: swing the bone to point at a spot, keeping its twist. Used for
+  the thighs, calves, upper arms and forearms, toward the IK's knees,
+  ankles, elbows and hands.
+- nothing: the bone stays at rest under its parent.
+
+The IK uses the model's own bone lengths. The hips and shoulders are
+read from the posed skeleton (`at`), so the limbs start where the mesh
+has them. The paddle hand reaches its grip a palm (7 cm) past the wrist,
+the hand turns so the palm sits behind the paddle face, and the fingers
+curl round the handle. While holding the next feed (ADR-016), the free
+hand turns palm up under the ball.
+
+**Clothes by shader.** The base bodies are in underwear. The skin shader
+(`view/body_skin.gdshader`) paints the clothes by where each spot sits
+in the T-pose. That position is written into the vertex colour once per
+model, when it loads. The clothes are:
+- a crew-neck shirt from the waist to a rounded collar, out to short
+  sleeves;
+- shorts above the knees;
+- socks.
+
+Cloth keeps only a hint of the body's normal map and shading. Shoes are
+meshes on the foot bones. The partner's cap and visor sit on the head
+bone. A cap goes with short hair, so the hair doesn't poke through.
+
+**Looks.** Skin tones come from the light and dark textures, and the
+middle tone is the light one tinted. The hair colour comes from the
+existing palette. The partner is male. In matches, the ladder's players
+named in `Opponents.WOMEN` get the female body, and shorts come from the
+team data. Hairstyles and beards vary by slot.
+
+**Culling.** A skinned mesh's bounds are its T-pose at the origin, so a
+player across the court was culled. The body meshes use a box the size
+of the whole court.
+
+Display only: the sim is untouched. `test_view_never_writes_to_the_sim`
+and the golden traces are unchanged. `test_avatar` checks that the
+skeleton lands on the joints: the paddle hand at its grip, the feet on
+their spots and on the floor, for both bodies.
+
+## Consequences
+
+- Each player is one skinned mesh of about 7–8k vertices. A doubles
+  match has four, which is well within the Quest 3's budget. The assets
+  add about 9 MB.
+- The free pack has two bodies. The paid Source pack (8 bodies, more
+  hair) would drop in the same way if more variety is wanted.
+- The superhero bodies are muscular, and the shirt is skin-tight over
+  them. A looser shirt would need cloth meshes.

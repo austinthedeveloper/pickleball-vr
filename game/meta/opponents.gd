@@ -43,3 +43,16 @@ static func player(i: int, slot: int) -> Dictionary:
 static func shirt(i: int, slot: int) -> Color:
 	var c: Array = player(i, slot)["shirt"]
 	return Color(c[0], c[1], c[2])
+
+
+static func shorts(i: int, slot: int) -> Color:
+	var c: Array = player(i, slot)["shorts"]
+	return Color(c[0], c[1], c[2])
+
+
+## Which of the ladder's players get the female body (ADR-018).
+const WOMEN := ["MARGE", "RAVEN", "LANI", "MIA", "JADE"]
+
+
+static func female(i: int, slot: int) -> bool:
+	return String(player(i, slot)["name"]) in WOMEN

@@ -1,5 +1,5 @@
-## A CPU player (ADR-012): a person built from simple shapes on a rig of
-## joints, posed every frame. Display only: it reads the sim and never
+## A CPU player (ADR-012): a rigged body (ADR-018, `Body`) posed every
+## frame from joints worked out here. Display only: it reads the sim and never
 ## writes to it.
 ##
 ## - Legs and arms are two-bone IK chains (hip-knee-foot, shoulder-elbow-
@@ -16,14 +16,14 @@ extends Node3D
 
 const SKINS := [Color(0.84, 0.6, 0.46), Color(0.7, 0.48, 0.34), Color(0.48, 0.31, 0.21)]
 const HAIRS := [Color(0.24, 0.15, 0.09), Color(0.1, 0.08, 0.07), Color(0.62, 0.42, 0.2)]
+const MEN_HAIR := ["parted", "buzzed"]
+const WOMEN_HAIR := ["long", "buns", "buzzed_f"]
 
-# The rig, metres.
-const THIGH := 0.44
-const SHIN := 0.44
-const UPPER_ARM := 0.29
-const FOREARM := 0.27
-const HIP_W := 0.11
-const SHOULDER_W := 0.21
+# The rig, metres (bone lengths come from the Body).
+const PELVIS_DROP := 0.022           ## the pelvis bone under the hip joints
+const PALM := 0.07                   ## wrist to the paddle's grip
+const CAP_R := 0.108
+const CAP_AT := Vector3(0, 0.135, 0.005) ## the crown's centre, from the head bone
 const STANCE := 0.2                  ## half the feet's spread
 const STEP_AT := 0.24                ## a foot this far off its spot steps
 const STEP_TIME := 0.16
@@ -41,10 +41,12 @@ var shorts := Color(0.15, 0.18, 0.3)
 var skin := SKINS[0]
 var hair := HAIRS[0]
 var cap := true
+var female := false
+var style := "parted"                ## Body.HAIR_STYLES
+var beard := false
 var paddle: PaddleMesh
+var figure: Body
 
-var _parts := {}                     ## name -> MeshInstance3D (top level, posed each frame)
-var _head: Node3D
 var _root := Vector3.ZERO            ## feet's centre, smoothed
 var _face := Vector3.FORWARD         ## facing, horizontal
 var _feet: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO]
@@ -73,120 +75,48 @@ var _last_swing := -1
 
 
 func _ready() -> void:
-	var skin_m := _mat(skin, 0.75)
-	var shirt_m := _mat(shirt, 0.8)
-	var shorts_m := _mat(shorts, 0.85)
-	var shoe_m := _mat(Color(0.95, 0.95, 0.96), 0.6)
-	var sock_m := _mat(Color(0.98, 0.98, 0.98), 0.9)
-	# Torso: a tapered shirt, shoulders, a collar; the pelvis in shorts.
-	_part("torso", _cyl(0.19, 0.165, 0.46), shirt_m)
-	_part("chest", _sph(0.19, 0.36), shirt_m)
-	_part("pelvis", _cyl(0.17, 0.18, 0.22), shorts_m)
-	for s in ["l", "r"]:
-		_part("shoulder_" + s, _sph(0.085, 0.17), shirt_m)
-		_part("thigh_" + s, _cap(0.085, THIGH + 0.08), skin_m)
-		_part("short_" + s, _cyl(0.1, 0.095, 0.22), shorts_m)
-		_part("shin_" + s, _cap(0.065, SHIN + 0.05), skin_m)
-		_part("sock_" + s, _cyl(0.048, 0.05, 0.1), sock_m)
-		_part("shoe_" + s, _box(Vector3(0.1, 0.07, 0.27)), shoe_m)
-		_part("sole_" + s, _box(Vector3(0.105, 0.02, 0.28)), _mat(Color(0.3, 0.3, 0.32), 0.9))
-		_part("upper_" + s, _cap(0.056, UPPER_ARM + 0.05), skin_m)
-		_part("sleeve_" + s, _cyl(0.075, 0.068, 0.14), shirt_m)
-		_part("fore_" + s, _cap(0.047, FOREARM + 0.04), skin_m)
-		_part("hand_" + s, _sph(0.045, 0.1), skin_m)
-	_part("neck", _cyl(0.055, 0.06, 0.12), skin_m)
-	_build_head(skin_m)
+	figure = Body.new()
+	figure.female = female
+	figure.dark = skin == SKINS[2]
+	figure.tint = Color(0.86, 0.78, 0.72) if skin == SKINS[1] else Color.WHITE
+	figure.shirt = shirt
+	figure.shorts = shorts
+	figure.hair = hair
+	figure.style = style if not cap else ("buzzed_f" if female else "buzzed")
+	figure.beard = beard
+	add_child(figure)
+	if cap:
+		_add_cap()
 	paddle = PaddleMesh.new()
 	paddle.color = Color(0.85, 0.15, 0.2) if slot < 2 else Color(0.2, 0.3, 0.85)   # your side's red
 	paddle.top_level = true          # posed in world space
 	add_child(paddle)
 
 
-func _build_head(skin_m: StandardMaterial3D) -> void:
-	_head = Node3D.new()
-	_head.top_level = true
-	add_child(_head)
-	var hair_m := _mat(hair, 0.9)
-	var dark := _mat(Color(0.12, 0.1, 0.1), 0.5)
-	_head_part(_sph(0.105, 0.25), skin_m, Vector3.ZERO, Vector3(1, 1, 1.02))
-	_head_part(_sph(0.072, 0.13), skin_m, Vector3(0, -0.058, -0.012), Vector3(1.05, 0.9, 0.95))   # jaw and chin
-	for s in [-1, 1]:
-		_head_part(_sph(0.022, 0.05), skin_m, Vector3(s * 0.102, -0.005, 0.005), Vector3(0.6, 1, 1))   # ears
-		_head_part(_sph(0.016, 0.03), _mat(Color(0.97, 0.97, 0.97), 0.3), Vector3(s * 0.037, 0.018, -0.093), Vector3.ONE)
-		_head_part(_sph(0.009, 0.018), dark, Vector3(s * 0.037, 0.017, -0.105), Vector3.ONE)
-		_head_part(_box(Vector3(0.036, 0.008, 0.01)), hair_m, Vector3(s * 0.038, 0.047, -0.098), Vector3.ONE)   # brows
-	_head_part(_cap(0.012, 0.045), skin_m, Vector3(0, -0.012, -0.106), Vector3.ONE, Vector3(0.35, 0, 0))   # nose
-	_head_part(_box(Vector3(0.038, 0.008, 0.008)), _mat(Color(0.62, 0.3, 0.28), 0.6), Vector3(0, -0.052, -0.098), Vector3.ONE)
-	# Hair, and a cap with a visor (the partner's look).
-	var top := SphereMesh.new()
-	top.radius = 0.112
-	top.height = 0.13
-	top.is_hemisphere = true
-	_head_part(top, hair_m, Vector3(0, 0.02, 0.01), Vector3(1, 1, 1))
-	_head_part(_sph(0.105, 0.2), hair_m, Vector3(0, -0.005, 0.03), Vector3(1, 0.9, 0.85))   # the back of the head
-	if cap:
-		var crown := SphereMesh.new()
-		crown.radius = 0.116
-		crown.height = 0.12
-		crown.is_hemisphere = true
-		var cap_m := _mat(shirt.darkened(0.25), 0.7)
-		_head_part(crown, cap_m, Vector3(0, 0.035, 0.0), Vector3(1, 1, 1))
-		_head_part(_box(Vector3(0.17, 0.01, 0.085)), cap_m, Vector3(0, 0.03, -0.135), Vector3.ONE, Vector3(-0.1, 0, 0))
-
-
-func _head_part(mesh: Mesh, m: Material, at: Vector3, sc: Vector3, rot := Vector3.ZERO) -> void:
-	var mi := MeshInstance3D.new()
-	mi.mesh = mesh
-	mi.material_override = m
-	mi.position = at
-	mi.scale = sc
-	mi.rotation = rot
-	if mesh.get_aabb().size.length() < 0.12:
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF   # the face's small parts
-	_head.add_child(mi)
-
-
-func _part(name: String, mesh: Mesh, m: Material) -> void:
-	var mi := MeshInstance3D.new()
-	mi.mesh = mesh
-	mi.material_override = m
-	mi.top_level = true
-	if name.begins_with("hand") or name.begins_with("sock") or name.begins_with("sole") or name.begins_with("sleeve"):
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mi)
-	_parts[name] = mi
+## A cap with a visor, on the head bone (the partner's look).
+func _add_cap() -> void:
+	var on := BoneAttachment3D.new()
+	on.bone_name = "Head"
+	figure.skel.add_child(on)
+	var cap_m := _mat(shirt.darkened(0.25), 0.7)
+	var crown := SphereMesh.new()
+	crown.radius = CAP_R
+	crown.height = CAP_R
+	crown.is_hemisphere = true
+	crown.height = CAP_R * 0.9
+	var visor := [_box(Vector3(0.18, 0.012, 0.1)), CAP_AT + Vector3(0, 0.0, 0.13), Vector3(-0.12, 0, 0)]
+	for part in [[crown, CAP_AT, Vector3.ZERO], visor]:
+		var mi := MeshInstance3D.new()
+		mi.mesh = part[0]
+		mi.material_override = cap_m
+		mi.position = part[1]
+		mi.rotation = part[2]
+		on.add_child(mi)
 
 
 static func _mat(c: Color, rough: float) -> StandardMaterial3D:
 	var m := World.material(c)
 	m.roughness = rough
-	return m
-
-
-static func _cap(r: float, h: float) -> CapsuleMesh:
-	var m := CapsuleMesh.new()
-	m.radius = r
-	m.height = h
-	m.radial_segments = 10
-	m.rings = 4
-	return m
-
-
-static func _cyl(top: float, bottom: float, h: float) -> CylinderMesh:
-	var m := CylinderMesh.new()
-	m.top_radius = top
-	m.bottom_radius = bottom
-	m.height = h
-	m.radial_segments = 12
-	return m
-
-
-static func _sph(r: float, h: float, squash := 1.0) -> SphereMesh:
-	var m := SphereMesh.new()
-	m.radius = r
-	m.height = h * squash
-	m.radial_segments = 12
-	m.rings = 6
 	return m
 
 
@@ -197,30 +127,6 @@ static func _box(size: Vector3) -> BoxMesh:
 
 
 # --- Posing helpers ------------------------------------------------------------
-
-## A limb mesh along from -> to (its y axis), centred between them.
-func _limb(name: String, from: Vector3, to: Vector3) -> void:
-	var mi: MeshInstance3D = _parts[name]
-	mi.global_transform = Transform3D(_along(to - from), (from + to) / 2)
-
-
-## A part at `at`, its y axis along `y`, its -z toward `fwd`.
-func _place(name: String, at: Vector3, y: Vector3, fwd: Vector3) -> void:
-	var mi: MeshInstance3D = _parts[name]
-	var yy := y.normalized()
-	var z := -(fwd - yy * fwd.dot(yy))
-	if z.length() < 0.001:
-		z = yy.cross(Vector3.RIGHT)
-	z = z.normalized()
-	mi.global_transform = Transform3D(Basis(yy.cross(z), yy, z), at)
-
-
-static func _along(dir: Vector3) -> Basis:
-	var y := dir.normalized()
-	var ref := Vector3.FORWARD if absf(y.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT
-	var x := y.cross(ref).normalized()
-	return Basis(x, y, x.cross(y))
-
 
 ## Two-bone IK: the middle joint for a chain root -> target with bone
 ## lengths a, b, bending toward `pole` (a direction). Returns [middle, end].
@@ -337,59 +243,65 @@ func show_from(sim: Sim, delta: float) -> void:
 	var t_right := t_face.cross(Vector3.UP).normalized()
 	var lean := 0.18 if ready else 0.08
 	var spine := (Vector3.UP + t_face * lean + (_vel * Vector3(1, 0, 1) * 0.05).limit_length(0.2)).normalized()
-	var chest := pelvis + spine * 0.46
-	_place("pelvis", pelvis + Vector3(0, 0.02, 0), Vector3.UP, _face)
-	_place("torso", pelvis + spine * 0.24, spine, t_face)
-	_place("chest", chest - spine * 0.1, spine, t_face)
-	var neck := chest + spine * 0.06
-	_place("neck", neck, spine, t_face)
-	var head_at := neck + spine * 0.15
+	# The body: hips, a spine that bends and coils, the neck.
+	figure.begin()
+	figure.orient("pelvis", _face, Vector3.UP, pelvis - Vector3(0, PELVIS_DROP, 0))
+	var mid_face := _face.slerp(t_face, 0.5)
+	figure.orient("spine_01", mid_face, Vector3.UP.lerp(spine, 0.5).normalized())
+	figure.orient("spine_02", t_face, spine)
+	figure.orient("spine_03", t_face, spine)
+	figure.orient("neck_01", t_face, spine)
 	# Legs: hips to planted feet, knees forward.
 	for i in 2:
-		var s := "l" if i == 0 else "r"
-		var hip := pelvis + right * (HIP_W if i == 1 else -HIP_W)
-		var ankle := _feet[i] + Vector3(0, 0.09 + _lift(i), 0)
-		var leg := two_bone(hip, ankle, THIGH, SHIN, _face + right * (0.25 if i == 1 else -0.25))
-		_limb("thigh_" + s, hip, leg[0])
-		_limb("short_" + s, hip, hip.lerp(leg[0], 0.45))
-		_limb("shin_" + s, leg[0], leg[1])
-		_limb("sock_" + s, leg[1], leg[1] + (leg[0] - leg[1]).normalized() * 0.1)
+		var s := "_l" if i == 0 else "_r"
+		var hip := figure.at("thigh" + s)
+		var ankle := _feet[i] + Vector3(0, figure.ankle_h + _lift(i), 0)
+		var leg := two_bone(hip, ankle, figure.thigh_len, figure.shin_len, _face + right * (0.25 if i == 1 else -0.25))
+		figure.aim("thigh" + s, leg[0])
+		figure.aim("calf" + s, leg[1])
 		var toe := _face.rotated(Vector3.UP, 0.25 if i == 0 else -0.25)
-		_place("shoe_" + s, leg[1] + Vector3(0, -0.055, 0) + toe * 0.05, Vector3.UP, toe)
-		_place("sole_" + s, leg[1] + Vector3(0, -0.09, 0) + toe * 0.05, Vector3.UP, toe)
+		figure.orient("foot" + s, toe, Vector3.UP)
 	# Arms: the paddle hand on its swing; the other out for balance.
 	var hand_want := _paddle_target(pelvis, t_face, t_right, ball)
 	var rate := 22.0 if _swing else 9.0
 	_hand = _hand.lerp(hand_want, clampf(delta * rate, 0.0, 1.0))
 	var off_want := pelvis + t_face * (0.32 + 0.12 * sin(_gait) * clampf(speed / 2.5, 0.0, 1.0)) \
 		- t_right * 0.26 + Vector3(0, 0.32 if ready else 0.12, 0)
-	if sim.drill != null and slot == 2 and sim.drill.stage == Drill.SETUP and sim.tick < sim.drill.toss_at + 6:
-		off_want = ball + Vector3(0, -0.045, 0)    # holding the next ball up, then letting it go
+	var holding := sim.drill != null and slot == 2 and sim.drill.stage == Drill.SETUP and sim.tick < sim.drill.toss_at + 6
+	if holding:
+		off_want = ball + Vector3(0, -0.07, 0)    # holding the next ball up, then letting it go
 	_off = _off.lerp(off_want, clampf(delta * 8.0, 0.0, 1.0))
 	var elbow_pole := Vector3.DOWN * 0.7 - t_face * 0.3
 	var hands := [_off, _hand]
-	var paddle_fore: Array[Vector3] = []
+	var wrist := Vector3.ZERO
 	for i in 2:
-		var s := "l" if i == 0 else "r"
-		var sh := chest + t_right * (SHOULDER_W if i == 1 else -SHOULDER_W) - spine * 0.03
-		var arm := two_bone(sh, hands[i], UPPER_ARM, FOREARM, elbow_pole + t_right * (0.4 if i == 1 else -0.4))
-		_place("shoulder_" + s, sh, spine, t_face)
-		_limb("upper_" + s, sh, arm[0])
-		_limb("sleeve_" + s, sh, sh.lerp(arm[0], 0.42))
-		_limb("fore_" + s, arm[0], arm[1])
-		(_parts["hand_" + s] as MeshInstance3D).global_position = arm[1]
+		var s := "_l" if i == 0 else "_r"
+		var sh := figure.at("upperarm" + s)
+		# The paddle hand reaches its grip, a palm past the wrist.
+		var fore := figure.fore_len + (PALM if i == 1 else 0.0)
+		var arm := two_bone(sh, hands[i], figure.upper_len, fore, elbow_pole + t_right * (0.4 if i == 1 else -0.4))
+		figure.aim("upperarm" + s, arm[0])
+		figure.aim("lowerarm" + s, arm[1])
 		if i == 1:
-			paddle_fore = [arm[0], arm[1]]
+			wrist = arm[0] + (arm[1] - arm[0]).normalized() * figure.fore_len
 	# The paddle: out of the hand along the forearm, tipped up, face to the shot.
-	var along := (paddle_fore[1] - paddle_fore[0]).normalized()
+	var along := (_hand - wrist).normalized()
 	along = (along + Vector3.UP * 0.6 + t_face * 0.2).normalized()
 	var face_n := _out if _swing else t_face
 	if _backhand:
 		face_n = face_n.rotated(Vector3.UP, 0.4)
-	paddle.pose_grip(paddle_fore[1], along, face_n)
-	# The head: on the neck, watching the ball.
+	paddle.pose_grip(_hand, along, face_n)
+	# The hand round the handle: thumb up it, palm behind the face.
+	figure.orient("hand_r", along, -face_n)
+	figure.curl(1, 1.0)
+	if holding:
+		figure.orient("hand_l", t_face, Vector3.DOWN)      # palm up under the ball
+		figure.curl(0, 0.35)
+	else:
+		figure.curl(0, 0.25)
 	# The head: on the neck, watching the ball in play (between points, the
 	# other side), never tipped down so far the cap hides the face.
+	var head_at := figure.at("Head") + spine * 0.1
 	var look := (ball - head_at) if ready else _face
 	if look.length() < 0.1 or look.dot(_face) < -0.2:
 		look = _face
@@ -397,7 +309,8 @@ func show_from(sim: Sim, delta: float) -> void:
 	var flat_len := Vector2(look.x, look.z).length()
 	look.y = clampf(look.y, -0.5 * flat_len, 0.6 * flat_len)
 	_look = _look.slerp(look.normalized(), clampf(delta * 10.0, 0.0, 1.0)) if _look != Vector3.ZERO else look.normalized()
-	_head.global_transform = Transform3D(Basis.looking_at(_look, Vector3.UP), head_at)
+	figure.orient("Head", _look, Vector3.UP)
+	figure.apply()
 
 
 ## Where the paddle hand goes: the swing if there is one, else ready.

@@ -79,6 +79,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-39 | Menus: click < to step back, > to step on | `feature/cld-vr-resets` | Ready to test |
 | VR-40 | CALL THE SPOT, LINE AND CROSS, VOLLEY DINKS, ATTACK OR DINK (ADR-017) | `feature/cld-vr-drills` | Ready to test |
 | VR-41 | The swing log by mode, and swings_report.py (ADR-017) | `feature/cld-vr-drills` | Ready to test |
+| VR-42 | Rigged bodies for the partner and CPU players (ADR-018) | `feature/cld-vr-body` | Ready to test |
 
 ## Phase 1: singles
 
@@ -141,6 +142,10 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-42, ready to test.** The partner is now a rigged person (ADR-018).
+Watch it through a few feeds and a doubles demo: does the swing read,
+does anything clip or pop, does the headset keep its frame rate?
 
 **VR-40 / VR-41, ready to test.** PRACTICE PARTNER > DRILL: try CALL
 THE SPOT, LINE AND CROSS, VOLLEY DINKS and ATTACK OR DINK, a few

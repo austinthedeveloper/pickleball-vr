@@ -97,8 +97,14 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 			a.skin = Avatar.SKINS[(s * 7 + maxi(cfg.opponent, 0)) % Avatar.SKINS.size()]
 			a.hair = Avatar.HAIRS[(s * 5 + maxi(cfg.opponent, 0) * 3) % Avatar.HAIRS.size()]
 			a.cap = s % 2 == 0
+			a.female = s % 2 == 1
 			if cfg.opponent >= 0 and s >= 2:
 				a.shirt = Opponents.shirt(cfg.opponent, s)
+				a.shorts = Opponents.shorts(cfg.opponent, s)
+				a.female = Opponents.female(cfg.opponent, s)
+			var looks: Array = Avatar.WOMEN_HAIR if a.female else Avatar.MEN_HAIR
+			a.style = looks[(s * 3 + maxi(cfg.opponent, 0)) % looks.size()]
+			a.beard = not a.female and (s + maxi(cfg.opponent, 0)) % 3 == 0
 			add_child(a)
 			avatars.append(a)
 	board = Scoreboard.new()
