@@ -42,6 +42,11 @@ you, at 5 m/s over the ground: about 0.9 s in the air. Each of your
 balls back raises the pace a third of the way to the DIFFICULTY's,
 so the third reply and on are at full pace (`HANDS_FEED`, `HANDS_RAMP`).
 
+Then: "have the partner be a bit faster after the feed ... just a bit more
+power." The reply to your first ball is half way to full pace (was a
+third), the next three quarters, and full pace is 8% up: EASY 7.8 m/s,
+MEDIUM 11.2, HARD 14.4 over the ground.
+
 ## Consequences
 
 - The demo CPU rallies at every level (36 in a row on HARD in the bot

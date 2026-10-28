@@ -88,9 +88,10 @@ const PARTNER_REACT := 22            ## ticks after your hit it starts moving (0
 ## HANDS (ADR-014): both at the kitchen line, keeping it alive in the air.
 ## The partner volleys at you at DIFFICULTY's pace (7, 10, 13 m/s), waist to
 ## chest high, and reads your volley faster than a dink.
-const HANDS_PACE := [60000, 85000, 110000]
+const HANDS_PACE := [65000, 93000, 120000]   ## 7.8, 11.2, 14.4 m/s
 ## A rally starts soft and straight at you, then speeds up: the feed at
-## 5 m/s, full pace by your HANDS_RAMP'th ball back (ADR-014 amended).
+## 5 m/s, then a jump (the reply to your first ball is already half way
+## to full pace), full by your HANDS_RAMP'th ball back (ADR-014 amended).
 const HANDS_FEED := 42000
 const HANDS_RAMP := 3
 const HANDS_REACT := 12              ## 0.1 s
@@ -548,7 +549,9 @@ func _partner_volley(sim: Sim, x: int, y: int, z: int) -> void:
 		K.COURT_HALF_WIDTH - 300000)
 	var ty := HANDS_HEIGHT + sim.scatter(150000)
 	var full: int = HANDS_PACE[clampi(partner_pace, 0, 2)]
-	var pace := HANDS_FEED + (full - HANDS_FEED) * mini(rally, HANDS_RAMP) / HANDS_RAMP
+	var pace := full
+	if rally < HANDS_RAMP:
+		pace = HANDS_FEED + (full - HANDS_FEED) * (rally + 1) / (HANDS_RAMP + 1) if rally > 0 else HANDS_FEED
 	var w := Aim.topspin(tx - x, p.z - z, 250000)
 	var v := Aim.through(x, maxi(y, 300000), z, tx, ty, p.z, pace, w)
 	var b := sim.ball

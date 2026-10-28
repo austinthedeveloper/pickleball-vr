@@ -17,7 +17,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ### Changed
 - DINK PARTNER is now PRACTICE PARTNER, with DINKS and HANDS drills.
 - **HANDS starts each rally with a soft feed** straight at you, then
-  speeds up over the next few balls to the DIFFICULTY's pace.
+  speeds up quickly to the DIFFICULTY's pace, which is a little harder
+  than before.
+- **A bigger, unhurried swing** no longer sends a dink long: the middle
+  of the swing range is a little softer. Gentle touch and full drives
+  are unchanged.
 - **The dink zone** now runs 2.5 ft past the kitchen line.
 - **FOCUS is much stronger:** it starts at 5 in a row and the world is
   nearly black around the court by 13.

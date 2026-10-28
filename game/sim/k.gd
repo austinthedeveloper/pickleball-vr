@@ -149,14 +149,15 @@ static func fault_text(f: int) -> String:
 
 
 ## +1 if the team's side is z > 0.
-## The swing curve (ADR-003, tuned on the lead's three logged sessions): a
-## VR controller weighs nothing, so touch comes out underhit and an
-## average swing overhit. The face's effective speed for the hit, as
-## straight segments through these points (m/s): 2.5 -> 3.05 (touch x1.22),
-## 4.2 -> 4.2, 6.5 -> 4.6 (an average swing levels off: a firm, controlled
-## ball), 9 -> 5.8, then +0.62 per m/s (a put-away still drives). It only
-## ever rises. um/tick.
-const SWING_CURVE := [[0, 0], [20833, 25417], [35000, 35000], [54167, 38333], [75000, 48333]]
+## The swing curve (ADR-003, tuned on the lead's logged sessions): a VR
+## controller weighs nothing, so touch comes out underhit and an average
+## swing overhit. The face's effective speed for the hit, as straight
+## segments through these points (m/s): 2.5 -> 3.05 (touch x1.22),
+## 4.2 -> 4.0, 6.5 -> 4.15 (a bigger, unhurried swing levels off: a firm,
+## controlled ball, not a long one), 9 -> 5.8, then +0.62 per m/s (a
+## put-away still drives). Only the face's speed at contact counts, not
+## how far it travelled. It only ever rises. um/tick.
+const SWING_CURVE := [[0, 0], [20833, 25417], [35000, 33333], [54167, 34583], [75000, 48333]]
 const SWING_TAIL_256 := 159          ## the slope past the last point, Q8
 
 
