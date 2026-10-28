@@ -36,6 +36,24 @@ driving at you, and you block it soft into their kitchen.
 - The demo CPU resets firmer and flatter (7 m/s, deep in their kitchen),
   since a slow ball from mid-court loops over the line.
 
+## Amended: a lead-in you can read
+
+"Still having the issue of having no clue where the ball is coming from.
+It's great that the ball is fast ... But the ball just appears and fires
+right away." The partner's feed was placed and struck in the same tick,
+and its swing only started at contact. Now every fresh partner feed
+(DINKS, HANDS and RESETS) has a lead-in, a new drill stage, SETUP:
+- the ball appears held up at chest height in front of the partner's
+  free hand, for 0.35 s;
+- it's dropped, with a little lift, and struck as it falls past the
+  height of the shot (0.8 m for HANDS and RESETS, 0.5 m for DINKS);
+- the partner's avatar winds up toward that strike, squared to you, and
+  its free hand holds the ball until the drop.
+
+That's about 0.85 s from seeing the ball to the strike, a rhythm to time
+the split step on. The drive itself is just as fast. It's all in the sim
+(`Drill._setup`), so the avatar plans its swing on the same flight.
+
 ## Consequences
 
 - `test_partner.gd`: drives come hard from the partner and it never plays

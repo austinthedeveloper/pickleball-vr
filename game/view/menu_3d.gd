@@ -130,19 +130,36 @@ func press() -> void:
 
 ## The row a ray from `origin` along `dir` (world) points at, or -1.
 func row_at(origin: Vector3, dir: Vector3) -> int:
+	var hit: Variant = _hit(origin, dir)
+	if hit == null:
+		return -1
+	var i := int(floor(-(hit as Vector3).y / ROW_H - 0.4))
+	return i if i >= 0 and i < rows.size() else -1
+
+
+## Where the ray meets the panel, in the menu's own space, or null.
+func _hit(origin: Vector3, dir: Vector3) -> Variant:
 	var inv := global_transform.affine_inverse()
 	var o := inv * origin
 	var d := inv.basis * dir
 	if absf(d.z) < 0.0001:
-		return -1
+		return null
 	var t := -o.z / d.z
 	if t <= 0.0:
-		return -1
+		return null
 	var hit := o + d * t
 	if absf(hit.x) > WIDTH / 2:
-		return -1
-	var i := int(floor(-hit.y / ROW_H - 0.4))
-	return i if i >= 0 and i < rows.size() else -1
+		return null
+	return hit
+
+
+## A value row's "< VALUE >" splits at its middle: a click left of it
+## steps back, right of it steps on (the label counts as the left).
+func value_middle(i: int) -> float:
+	var l := _values[i]
+	var font: Font = l.font if l.font else ThemeDB.fallback_font
+	var w := font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, l.font_size).x * l.pixel_size
+	return l.position.x - w / 2
 
 
 func _process(delta: float) -> void:
@@ -153,7 +170,8 @@ func locked() -> bool:
 	return lock > 0.0
 
 
-## Pointing: hover selects; a click presses.
+## Pointing: hover selects; a click presses an action row, and steps a
+## value row back or on by the side of it clicked (the < or the >).
 func point(origin: Vector3, dir: Vector3, click: bool) -> void:
 	if locked():
 		return
@@ -163,5 +181,10 @@ func point(origin: Vector3, dir: Vector3, click: bool) -> void:
 	if i != selected:
 		selected = i
 		refresh()
-	if click:
+	if not click:
+		return
+	if (rows[i]["values"] as Array).is_empty():
 		press()
+	else:
+		var hit: Vector3 = _hit(origin, dir)
+		change(-1 if hit.x < value_middle(i) else 1)

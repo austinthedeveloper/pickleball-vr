@@ -79,6 +79,14 @@ const RETURN := 2                    ## you hit it, going back
 const SERVING := 3                   ## SERVE: the ball in your hand or tossed
 const DONE := 4                      ## the lesson's goal is met
 const PARTNER := 5                   ## DINK PARTNER: your ball's on their side, they're going for it
+const SETUP := 6                     ## the partner shows the next ball, drops it and hits it
+
+## Every fresh partner feed has a lead-in you can read (ADR-016 amended):
+## the ball held up in their hand, then dropped and struck as it falls,
+## so you see where it comes from and when; the shot itself stays fast.
+const HOLD_TICKS := 42               ## 0.35 s held up
+const HOLD_Y := 1200000             ## chest high, in front of the free hand
+const DROP_VY := 12000               ## a little lift as it leaves the hand (1.4 m/s)
 
 ## DINK PARTNER (ADR-010): a CPU at their kitchen line who only wants the
 ## rally to go on: every ball it reaches comes back as a dink about a metre
@@ -163,6 +171,7 @@ var read_at := 0                     ## when the partner reads your shot
 var target_x := 0
 var target_z := 0
 var target_hits := 0
+var toss_at := 0                     ## SETUP: when the held ball is dropped
 var rally := 0                       ## DINK PARTNER: your hits back this rally
 var best_rally := 0
 
@@ -252,10 +261,7 @@ func update(sim: Sim, tossed: bool) -> void:
 				if shot == SHOT_SERVE:
 					_serve_ready(sim)
 				elif partner:
-					var q := sim.players[2]
-					# A fresh rally: dinks from low, a HANDS feed or a RESETS
-					# drive from the waist.
-					_partner_dink(sim, q.x - 300000, HANDS_HEIGHT if hands or resets else 500000, q.z + 300000)
+					_partner_setup(sim)
 				else:
 					_feed(sim)
 			else:
@@ -266,6 +272,8 @@ func update(sim: Sim, tossed: bool) -> void:
 			_return(sim)
 		PARTNER:
 			_partner(sim)
+		SETUP:
+			_setup(sim)
 		SERVING:
 			_serving(sim, p, tossed)
 		DONE:
@@ -506,6 +514,53 @@ func _result(sim: Sim, r: int, rally_on := false) -> void:
 
 
 # --- DINK PARTNER -------------------------------------------------------------
+
+## A fresh rally: the partner holds the ball up, then drops it.
+func _partner_setup(sim: Sim) -> void:
+	var q := sim.players[2]
+	stage = SETUP
+	toss_at = sim.tick + HOLD_TICKS
+	var b := sim.ball
+	b.held = true
+	b.place(_hold_x(q), HOLD_Y, q.z + 350000)
+	b.launch(0, 0, 0)
+	b.set_spin(0, 0, 0)
+	partner_plan = toss_at + _drop_ticks()
+
+
+## The held ball: a hand's width to the free hand's side of centre.
+static func _hold_x(q: SimTypes.Player) -> int:
+	return q.x - K.right_sign(q.team) * 100000
+
+
+## Ticks from the drop to the strike: dinks low, a HANDS feed or a RESETS
+## drive from the waist.
+func _drop_ticks() -> int:
+	var strike := HANDS_HEIGHT - 150000 if hands or resets else 500000
+	var b := Ball.new()
+	b.held = false
+	b.place(0, HOLD_Y, 0)
+	b.launch(0, DROP_VY, 0)
+	for i in 120:
+		b.step()
+		if b.vy < 0 and b.y <= strike:
+			return i + 1
+	return 60
+
+
+func _setup(sim: Sim) -> void:
+	var q := sim.players[2]
+	var b := sim.ball
+	if sim.tick < toss_at:
+		b.place(_hold_x(q), HOLD_Y, q.z + 350000)    # in the hand, following them
+		return
+	if sim.tick == toss_at:
+		b.held = false
+		b.launch(0, DROP_VY, 0)
+	b.step()
+	if sim.tick >= partner_plan:
+		partner_plan = -1
+		_partner_dink(sim, b.x, b.y, b.z)
 
 ## A dink from (x, y, z) to land about a metre in front of you, near your
 ## line: the partner's every shot.
@@ -760,4 +815,4 @@ func _new_target(sim: Sim) -> void:
 func snapshot() -> Array:
 	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
 		hit_at, machine_z, partner_plan, read_at, target_x, target_z, target_hits, rally, best_rally,
-		1 if partner else 0, 1 if hands else 0, 1 if resets else 0]
+		1 if partner else 0, 1 if hands else 0, 1 if resets else 0, toss_at]

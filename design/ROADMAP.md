@@ -74,7 +74,9 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-34 | HANDS: more power after the feed (ADR-014) | `feature/cld-vr-blocks` | Ready to test |
 | VR-35 | PADDLE page: profiles for paddle accessories (ADR-015) | `feature/cld-vr-paddle-profiles` | Ready to test |
 | VR-36 | Kitchen drills: proposals (design/KITCHEN_DRILLS.md) | `feature/cld-vr-paddle-profiles` | Done (the lead picked RESETS) |
-| VR-37 | RESETS: block speed-ups into the kitchen (ADR-016) | `feature/cld-vr-resets` | Ready to test |
+| VR-37 | RESETS: block speed-ups into the kitchen (ADR-016) | `feature/cld-vr-resets` | Played: "the right idea" |
+| VR-38 | Partner feeds have a lead-in: hold, drop, strike (ADR-016) | `feature/cld-vr-resets` | Ready to test |
+| VR-39 | Menus: click < to step back, > to step on | `feature/cld-vr-resets` | Ready to test |
 
 ## Phase 1: singles
 
@@ -138,7 +140,12 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
 
-**VR-37, ready to test.** MAIN > PRACTICE PARTNER > DRILL RESETS. You
+**VR-38 / VR-39, ready to test.** Every partner feed now starts with the
+ball held up in their hand, then dropped and struck: about 0.85 s to see
+it coming. Is that enough warning without making RESETS slow? In any
+menu, click the < of a setting to step it back.
+
+**VR-37, played: "the right idea".** MAIN > PRACTICE PARTNER > DRILL RESETS. You
 start mid-court. Block each drive soft into their kitchen, under the red
 line over the net. Are the drives the speed and height of a real
 speed-up? Is the line fair on each level?

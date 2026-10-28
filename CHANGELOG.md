@@ -7,6 +7,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ## [Unreleased]
 
 ### Added
+- **Every partner feed has a lead-in:** the partner holds the next ball
+  up, drops it and hits it as it falls, so you see where it's coming
+  from and when.
+- **Menu arrows both work:** clicking the < on a setting steps it back,
+  the > steps it on.
 - **RESETS:** a new PRACTICE PARTNER drill. You stand mid-court and the
   partner drives at you, hard and low. Block it soft into their kitchen,
   under the red pop-up line over the net. DIFFICULTY sets the pace and

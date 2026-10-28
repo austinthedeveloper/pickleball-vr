@@ -242,14 +242,15 @@ static func two_bone(root: Vector3, target: Vector3, a: float, b: float, pole: V
 func _plan_tick(sim: Sim) -> int:
 	if sim.drill and sim.drill.partner and slot == 2:
 		var st := sim.drill.stage
-		return sim.drill.partner_plan if st == Drill.PARTNER or st == Drill.RETURN else -1
+		return sim.drill.partner_plan if st == Drill.PARTNER or st == Drill.RETURN or st == Drill.SETUP else -1
 	var p := sim.players[slot]
 	return p.plan_tick if p.cpu else -1
 
 
 func _incoming(sim: Sim) -> bool:
 	if sim.drill:
-		return sim.drill.partner and slot == 2 and (sim.drill.stage == Drill.PARTNER or sim.drill.stage == Drill.RETURN)
+		var st := sim.drill.stage
+		return sim.drill.partner and slot == 2 and (st == Drill.PARTNER or st == Drill.RETURN or st == Drill.SETUP)
 	return sim.phase == K.PHASE_LIVE and sim.last_hitter >= 0 and sim.last_hitter >> 1 != slot >> 1
 
 
@@ -362,6 +363,8 @@ func show_from(sim: Sim, delta: float) -> void:
 	_hand = _hand.lerp(hand_want, clampf(delta * rate, 0.0, 1.0))
 	var off_want := pelvis + t_face * (0.32 + 0.12 * sin(_gait) * clampf(speed / 2.5, 0.0, 1.0)) \
 		- t_right * 0.26 + Vector3(0, 0.32 if ready else 0.12, 0)
+	if sim.drill != null and slot == 2 and sim.drill.stage == Drill.SETUP and sim.tick < sim.drill.toss_at + 6:
+		off_want = ball + Vector3(0, -0.045, 0)    # holding the next ball up, then letting it go
 	_off = _off.lerp(off_want, clampf(delta * 8.0, 0.0, 1.0))
 	var elbow_pole := Vector3.DOWN * 0.7 - t_face * 0.3
 	var hands := [_off, _hand]
@@ -459,6 +462,10 @@ func _track_swing(sim: Sim, body: Vector3, ball: Vector3, delta: float) -> void:
 		var right := _face.cross(Vector3.UP)
 		_backhand = (_contact - body).dot(right) < -0.1
 		_out = Vector3(0, 0, K.side_sign(1 - p.team))
+		if sim.drill != null and sim.drill.stage == Drill.SETUP:
+			# The feed: square to you, so the wind-up shows where it's going.
+			var you := World.m(sim.players[0].x, 0, sim.players[0].z)
+			_out = Vector3(you.x - _contact.x, 0, you.z - _contact.z).normalized()
 		_soft = sim.drill != null and sim.drill.partner and not sim.drill.hands and not sim.drill.resets
 	else:
 		_until = maxf(_until - delta, 0.0)

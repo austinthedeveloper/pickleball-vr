@@ -309,12 +309,12 @@ func test_resets_drive_at_you_in_transition() -> void:
 	var drives := 0
 	var fastest := 0
 	var partner_returns := 0
-	for i in 9000:
+	for i in 12000:
 		var stage := sim.drill.stage
 		sim.step([bot.input()])
 		for e in sim.drain_events():
 			if e[0] == K.EVENT_HIT and e[1] == 2:
-				if stage == Drill.WAIT:
+				if stage == Drill.SETUP:
 					drives += 1
 					fastest = maxi(fastest, Fx.length(sim.ball.vx, 0, sim.ball.vz))
 				else:
@@ -381,3 +381,30 @@ func test_resets_menu_and_old_saves() -> void:
 	s.load_settings()
 	check(s.partner_hands and s.partner_drill == 1, "an older save's HANDS loads as HANDS")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))
+
+
+func test_every_feed_has_a_lead_in() -> void:
+	# The ball shows in the partner's hand, drops, and is struck as it
+	# falls: you see where it comes from before it's fired (ADR-016).
+	for drill in 3:
+		var s := Settings.new()
+		s.partner_drill = drill
+		var sim := Sim.new(s.partner_config())
+		var bot := Bot.new(sim, 0)
+		var shown := -1
+		var lead := []
+		for i in 3000:
+			var was := sim.drill.stage
+			sim.step([bot.input()])
+			if was != Drill.SETUP and sim.drill.stage == Drill.SETUP:
+				shown = sim.tick
+				near(sim.ball.z, sim.players[2].z + 350000, 1000, "in the partner's hand")
+				near(sim.ball.y, Drill.HOLD_Y, 0, "held up where you can see it")
+			for e in sim.drain_events():
+				if e[0] == K.EVENT_HIT and e[1] == 2 and was == Drill.SETUP:
+					lead.append(sim.tick - shown)
+		check(lead.size() >= 3, "%s: feeds came" % Settings.PARTNER_DRILLS[drill])
+		for t: int in lead:
+			check(t >= 90 and t <= 130, "%s: shown %.2f s before it's hit" % [Settings.PARTNER_DRILLS[drill], t / 120.0])
+		if asserts > 60:
+			asserts = 60
