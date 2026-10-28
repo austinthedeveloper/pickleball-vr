@@ -57,3 +57,12 @@ enough". The profile now covers every orientation:
 
 Every step is 5°. A grip is TURN, then ANGLE, then TWIST. TURN 0 is the
 grip as before, and a profile saved without TURN loads with none.
+
+## Amendment (2026-10-28): reach back toward the hand
+
+The lead's accessory is a fake paddle with a handle. It holds the
+controller 6-8 inches (15-20 cm) up the handle, above the hand. REACH
+now runs from -30 to +20 cm in 1 cm steps; it was 0 to 40 in 2s. A
+negative reach slides the virtual paddle back along its handle toward
+the hand, and 40 cm out was more than any accessory needs. A saved reach
+outside the range loads clamped: an old 40 comes back as 20.

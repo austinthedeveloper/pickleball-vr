@@ -17,7 +17,10 @@ const PROFILE_NAMES := ["DEFAULT", "PROFILE 1", "PROFILE 2", "PROFILE 3"]
 static var PROFILE_ANGLES := range(-90, 95, 5)
 static var PROFILE_TURNS := range(-90, 95, 5)
 static var PROFILE_TWISTS := range(-180, 185, 5)
-const PROFILE_REACHES := [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40]   ## cm
+## REACH slides the paddle along its handle, cm in 1s: out past the
+## controller, or (negative) back toward your hand, for an accessory that
+## holds the controller up its handle, 15-20 cm above the hand.
+static var PROFILE_REACHES := range(-30, 21)
 
 ## Tests point this at their own file (the runner does), never the player's.
 static var default_path := "user://settings.cfg"
@@ -113,6 +116,7 @@ func load_settings() -> void:
 	for i in mini(saved.size(), profiles.size()):
 		var d: Dictionary = new_profile()
 		d.merge(saved[i], true)
+		d["reach"] = clampi(int(d["reach"]), PROFILE_REACHES[0], PROFILE_REACHES[-1])
 		profiles[i] = d
 	venue = c.get_value("match", "venue", venue)
 	machine_shot = c.get_value("machine", "shot", machine_shot)

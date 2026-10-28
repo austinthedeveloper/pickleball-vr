@@ -16,12 +16,12 @@ func test_default_is_the_paddle_angle() -> void:
 func test_profiles_are_saved() -> void:
 	var s := Settings.new()
 	s.paddle_profile = 3
-	s.profiles[2] = {"angle": 60, "turn": -30, "twist": -150, "reach": 30}
+	s.profiles[2] = {"angle": 60, "turn": -30, "twist": -150, "reach": -18}
 	s.save()
 	var t := Settings.new()
 	t.load_settings()
 	eq(t.paddle_profile, 3, "the profile in use")
-	eq(t.profiles[2], {"angle": 60, "turn": -30, "twist": -150, "reach": 30}, "its numbers")
+	eq(t.profiles[2], {"angle": 60, "turn": -30, "twist": -150, "reach": -18}, "its numbers")
 	eq(t.profiles[0], Settings.new_profile(), "the others untouched")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))
 
@@ -63,8 +63,8 @@ func test_the_paddle_page() -> void:
 	main.menu.select("reach")
 	main.menu.change(3)
 	main.lobby()
-	eq(main.settings.profiles[0]["reach"], 6, "6 cm")
-	near(int(main.view.paddle_reach * 100), 6, 0, "the paddle in your hand follows")
+	eq(main.settings.profiles[0]["reach"], 3, "3 cm")
+	near(int(main.view.paddle_reach * 100), 3, 0, "the paddle in your hand follows")
 	main.menu.select("angle")
 	main.menu.change(-4)
 	eq(main.settings.profiles[0]["angle"], -5, "an angle the DEFAULT can't")
@@ -92,4 +92,21 @@ func test_any_way_round() -> void:
 	s.load_settings()
 	eq(s.profiles[0]["turn"], 0, "no turn")
 	eq(s.profiles[0]["twist"], 40, "its twist kept")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))
+
+
+## The lead's accessory holds the controller up the handle, 15-20 cm above
+## the hand: REACH goes back toward the hand, and 40 cm out was too much.
+func test_reach_goes_back_toward_the_hand() -> void:
+	check(Settings.PROFILE_REACHES.has(-30) and Settings.PROFILE_REACHES.has(-18), "back to -30 cm")
+	eq(Settings.PROFILE_REACHES[-1], 20, "out to 20 cm")
+	var face := XrRig.grip(15.0, 0.0, -0.18) * PaddleMesh.FACE_CENTER
+	var face0 := XrRig.grip(15.0, 0.0, 0.0) * PaddleMesh.FACE_CENTER
+	near(int(face0.length() * 1000) - int(face.length() * 1000), 180, 1, "-18 cm: the face 18 cm nearer the hand")
+	var s := Settings.new()
+	var c := ConfigFile.new()
+	c.set_value("paddle", "profiles", [{"angle": 30, "twist": 0, "reach": 40}])
+	c.save(s.path)
+	s.load_settings()
+	eq(s.profiles[0]["reach"], 20, "an old 40 cm comes back as the most there is now")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))

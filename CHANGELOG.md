@@ -57,6 +57,8 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 - **Paddle profiles turn any way:** TWIST goes a full turn, ANGLE runs
   from -90 to 90, and a new TURN swings the face left or right. That
   covers paddle accessories that only hold the controller one way.
+  REACH goes negative (down to -30 cm, in 1 cm steps) for accessories
+  that hold the controller up the handle.
 - **The DINKS target follows you:** it sits in front of the partner,
   moves to the other half when you switch sides, and moves after a miss
   as well as a hit.

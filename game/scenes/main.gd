@@ -154,7 +154,7 @@ func _page(id: String) -> Menu3D:
 					maxi(Settings.PROFILE_TURNS.find(p["turn"]), 0))
 				m.add_row("twist", "TWIST", _degrees(Settings.PROFILE_TWISTS),
 					maxi(Settings.PROFILE_TWISTS.find(p["twist"]), 0))
-				m.add_row("reach", "REACH", Settings.PROFILE_REACHES.map(func(c: int) -> String: return "%d CM" % c),
+				m.add_row("reach", "REACH", Settings.PROFILE_REACHES.map(func(c: int) -> String: return "%+d CM" % c if c != 0 else "0 CM"),
 					maxi(Settings.PROFILE_REACHES.find(p["reach"]), 0))
 				m.add_row("reset", "RESET TO DEFAULT")
 			m.add_row("back", "BACK")
