@@ -130,6 +130,23 @@ func _dress(model: Node, file: String) -> void:
 			m.set_shader_parameter("box_size", box.size)
 			m.set_shader_parameter("female", female)
 			mi.material_override = m
+			var src := mi.mesh
+			for part in [Cloth.SHIRT, Cloth.SHORTS]:
+				_add_cloth(mi, Cloth.garment(file, female, part, src), shirt if part == Cloth.SHIRT else shorts)
+
+
+## A garment, skinned like the body it was made from.
+func _add_cloth(body_mi: MeshInstance3D, mesh: ArrayMesh, c: Color) -> void:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.skin = body_mi.skin
+	mi.custom_aabb = COURT_BOX
+	var m := World.material(c)
+	m.roughness = 0.95
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED      # the inside shows at the hems
+	mi.material_override = m
+	body_mi.get_parent().add_child(mi)
+	mi.skeleton = mi.get_path_to(skel)
 
 
 ## The body mesh with each vertex's T-pose place in its colour (0..1 of the

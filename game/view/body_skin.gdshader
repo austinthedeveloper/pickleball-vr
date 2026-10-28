@@ -28,17 +28,18 @@ void fragment() {
 	vec3 c = skin;
 	float cloth = 0.0;
 	// Crew neck, lower at the front; short sleeves; the hem over the shorts.
-	float neck = (female ? 1.45 : 1.49) - 0.05 * smoothstep(0.0, 0.1, bind.z);
-	float collar = neck + 4.0 * pow(max(ax - 0.04, 0.0), 2.0);    // round, over the shoulders
+	float neck = (female ? 1.465 : 1.51) - 0.05 * smoothstep(0.0, 0.1, bind.z);
+	// Painted under the cloth shells (Cloth), a little inside their edges.
+	float collar = neck - 0.03 + 4.0 * pow(max(ax - 0.04, 0.0), 2.0);
 	if (y < 0.012) {
 		c = SOLE; cloth = 1.0;
 	} else if (y < 0.13) {
 		c = SHOE; cloth = 1.0;
 	} else if (y < 0.2) {
 		c = SOCK; cloth = 1.0;
-	} else if (y > 0.66 && y < 1.0) {
+	} else if (y > 0.62 && y < 1.0) {
 		c = shorts.rgb; cloth = 1.0;
-	} else if (y >= 1.0 && y < collar && ax < (female ? 0.31 : 0.37)) {
+	} else if (y >= 1.0 && y < collar && ax < (female ? 0.29 : 0.35)) {
 		c = shirt.rgb; cloth = 1.0;
 	}
 	// Cloth keeps a little of the body's shading (folds), not its colour.

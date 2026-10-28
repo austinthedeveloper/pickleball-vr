@@ -38,18 +38,26 @@ the hand turns so the palm sits behind the paddle face, and the fingers
 curl round the handle. While holding the next feed (ADR-016), the free
 hand turns palm up under the ball.
 
-**Clothes by shader.** The base bodies are in underwear. The skin shader
-(`view/body_skin.gdshader`) paints the clothes by where each spot sits
-in the T-pose. That position is written into the vertex colour once per
-model, when it loads. The clothes are:
-- a crew-neck shirt from the waist to a rounded collar, out to short
-  sleeves;
-- shorts above the knees;
-- socks.
+**Clothes: cloth shells.** The base bodies are in underwear. The first
+cut painted the clothes on in the skin shader; in the headset the lead
+found the shirt "looks painted on" (2026-10-28). Now the shirt and shorts
+are their own meshes (`view/cloth.gd`), made from the body mesh itself
+when a model first loads:
+1. Copy the part of the skin a garment covers, with its skin weights.
+   Seams are welded first.
+2. Smooth it until the muscles are gone. Taubin smoothing is used
+   because it doesn't shrink the mesh.
+3. Cut the edges straight: a level hem, sleeves and legs square to the
+   limb, and a collar smoothed along itself.
+4. Push it out from the skin: snug at the shoulders and waistband,
+   looser toward the hems.
 
-Cloth keeps only a hint of the body's normal map and shading. Shoes are
-meshes on the foot bones. The partner's cap and visor sit on the head
-bone. A cap goes with short hair, so the hair doesn't poke through.
+The shells are skinned to the same skeleton, so they move with the body.
+Under them, the skin shader still paints the cloth colour a little
+inside the shell's edges, so nothing pokes through. Socks are painted.
+Shoes are meshes on the foot bones. The partner's cap and visor sit on
+the head bone. A cap goes with short hair, so the hair doesn't poke
+through.
 
 **Looks.** Skin tones come from the light and dark textures, and the
 middle tone is the light one tinted. The hair colour comes from the
@@ -73,5 +81,6 @@ their spots and on the floor, for both bodies.
   add about 9 MB.
 - The free pack has two bodies. The paid Source pack (8 bodies, more
   hair) would drop in the same way if more variety is wanted.
-- The superhero bodies are muscular, and the shirt is skin-tight over
-  them. A looser shirt would need cloth meshes.
+- The shells are made at load: about 50 ms per model the first time.
+  They're rigid with the body (no cloth simulation), so a shirt can't
+  swing or flutter.
