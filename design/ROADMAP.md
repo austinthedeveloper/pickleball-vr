@@ -84,8 +84,10 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-44 | Dartboard targets: rings and points (ADR-019) | `feature/cld-vr-dartboard` | Played: "look good" |
 | VR-45 | Practice: leaning over the kitchen line isn't a fault (ADR-019) | `feature/cld-vr-dartboard` | Ready to test |
 | VR-46 | TUNING pages (debug builds) and tune.sh sync (ADR-020) | `feature/cld-vr-tuning` | Ready to test |
-| VR-47 | Paddle profiles: TURN, a full TWIST, ANGLE +-90 (ADR-015) | `feature/cld-vr-tuning` | Ready to test |
+| VR-47 | Paddle profiles: TURN, a full TWIST, ANGLE +-90 (ADR-015) | `feature/cld-vr-tuning` | Played: "good" |
 | VR-48 | DINKS: the target follows you across (ADR-019) | `feature/cld-vr-tuning` | Ready to test |
+| VR-49 | Passthrough: the court in your room (ADR-021) | `feature/cld-vr-timed` | Ready to test |
+| VR-50 | Timed runs (MODE) and RECORDS (ADR-022) | `feature/cld-vr-timed` | Ready to test |
 
 ## Phase 1: singles
 
@@ -148,6 +150,10 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-49 / VR-50, ready to test.** MAIN > PASSTHROUGH ON: is it only the
+court in your room, and does the floor line up? PRACTICE PARTNER > MODE
+1 MIN: play a few runs, then check RECORDS.
 
 **VR-46, ready to test.** PAUSED > TUNING (debug builds): step the
 drills' numbers while you play. Say "sync the tuning" and

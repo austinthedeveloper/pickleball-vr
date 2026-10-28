@@ -56,6 +56,7 @@ func _new_view() -> MatchView:
 	menu = null
 	view = MatchView.new()
 	view.left_handed = settings.left_handed
+	view.passthrough = settings.passthrough
 	var pose := settings.paddle_pose()
 	view.paddle_tilt = pose[0]
 	view.paddle_twist = pose[1]
@@ -77,6 +78,8 @@ func lobby(to := "") -> void:
 		demo_cfg = settings.machine_config()
 	elif page == "partner":
 		demo_cfg = settings.partner_config()
+	if demo_cfg.drill:
+		demo_cfg.drill.time_limit = 0    # the lobby's demo plays on (ADR-022)
 	_new_view().setup(demo_cfg, use_xr, true, true)
 	_inherit()
 	menu = _page(page)
@@ -112,7 +115,9 @@ func _page(id: String) -> Menu3D:
 			m.add_row("zone", "RETURN TO", Drill.ZONE_NAMES, settings.machine_zone)
 			m.add_row("targets", "TARGETS", OFF_ON, 1 if settings.machine_targets else 0)
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
+			m.add_row("mtime", "MODE", Drill.TIME_NAMES, settings.machine_time)
 			m.add_row("start", "START")
+			m.add_row("to_records", "RECORDS")
 			m.add_row("back", "BACK")
 		"partner":
 			m.title = "PRACTICE PARTNER   BEST %d" % settings.partner_best
@@ -124,7 +129,9 @@ func _page(id: String) -> Menu3D:
 			m.add_row("spread", "SPREAD", Drill.SPREAD_NAMES, settings.partner_spread)
 			m.add_row("ptargets", "TARGETS", OFF_ON, 1 if settings.partner_targets else 0)
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
+			m.add_row("ptime", "MODE", Drill.TIME_NAMES, settings.partner_time)
 			m.add_row("pstart", "START")
+			m.add_row("to_records", "RECORDS")
 			m.add_row("back", "BACK")
 		"paddle":
 			# Paddle profiles (ADR-015): DEFAULT is the angle you had; the
@@ -153,6 +160,8 @@ func _page(id: String) -> Menu3D:
 				var done: bool = settings.lessons_done.has(l["id"])
 				m.add_row("lesson_%d" % i, "%d  %s%s" % [i + 1, l["title"], "   - DONE" if done else ""])
 			m.add_row("back", "BACK")
+		"records":
+			m = _records_menu()
 		"tune":
 			m = _tune_menu("")
 		_ when id.begins_with("tune_"):
@@ -164,6 +173,7 @@ func _page(id: String) -> Menu3D:
 			m.add_row("to_machine", "BALL MACHINE")
 			m.add_row("to_lessons", "HOW TO PLAY")
 			m.add_row("to_paddle", "PADDLE")
+			m.add_row("passthrough", "PASSTHROUGH", OFF_ON, 1 if settings.passthrough else 0)
 			if Settings.dev_tools():
 				m.add_row("to_tune", "TUNING")
 			if not use_xr:
@@ -186,6 +196,7 @@ func _on_changed(id: String, index: int) -> void:
 		"points": settings.points = index
 		"win_by_2": settings.win_by_2 = index == 1
 		"hand": settings.left_handed = index == 1
+		"passthrough": settings.passthrough = index == 1
 		"angle":
 			if settings.profile() == null:
 				settings.paddle_angle = index
@@ -208,8 +219,10 @@ func _on_changed(id: String, index: int) -> void:
 		"spread": settings.partner_spread = index
 		"drill": settings.partner_drill = index
 		"lane": settings.partner_lane = index
+		"ptime": settings.partner_time = index
+		"mtime": settings.machine_time = index
 	settings.save()
-	if id in ["mode", "vs", "venue", "hand", "angle", "profile", "twist", "turn", "reach", "shot", "target", "zone", "machine_at", "speed",
+	if id in ["mode", "vs", "venue", "hand", "passthrough", "angle", "profile", "twist", "turn", "reach", "shot", "target", "zone", "machine_at", "speed",
 			"targets", "level", "ptargets", "side", "spread", "drill", "lane"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
@@ -228,6 +241,10 @@ func _on_pressed(id: String) -> void:
 		"pstart": _start.call_deferred(settings.partner_config(), false)
 		"to_lessons": lobby.call_deferred("lessons")
 		"to_paddle": lobby.call_deferred("paddle")
+		"to_records":
+			_records_from = page
+			lobby.call_deferred("records")
+		"records_back": lobby.call_deferred(_records_from)
 		"reset":
 			# The profile back to the DEFAULT paddle: its angle, no twist or reach.
 			settings.profile()["angle"] = int(settings.tilt())
@@ -258,6 +275,7 @@ func _start(cfg: SimTypes.MatchConfig, demo: bool) -> void:
 	_inherit()
 	view.match_over.connect(_on_match_over)
 	view.drill_done.connect(_on_drill_done)
+	view.time_up.connect(_on_time_up)
 	view.pause_requested.connect(_on_pause)
 
 
@@ -318,6 +336,56 @@ func _on_drill_done() -> void:
 	m.add_row("lobby", "MENU")
 	m.pressed.connect(_on_pressed)
 	view.show_menu(m)
+
+
+# --- Timed runs and records (ADR-022) ----------------------------------------------------
+
+var _records_from := "partner"       ## the page RECORDS goes back to
+
+
+## The clock ran out: the score kept, where it places, and the last few.
+func _on_time_up(score: int, good: int, best_streak: int) -> void:
+	var name := Settings.run_name(view.sim.drill)
+	var place := settings.add_run(name, score, good, best_streak, Time.get_datetime_string_from_system().replace("T", " ").left(16))
+	settings.save()
+	var m := Menu3D.new()
+	m.title = "TIME!   SCORE %d" % score
+	if place[0] == 1 and place[1] > 1:
+		m.add_row("info_best", "NEW BEST!")
+	else:
+		m.add_row("info_best", "BEST %d" % int(settings.best_runs(name, 1)[0][0]) + ("" if place[1] == 1 else "   YOU PLACED %d OF %d" % place))
+	m.add_row("info_good", "%d GOOD   LONGEST STREAK %d" % [good, best_streak])
+	m.add_row("info_recent", "LAST RUNS   " + "  ".join(settings.recent_scores(name).map(func(v: int) -> String: return str(v))))
+	m.add_row("again", "AGAIN")
+	m.add_row("lobby", "MENU")
+	m.pressed.connect(_on_pressed)
+	view.show_menu(m)
+
+
+## RECORDS: the drill and level set on the page you came from, each timed
+## MODE's best runs and its last few scores.
+func _records_menu() -> Menu3D:
+	var m := Menu3D.new()
+	var cfg := settings.machine_config() if _records_from == "machine" else settings.partner_config()
+	var d: Drill = cfg.drill
+	m.title = "RECORDS: " + d.mode_name() + (" TARGETS" if d.targets else "")
+	var any := false
+	for t in range(1, Drill.TIMES.size()):
+		d.time_limit = Drill.TIMES[t] * K.TICK_HZ
+		var name := Settings.run_name(d)
+		var best := settings.best_runs(name, 3)
+		if best.is_empty():
+			continue
+		any = true
+		var tops := "  ".join(best.map(func(r: Array) -> String: return str(int(r[0]))))
+		m.add_row("info_%d" % t, "%s   BEST %s" % [Drill.TIME_NAMES[t], tops])
+		var recent := settings.recent_scores(name)
+		m.add_row("info_r%d" % t, "      LAST %s   (%d RUNS)" % ["  ".join(recent.map(func(v: int) -> String: return str(v))),
+			(settings.records[name] as Array).size()])
+	if not any:
+		m.add_row("info_none", "NO TIMED RUNS YET: SET MODE TO 1, 2 OR 3 MIN")
+	m.add_row("records_back", "BACK")
+	return m
 
 
 func _on_pause() -> void:

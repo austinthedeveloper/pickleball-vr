@@ -12,6 +12,7 @@ const SPECTATE := Vector3(-3.0, 0, 9.4)
 
 signal match_over(winner: int)
 signal drill_done
+signal time_up(score: int, good: int, best: int)   ## a timed run's clock ran out (ADR-022)
 signal pause_requested
 
 var sim: Sim
@@ -21,6 +22,7 @@ var flat: FlatRig
 var demo := false
 var spectate := false
 var left_handed := false
+var passthrough := false             ## ADR-021: the court in your room
 var menu: Menu3D
 var them := "CPU"
 var crowd: Crowd
@@ -68,7 +70,9 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		them = String(Opponents.team(cfg.opponent)["team"])
 	world = World.new()
 	world.venue = cfg.venue
+	world.passthrough = passthrough
 	add_child(world)
+	set_passthrough(passthrough and use_xr)
 	if use_xr:
 		xr = XrRig.new()
 		xr.left_handed = left_handed
@@ -136,6 +140,9 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	_sounds()
 	crowd = Crowd.new()
 	add_child(crowd)
+	if passthrough:
+		crowd.visible = false            # the stands are off the court
+		crowd.process_mode = Node.PROCESS_MODE_DISABLED
 	announcer = Announcer.new()
 	add_child(announcer)
 	if sim.drill:
@@ -147,6 +154,21 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		flat.recenter(_start_spot())
 	if cfg.opponent >= 0 and not spectate:
 		board.announce(String(Opponents.team(cfg.opponent)["intro"]), Color(1, 0.9, 0.5), 3.5)
+
+
+## Passthrough on the headset (ADR-021): the view's clear background shows
+## the cameras' picture of the room (OpenXR alpha blend, Meta's passthrough).
+## Off, or where the headset can't, it's opaque as ever.
+func set_passthrough(on: bool) -> bool:
+	var openxr := XRServer.find_interface("OpenXR")
+	var can := on and openxr != null and openxr.is_initialized() \
+		and openxr.get_supported_environment_blend_modes().has(XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND)
+	if is_inside_tree():
+		get_viewport().transparent_bg = can
+	if openxr and openxr.is_initialized():
+		openxr.environment_blend_mode = XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND if can \
+			else XRInterface.XR_ENV_BLEND_MODE_OPAQUE
+	return can
 
 
 ## Practice: the machine, the return zone, no crowd.
@@ -473,6 +495,14 @@ func _on_event(e: Array) -> void:
 		K.EVENT_FEED:
 			machine.kick()
 			_play("0_hit_soft", machine.global_position + Vector3(0, 0.9, 0), 0.8, -3.0)
+		K.EVENT_TIME_UP:
+			_play("4_applause", Vector3(0, 2, 0))
+			announcer.say(["winner"], Announcer.TOP)
+			board.announce("TIME!  SCORE %d" % e[1], Color(1, 0.9, 0.2), 4.0)
+			if Perf.on and not demo:
+				_log_line("TIME UP | score %d | good %d | best streak %d" % [e[1], e[2], e[3]])
+			if not demo:
+				time_up.emit(e[1], e[2], e[3])
 		K.EVENT_TARGET:
 			if floor_target:
 				floor_target.flare()
@@ -653,7 +683,7 @@ func _log_swing() -> void:
 ## The mode this is: the drill and its level, or a match.
 func _mode() -> String:
 	if sim.drill:
-		return sim.drill.mode_name()
+		return Settings.run_name(sim.drill) if sim.drill.time_limit > 0 else sim.drill.mode_name()
 	return "DOUBLES" if sim.config.doubles else "SINGLES"
 
 

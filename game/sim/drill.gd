@@ -210,6 +210,11 @@ var attack: bool:
 var spread := 1
 var targets := false                 ## floor targets on
 var goal := 0                        ## good returns to finish; 0 runs forever
+## A timed run (ADR-022): this many ticks from the first feed, then DONE and
+## a score. 0 is free play, forever.
+var time_limit := 0
+const TIMES := [0, 60, 120, 180]     ## seconds: the MODE row
+const TIME_NAMES := ["FREE PLAY", "1 MIN", "2 MIN", "3 MIN"]
 ## The spot you start on (a lesson's), um; x, z.
 var spot_x := 0
 var spot_z := K.COURT_HALF_LENGTH - 500000
@@ -234,6 +239,7 @@ var target_x := 0
 var target_z := 0
 var target_hits := 0
 var target_side := 0                 ## the half (sign of x) a partner drill's target is in
+var ends_at := -1                    ## a timed run's last tick
 var points := 0                      ## dartboard points (spots and floor targets)
 var last_ring := 0                   ## the ring the last ball landed in (0 off the board)
 var last_off := -1                   ## how far it landed from the board's centre, um (-1: no board)
@@ -263,6 +269,7 @@ func copy_settings_from(o: Drill) -> void:
 	zone = o.zone
 	rules = o.rules
 	goal = o.goal
+	time_limit = o.time_limit
 	spot_x = o.spot_x
 	spot_z = o.spot_z
 
@@ -292,6 +299,7 @@ func reset(sim: Sim) -> void:
 	sim.players[0].x = spot_x
 	sim.players[0].z = spot_z
 	target_hits = 0
+	ends_at = next_feed + time_limit if time_limit > 0 else -1
 	points = 0
 	last_ring = 0
 	last_off = -1
@@ -324,6 +332,9 @@ func _serve_ready(sim: Sim) -> void:
 
 func update(sim: Sim, tossed: bool) -> void:
 	var p := sim.players[0]
+	if ends_at >= 0 and stage != DONE and sim.tick >= ends_at:
+		stage = DONE                     # time: the ball in the air plays out, nothing more counts
+		sim.emit(K.EVENT_TIME_UP, score(), good, best)
 	if partner and stage != PARTNER:
 		if stage == RETURN and partner_plan >= 0:
 			_partner_step(sim.players[2], sim.players[2].goal_x, sim.players[2].goal_z)
@@ -517,6 +528,17 @@ func _topspin(b: Ball) -> bool:
 
 
 ## RESETS: a ball higher than this over the net is a pop-up.
+## A run's score (ADR-022): a point for each good ball, and a dartboard's
+## points on top.
+func score() -> int:
+	return good + points
+
+
+## A timed run's ticks left (0 when free play or over).
+func time_left(sim: Sim) -> int:
+	return clampi(ends_at - sim.tick, 0, time_limit) if ends_at >= 0 else 0
+
+
 func popup_y() -> int:
 	return K.NET_HEIGHT_CENTER + POPUP_OVER[clampi(partner_pace, 0, 2)]
 
@@ -1047,4 +1069,4 @@ func snapshot() -> Array:
 	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
 		hit_at, machine_z, partner_plan, read_at, target_x, target_z, target_hits, rally, best_rally,
 		1 if partner else 0, kind, lane, toss_at, 1 if spot_lit else 0, spot_i, 1 if lane_cross else 0,
-		1 if high_ball else 0, 1 if you_fast else 0, points, last_ring, last_off, target_side]
+		1 if high_ball else 0, 1 if you_fast else 0, points, last_ring, last_off, target_side, time_limit, ends_at]

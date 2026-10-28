@@ -39,6 +39,7 @@ var assist := 2                      ## index into ASSISTS
 var points := 0                      ## index into POINTS
 var win_by_2 := false
 var left_handed := false
+var passthrough := false             ## ADR-021: the court in your room (headset)
 var paddle_angle := 1                ## index into ANGLES
 var paddle_profile := 0              ## index into PROFILE_NAMES
 ## The three custom profiles: {angle, twist, reach} in degrees and cm.
@@ -66,6 +67,13 @@ var partner_hands: bool:
 	get: return partner_drill == 1
 	set(v): partner_drill = 1 if v else 0
 var partner_best := 0
+## Timed runs (ADR-022): MODE, an index into Drill.TIMES (0 free play).
+var partner_time := 0
+var machine_time := 0
+## Every timed run kept: run name (Settings.run_name) -> [[score, date,
+## good, best streak], ...], oldest first, the last RUNS_KEPT.
+var records := {}
+const RUNS_KEPT := 100
 
 
 func load_settings() -> void:
@@ -79,6 +87,7 @@ func load_settings() -> void:
 	points = c.get_value("match", "points", points)
 	win_by_2 = c.get_value("match", "win_by_2", win_by_2)
 	left_handed = c.get_value("player", "left_handed", left_handed)
+	passthrough = c.get_value("player", "passthrough", passthrough)
 	paddle_angle = c.get_value("player", "paddle_angle", paddle_angle)
 	paddle_profile = c.get_value("paddle", "profile", paddle_profile)
 	var saved: Array = c.get_value("paddle", "profiles", [])
@@ -104,6 +113,9 @@ func load_settings() -> void:
 	# An older save kept HANDS as a flag.
 	partner_drill = c.get_value("partner", "drill", 1 if c.get_value("partner", "hands", false) else 0)
 	partner_lane = c.get_value("partner", "lane", partner_lane)
+	partner_time = c.get_value("partner", "time", partner_time)
+	machine_time = c.get_value("machine", "time", machine_time)
+	records = c.get_value("records", "runs", records)
 
 
 func save() -> void:
@@ -116,6 +128,7 @@ func save() -> void:
 	c.set_value("match", "points", points)
 	c.set_value("match", "win_by_2", win_by_2)
 	c.set_value("player", "left_handed", left_handed)
+	c.set_value("player", "passthrough", passthrough)
 	c.set_value("player", "paddle_angle", paddle_angle)
 	c.set_value("paddle", "profile", paddle_profile)
 	c.set_value("paddle", "profiles", profiles)
@@ -130,6 +143,9 @@ func save() -> void:
 	c.set_value("lessons", "done", lessons_done)
 	c.set_value("machine", "targets", machine_targets)
 	c.set_value("partner", "level", partner_level)
+	c.set_value("partner", "time", partner_time)
+	c.set_value("machine", "time", machine_time)
+	c.set_value("records", "runs", records)
 	c.set_value("partner", "targets", partner_targets)
 	c.set_value("partner", "best", partner_best)
 	c.set_value("partner", "cross", partner_cross)
@@ -187,6 +203,7 @@ func machine_config() -> SimTypes.MatchConfig:
 	d.machine_at = machine_at
 	d.targets = machine_targets
 	d.zone = machine_zone
+	d.time_limit = Drill.TIMES[clampi(machine_time, 0, Drill.TIMES.size() - 1)] * K.TICK_HZ
 	if d.shot == Drill.SHOT_SERVE:
 		var sp := d.serve_spot()
 		d.spot_x = sp[0]
@@ -209,6 +226,7 @@ func partner_config() -> SimTypes.MatchConfig:
 	d.spread = partner_spread
 	d.kind = clampi(partner_drill, 0, Drill.KIND_NAMES.size() - 1)
 	d.lane = partner_lane
+	d.time_limit = Drill.TIMES[clampi(partner_time, 0, Drill.TIMES.size() - 1)] * K.TICK_HZ
 	if d.hands:
 		d.zone = Drill.ZONE_ANY          # a volley that lands anywhere in counts too
 	if d.kind != Drill.KIND_DINKS and d.kind != Drill.KIND_RESETS:
@@ -230,3 +248,41 @@ func lesson_config(i: int) -> SimTypes.MatchConfig:
 	var cfg := match_config()
 	cfg.drill = Lessons.drill(i)
 	return cfg
+
+
+# --- Records (ADR-022) ----------------------------------------------------------------
+
+## What a timed run is kept under: the drill, its level, the time.
+static func run_name(d: Drill) -> String:
+	var t := Drill.TIMES.find(d.time_limit / K.TICK_HZ)
+	return "%s%s %s" % [d.mode_name(), " TARGETS" if d.targets else "", Drill.TIME_NAMES[maxi(t, 0)]]
+
+
+## Keeps a run; returns where it places: [rank among all (1 best), runs so far].
+func add_run(name: String, score: int, good: int, best_streak: int, date: String) -> Array[int]:
+	var runs: Array = records.get(name, [])
+	runs.append([score, date, good, best_streak])
+	if runs.size() > RUNS_KEPT:
+		runs = runs.slice(runs.size() - RUNS_KEPT)
+	records[name] = runs
+	var rank := 1
+	for r in runs:
+		if int(r[0]) > score:
+			rank += 1
+	return [rank, runs.size()]
+
+
+## A run name's best scores, highest first: [[score, date, good, best streak], ...].
+func best_runs(name: String, n := 5) -> Array:
+	var runs: Array = (records.get(name, []) as Array).duplicate()
+	runs.sort_custom(func(a: Array, b: Array) -> bool: return int(a[0]) > int(b[0]))
+	return runs.slice(0, n)
+
+
+## Its last few scores, oldest first.
+func recent_scores(name: String, n := 5) -> Array[int]:
+	var out: Array[int] = []
+	var runs: Array = records.get(name, [])
+	for r in runs.slice(maxi(runs.size() - n, 0)):
+		out.append(int(r[0]))
+	return out

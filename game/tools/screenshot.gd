@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N]
 extends SceneTree
 
 var frames := 240
@@ -46,12 +46,16 @@ func _initialize() -> void:
 				st.partner_drill = Drill.KIND_NAMES.find(a.trim_prefix("drill=").replace("_", " "))
 		if args.has("resets"):
 			st.partner_drill = 2
+		for a in args:
+			if a.begins_with("time="):
+				st.partner_time = Drill.TIMES.find(int(a.trim_prefix("time=")))
 		cfg.drill = st.partner_config().drill
 	elif mode == "machine":
 		cfg.drill = Drill.new()
 		cfg.drill.zone = Drill.ZONE_DEEP
 	elif mode == "lesson":
 		cfg.drill = Lessons.drill(int(args[3]) if args.size() > 3 else 0)
+	view.passthrough = args.has("passthrough")      # the court-only world (no headset: black behind)
 	view.setup(cfg, false, demo or mode in ["machine", "lesson", "partner"])
 	if mode == "lesson":
 		var l := Lessons.lesson(int(args[3]) if args.size() > 3 else 0)

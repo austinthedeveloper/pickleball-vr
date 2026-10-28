@@ -26,5 +26,7 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [018](ADR-018-rigged-bodies.md) | Rigged bodies for the partner and the CPU players |
 | [019](ADR-019-dartboards-and-the-lean.md) | Dartboard targets, and a lean allowance at the kitchen line |
 | [020](ADR-020-dev-tuning.md) | Developer tuning pages, synced back as the defaults |
+| [021](ADR-021-passthrough.md) | Passthrough: the court in your room |
+| [022](ADR-022-timed-runs.md) | Timed runs and records |
 
-Next: ADR-021.
+Next: ADR-023.

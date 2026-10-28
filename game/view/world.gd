@@ -30,6 +30,9 @@ const VENUES := [
 const FENCE := Color(0.10, 0.16, 0.12, 0.18)
 
 var venue := Venues.PARK
+## Passthrough (ADR-021): the court, its lines and the net in your room;
+## no ground, sky or scenery. The headset shows the room where nothing's drawn.
+var passthrough := false
 var line_color := Color(0.96, 0.96, 0.94)
 ## FOCUS (ADR-013): the surroundings' materials and their own colours, so
 ## they can dim; the court, its lines and the net aren't among them.
@@ -61,14 +64,15 @@ static func ambience(v: int) -> String:
 
 func _ready() -> void:
 	var d: Dictionary = VENUES[clampi(venue, 0, VENUES.size() - 1)]
-	_sky(String(d["sky"]))
+	_sky("passthrough" if passthrough else String(d["sky"]))
 	var hw := K.COURT_HALF_WIDTH / float(K.M)
 	var hl := K.COURT_HALF_LENGTH / float(K.M)
 	var kd := K.KITCHEN_DEPTH / float(K.M)
 	var lw := K.LINE_WIDTH / float(K.M)
 	line_color = c8(LINES[d["lines"]])
-	_box(Vector3(0, -0.05, 0), Vector3(80, 0.1, 80), c8(d["ground"]))
-	_box(Vector3(0, 0.0, 0), Vector3(hw * 2 + 6, 0.02, hl * 2 + 8), c8(SURROUNDS[d["surround"]]))
+	if not passthrough:
+		_box(Vector3(0, -0.05, 0), Vector3(80, 0.1, 80), c8(d["ground"]))
+		_box(Vector3(0, 0.0, 0), Vector3(hw * 2 + 6, 0.02, hl * 2 + 8), c8(SURROUNDS[d["surround"]]))
 	_scenery = false                     # the court stays bright under FOCUS
 	_box(Vector3(0, 0.012, 0), Vector3(hw * 2, 0.004, hl * 2), c8(SURFACES[d["surface"]]))
 	for s in [-1, 1]:
@@ -82,6 +86,8 @@ func _ready() -> void:
 		_box(Vector3(0, y, s * (kd + hl) / 2), Vector3(lw, 0.003, hl - kd), line_color)
 	_net()
 	_scenery = true
+	if passthrough:
+		return
 	match venue:
 		Venues.LAKESIDE:
 			_fences(hw + 3, hl + 4, FENCE)
@@ -114,7 +120,17 @@ func _sky(kind: String) -> void:
 	sun.directional_shadow_max_distance = 24.0
 	e.tonemap_mode = Environment.TONE_MAPPER_ACES
 	e.tonemap_white = 6.0
-	if kind == "indoor" or kind == "space":
+	if kind == "passthrough":
+		# Nothing behind the court: a clear background the headset fills
+		# with the room; light that suits a room.
+		e.background_mode = Environment.BG_COLOR
+		e.background_color = Color(0, 0, 0, 0)
+		e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		e.ambient_light_color = Color(0.85, 0.85, 0.85)
+		e.ambient_light_energy = 0.6
+		sun.rotation_degrees = Vector3(-70, -20, 0)
+		sun.light_energy = 0.75
+	elif kind == "indoor" or kind == "space":
 		e.background_mode = Environment.BG_COLOR
 		e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 		if kind == "indoor":
@@ -232,7 +248,7 @@ func set_focus(a: float) -> void:
 		_sky_mat.sky_horizon_color = _sky_base[1] * k
 		_sky_mat.ground_horizon_color = _sky_base[2] * k
 		_sky_mat.ground_bottom_color = _sky_base[3] * k
-	else:
+	elif not passthrough:
 		_env.background_color = _bg_base * k
 
 
