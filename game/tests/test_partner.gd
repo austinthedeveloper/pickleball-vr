@@ -433,3 +433,29 @@ func test_the_target_follows_you_across() -> void:
 			sim.step([h])
 		eq(d.target_side, -side0, "it moved to the other half")
 		eq(signi(d.target_x), -side0, "the board with it")
+
+
+## A miss moves the target too, not only a hit (the lead: "the default
+## target is pretty hard to hit"); it's never right at the net.
+func test_a_miss_moves_the_target() -> void:
+	var m := _partner(1, true)
+	var sim: Sim = m[0]
+	var d := sim.drill
+	var moves := 0
+	var hits := 0
+	var misses_kept := 0
+	var at := Vector2i(d.target_x, d.target_z)
+	for i in 9000:
+		sim.step([(m[1] as Bot).input()])
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_TARGET:
+				hits += 1
+			elif e[0] == K.EVENT_DRILL and d.last_ring == 0 and d.hit_at > d.fed_at \
+					and Vector2i(d.target_x, d.target_z) == at:
+				misses_kept += 1
+		if Vector2i(d.target_x, d.target_z) != at:
+			moves += 1
+			at = Vector2i(d.target_x, d.target_z)
+			check(-d.target_z >= 900000, "not right at the net: %d" % -d.target_z)
+	check(moves > hits, "it moves on misses as well as hits: %d moves, %d hits" % [moves, hits])
+	eq(misses_kept, 0, "no miss leaves it where it was")

@@ -448,6 +448,8 @@ func _fly(sim: Sim, p: SimTypes.Player) -> void:
 		return
 	var volley := bounces == 0
 	hit_at = sim.tick
+	last_ring = 0                        # this ball hasn't found a board yet
+	last_off = -1
 	spot_lit = spot_lit or spots         # too late to call it now: show it
 	you_fast = Fx.length(sim.ball.vx, 0, sim.ball.vz) >= SPEEDUP_V
 	p.cooldown = K.PADDLE_COOLDOWN
@@ -598,6 +600,8 @@ func _serving(sim: Sim, p: SimTypes.Player, tossed: bool) -> void:
 
 func _result(sim: Sim, r: int, rally_on := false) -> void:
 	last_result = r
+	if targets and last_ring == 0 and hit_at > fed_at:
+		_new_target(sim)                 # missed it: somewhere new to try (ADR-019)
 	if partner and not rally_on:
 		rally = 0
 	if r == RESULT_GOOD:
@@ -1049,7 +1053,7 @@ func _new_target(sim: Sim) -> void:
 		xhi = hw if target_side > 0 else -400000
 	match z2:
 		ZONE_KITCHEN:
-			lo = 500000
+			lo = 900000                  # not a hair over the net: a dink you can drop there
 			hi = DINK_ZONE - 450000
 		ZONE_DEEP:
 			lo = K.COURT_HALF_LENGTH * 2 / 3 + 400000

@@ -69,3 +69,11 @@ third up, the bullseye a fifth up. It replaces the quiet applause the
 floor targets had. The tone is synthesized by
 `game/tools/make_ding.py` (a bell's partials, 0.7 s), so it's ours and
 can be remade.
+
+## Amendment (2026-10-28): a miss moves it too
+
+"Have the target move after a miss. The default target is pretty hard to
+hit." A floor target used to move only when a ball landed on it, so a
+hard one stayed put. Now any ball of yours that doesn't land on the
+board moves it too: off the board, in the net or out. Its centre is also
+at least 90 cm from the net (it was 50), so it's never a hair-over dink.
