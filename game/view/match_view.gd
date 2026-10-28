@@ -13,6 +13,7 @@ const SPECTATE := Vector3(-3.0, 0, 9.4)
 signal match_over(winner: int)
 signal drill_done
 signal time_up(score: int, good: int, best: int)   ## a timed run's clock ran out (ADR-022)
+signal shot_done(info: Dictionary)   ## a practice shot of yours and how it ended (the coach, ADR-023)
 signal pause_requested
 
 var sim: Sim
@@ -54,6 +55,7 @@ var floor_target: FloorTarget
 var partner_avatar: Avatar
 var lesson_label: Label3D
 var zone_mesh: MeshInstance3D
+var _shot := {}                      ## your ball in play: its hit, then where it landed
 var paused := false                  ## the sim isn't stepped while a pause menu is up
 var focus := 0.0                     ## FOCUS (ADR-013): how dim the world is now
 var _placed := false                 ## XR: turned to the court and moved to the start, once tracked
@@ -363,6 +365,17 @@ func _play(n: String, at: Vector3, pitch := 1.0, db := 0.0) -> void:
 	p.play()
 
 
+## A drill result: your shot, as the coach sees it (ADR-023).
+func _shot_ended(r: int, streak: int) -> void:
+	var d := sim.drill
+	var info := _shot.duplicate()
+	info.merge({"type": "shot", "result": Drill.RESULT_TEXT[r], "good": r == Drill.RESULT_GOOD,
+		"ring": d.last_ring, "off": snappedf(d.last_off / 1e6, 0.01) if d.last_off >= 0 else -1.0,
+		"streak": streak, "mode": _mode(), "tick": sim.tick, "hit": not _shot.is_empty()})
+	_shot = {}
+	shot_done.emit(info)
+
+
 ## A ball on a dartboard: a light ding from the board, higher the closer
 ## to the bullseye.
 func _ding(ring: int, at: Vector3) -> void:
@@ -524,6 +537,8 @@ func _on_event(e: Array) -> void:
 			_ding(e[3], World.m(e[1], 0, e[2]))
 		K.EVENT_DRILL:
 			var r: int = e[1]
+			if not demo:
+				_shot_ended(r, e[2])
 			if Perf.on and not demo:
 				var board_at := ""
 				if sim.drill.last_off >= 0:
@@ -555,6 +570,9 @@ func _on_event(e: Array) -> void:
 				announcer.say(["rally_%d_1" % e[2]], Announcer.HIGH)
 		K.EVENT_HIT:
 			var speed: int = e[2]
+			if e[1] == 0:
+				_shot = {"speed": snappedf(speed * K.TICK_HZ / 1e6, 0.1), "height": snappedf(sim.ball.y / 1e6, 0.01),
+					"from_x": snappedf(sim.ball.x / 1e6, 0.01), "from_z": snappedf(sim.ball.z / 1e6, 0.01), "volley": e[3] == 1}
 			if e[1] == 0 and Perf.on and not demo:     # your swings, not the lobby's bot
 				_log_swing()
 			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf())
@@ -565,6 +583,9 @@ func _on_event(e: Array) -> void:
 				xr.pulse(strength * (1.0 - 0.4 * off), HAPTIC_MS / 1000.0 + 0.06 * off)
 		K.EVENT_BOUNCE:
 			_play("1_bounce", World.m(e[1], 0, e[2]), 1.0, -4.0)
+			if not _shot.is_empty() and not _shot.has("x") and e[2] < 0:
+				_shot["x"] = snappedf(e[1] / 1e6, 0.01)       # where your ball landed on their side
+				_shot["z"] = snappedf(e[2] / 1e6, 0.01)
 		K.EVENT_NET:
 			_play("2_net", World.m(e[1], e[2], 0))
 		K.EVENT_FAULT:

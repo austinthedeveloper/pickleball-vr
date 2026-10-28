@@ -30,6 +30,9 @@ func _ready() -> void:
 	settings.load_settings()
 	if Settings.dev_tools():
 		Tune.load_saved()
+	if OS.get_cmdline_user_args().has("coach"):
+		settings.coach = true
+	_coach_on(settings.coach)
 	var args := OS.get_cmdline_user_args()
 	if args.has("demo") or args.has("play") or args.has("doubles"):
 		if args.has("doubles"):
@@ -63,6 +66,7 @@ func _new_view() -> MatchView:
 	view.paddle_reach = pose[2]
 	view.paddle_turn = pose[3]
 	add_child(view)
+	view.shot_done.connect(_on_shot)
 	return view
 
 
@@ -162,6 +166,18 @@ func _page(id: String) -> Menu3D:
 			m.add_row("back", "BACK")
 		"records":
 			m = _records_menu()
+		"coach":
+			m.title = "COACH"
+			m.add_row("coach", "COACH MODE", OFF_ON, 1 if settings.coach else 0)
+			if coach and coach.listening():
+				var at := Coach.addresses()
+				m.add_row("info_open", "ON A PHONE ON THIS WI-FI, OPEN")
+				m.add_row("info_url", "HTTP://%s:%d" % [at[0] if at.size() > 0 else "THIS-HEADSET", Coach.PORT])
+				m.add_row("info_code", "CODE   %s" % coach.code)
+				m.add_row("info_n", "COACHES CONNECTED   %d" % coach.coaches())
+			elif settings.coach:
+				m.add_row("info_err", "CAN'T START: NO NETWORK?")
+			m.add_row("back", "BACK")
 		"tune":
 			m = _tune_menu("")
 		_ when id.begins_with("tune_"):
@@ -174,6 +190,7 @@ func _page(id: String) -> Menu3D:
 			m.add_row("to_lessons", "HOW TO PLAY")
 			m.add_row("to_paddle", "PADDLE")
 			m.add_row("passthrough", "PASSTHROUGH", OFF_ON, 1 if settings.passthrough else 0)
+			m.add_row("to_coach", "COACH")
 			if Settings.dev_tools():
 				m.add_row("to_tune", "TUNING")
 			if not use_xr:
@@ -197,6 +214,12 @@ func _on_changed(id: String, index: int) -> void:
 		"win_by_2": settings.win_by_2 = index == 1
 		"hand": settings.left_handed = index == 1
 		"passthrough": settings.passthrough = index == 1
+		"coach":
+			settings.coach = index == 1
+			_coach_on(settings.coach)
+			settings.save()
+			lobby.call_deferred("coach")     # the address and code
+			return
 		"angle":
 			if settings.profile() == null:
 				settings.paddle_angle = index
@@ -241,6 +264,7 @@ func _on_pressed(id: String) -> void:
 		"pstart": _start.call_deferred(settings.partner_config(), false)
 		"to_lessons": lobby.call_deferred("lessons")
 		"to_paddle": lobby.call_deferred("paddle")
+		"to_coach": lobby.call_deferred("coach")
 		"to_records":
 			_records_from = page
 			lobby.call_deferred("records")
@@ -336,6 +360,103 @@ func _on_drill_done() -> void:
 	m.add_row("lobby", "MENU")
 	m.pressed.connect(_on_pressed)
 	view.show_menu(m)
+
+
+# --- The coach companion (ADR-023) ----------------------------------------------------
+
+const COACH_EVERY := 0.25            ## seconds between state messages
+
+var coach: Coach
+var _coach_t := 0.0
+
+
+func _coach_on(on: bool) -> void:
+	if on and coach == null:
+		coach = Coach.new()
+		add_child(coach)
+		coach.command.connect(_on_coach)
+	elif not on and coach != null:
+		coach.queue_free()
+		coach = null
+
+
+func _process(delta: float) -> void:
+	if coach == null or coach.coaches() == 0:
+		return
+	_coach_t += delta
+	if _coach_t >= COACH_EVERY:
+		_coach_t = 0.0
+		coach.broadcast(coach_state())
+
+
+func _on_shot(info: Dictionary) -> void:
+	if coach:
+		coach.broadcast(info)
+
+
+## What the coach's page shows: where the player is, the drill as set, the
+## run so far, the target, the court's size (metres).
+func coach_state() -> Dictionary:
+	var where := "lobby"
+	if _playing():
+		where = "paused" if view.paused else "playing"
+	var st := {"type": "state", "where": where,
+		"court": {"hw": K.COURT_HALF_WIDTH / 1e6, "hl": K.COURT_HALF_LENGTH / 1e6, "kd": K.KITCHEN_DEPTH / 1e6,
+			"dink": Drill.DINK_ZONE / 1e6},
+		"setup": {"drill": settings.partner_drill, "drills": Drill.KIND_NAMES, "level": settings.partner_level,
+			"levels": Drill.PACE_NAMES, "time": settings.partner_time, "times": Drill.TIME_NAMES,
+			"targets": settings.partner_targets, "side": settings.partner_cross, "spread": settings.partner_spread,
+			"spreads": Drill.SPREAD_NAMES}}
+	var d: Drill = view.sim.drill if view and view.sim and _playing() else null
+	if d:
+		st["run"] = {"name": Settings.run_name(d) if d.time_limit > 0 else d.mode_name(), "score": d.score(),
+			"good": d.good, "streak": d.streak, "best": d.best, "points": d.points, "timed": d.time_limit > 0,
+			"left": ceili(d.time_left(view.sim) / float(K.TICK_HZ)), "done": d.stage == Drill.DONE}
+		if d.targets or d.spots:
+			st["target"] = {"x": d.target_x / 1e6, "z": d.target_z / 1e6, "lit": d.spot_lit or d.targets,
+				"r": (d.spot_radius() if d.spots else Drill.TARGET_RADIUS) / 1e6, "rings": Drill.RING_EDGES}
+	var cfg := settings.partner_config()
+	cfg.drill.time_limit = Drill.TIMES[settings.partner_time] * K.TICK_HZ
+	if cfg.drill.time_limit > 0:
+		var name := Settings.run_name(cfg.drill)
+		st["records"] = {"name": name, "best": settings.best_runs(name, 3).map(func(r: Array) -> int: return r[0]),
+			"recent": settings.recent_scores(name, 8)}
+	return st
+
+
+## A coach's message: the PRACTICE PARTNER setup, or start / pause /
+## resume / restart / menu, as the headset's own menus would do them.
+func _on_coach(msg: Dictionary) -> void:
+	match String(msg.get("type", "")):
+		"set":
+			var v := int(msg.get("value", 0))
+			match String(msg.get("key", "")):
+				"drill": settings.partner_drill = clampi(v, 0, Drill.KIND_NAMES.size() - 1)
+				"level": settings.partner_level = clampi(v, 0, 2)
+				"time": settings.partner_time = clampi(v, 0, Drill.TIMES.size() - 1)
+				"targets": settings.partner_targets = v != 0
+				"side": settings.partner_cross = v != 0
+				"spread": settings.partner_spread = clampi(v, 0, Drill.SPREADS.size() - 1)
+				_: return
+			settings.save()
+			if not _playing():
+				lobby.call_deferred("partner")   # the headset shows what the coach set
+		"start":
+			_start.call_deferred(settings.partner_config(), false)
+		"pause":
+			if _playing() and not view.paused:
+				_on_pause()
+		"resume":
+			if _playing() and view.paused:
+				_on_pressed("resume")
+		"restart":
+			if _playing():
+				_on_pressed("again")
+		"menu":
+			if _playing():
+				_on_pressed("lobby")
+	if coach:
+		coach.broadcast(coach_state())
 
 
 # --- Timed runs and records (ADR-022) ----------------------------------------------------

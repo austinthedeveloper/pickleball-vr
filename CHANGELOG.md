@@ -7,6 +7,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ## [Unreleased]
 
 ### Added
+- **Coach companion:** turn on MAIN > COACH, and a coach opens the address
+  it shows on a phone on the same Wi-Fi, then enters the code. They see
+  your score, clock and streak live, where every shot landed, a session
+  summary by drill and your records. They can set up the drill and
+  start, pause, restart or end it.
 - **Timed runs:** a MODE row on PRACTICE PARTNER and BALL MACHINE. FREE
   PLAY is as before; 1, 2 or 3 MIN give you a clock and a score (good
   balls plus dartboard points). RECORDS shows your best and latest runs

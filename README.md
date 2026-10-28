@@ -84,6 +84,7 @@ game/meta/    settings, opponents (the ladder), lessons, venues
 game/view/    world (the venues), match_view, xr_rig, flat_rig, avatar,
               body (the rigged person), paddle_mesh, scoreboard, menu_3d, machine, crowd, announcer
 game/data/    opponents.json (imported), lessons.json
+game/coach/   index.html: the coach companion page the headset serves (ADR-023)
 game/assets/  audio; people (Quaternius' Universal Base Characters, CC0)
 game/scenes/  main (XR or flat)
 game/tests/   headless suites, golden traces

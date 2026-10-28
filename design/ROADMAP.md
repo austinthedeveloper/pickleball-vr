@@ -90,6 +90,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-50 | Timed runs (MODE) and RECORDS (ADR-022) | `feature/cld-vr-timed` | Ready to test |
 | VR-51 | Stronger hit vibration (tunable); a ding on target hits | `feature/cld-vr-timed` | Ready to test |
 | VR-52 | Floor targets move after a miss too (ADR-019) | `feature/cld-vr-timed` | Ready to test |
+| VR-53 | Coach companion: a web page from the headset (ADR-023) | `feature/cld-vr-coach` | Ready to test |
 
 ## Phase 1: singles
 
@@ -152,6 +153,10 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-53, ready to test.** MAIN > COACH > COACH MODE ON, then on a phone
+on the same Wi-Fi open the address it shows and enter the code. Run a
+drill from the phone; watch the shots land on its court.
 
 **VR-49 / VR-50, ready to test.** MAIN > PASSTHROUGH ON: is it only the
 court in your room, and does the floor line up? PRACTICE PARTNER > MODE

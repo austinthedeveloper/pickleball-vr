@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pickleball '94 Coach</title>
+<!-- The coach companion (ADR-023): served by the game on the headset; talks
+     to it over a WebSocket on the next port. One file, no libraries. -->
+<style>
+  :root {
+    --bg: #0b1020; --panel: #141b31; --panel2: #1b2440; --line: #2a355a;
+    --text: #e8ecf8; --dim: #8e9ac0; --gold: #f2c230; --good: #3ddc84;
+    --bad: #ff6b5a; --net: #9aa3bd; --blue: #2f6fd6; --kitchen: #24448f; --court: #2f6fd6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.35 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
+  body { padding: 12px 16px 40px; max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 17px; margin: 0; letter-spacing: .04em; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin: 0 0 8px; font-weight: 600; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .pill { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--panel2); color: var(--dim); }
+  .pill.playing { background: #123a26; color: var(--good); }
+  .pill.paused { background: #3a3012; color: var(--gold); }
+  .pill.off { background: #3a1616; color: var(--bad); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stat { background: var(--panel2); border-radius: 10px; padding: 8px 6px; text-align: center; }
+  .stat b { display: block; font-size: 26px; font-variant-numeric: tabular-nums; color: var(--gold); }
+  .stat span { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+  .runname { font-weight: 700; margin-bottom: 10px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 4px; }
+  select { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px; font-size: 15px; }
+  .buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 6px; font-size: 14px; font-weight: 700; letter-spacing: .03em; }
+  button.go { background: var(--gold); color: #1b1400; border-color: var(--gold); }
+  button:disabled { opacity: .35; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  svg { width: 100%; height: auto; display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  .seg { display: inline-flex; background: var(--panel2); border-radius: 10px; padding: 3px; }
+  .seg button { border: 0; padding: 6px 10px; font-size: 12px; background: transparent; color: var(--dim); }
+  .seg button.on { background: var(--line); color: var(--text); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  th { color: var(--dim); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  td.num, th.num { text-align: right; }
+  .shots li { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .shots { list-style: none; margin: 0; padding: 0; }
+  .shots .r-good { color: var(--good); } .shots .r-bad { color: var(--bad); }
+  .muted { color: var(--dim); font-size: 13px; }
+  .spark { display: flex; align-items: flex-end; gap: 4px; height: 48px; margin-top: 6px; }
+  .spark div { flex: 1; background: var(--blue); border-radius: 3px 3px 0 0; min-height: 3px; position: relative; }
+  .spark div.best { background: var(--gold); }
+  #login { max-width: 360px; margin: 18vh auto 0; text-align: center; }
+  #login input { width: 100%; font-size: 34px; letter-spacing: .4em; text-align: center; padding: 12px;
+    border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); margin: 14px 0; }
+  #login p { color: var(--dim); }
+  .err { color: var(--bad); min-height: 1.4em; }
+  .hidden { display: none !important; }
+  @media (max-width: 420px) { .stat b { font-size: 22px; } .buttons { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>PICKLEBALL '94 COACH</h1>
+  <p>Enter the code shown on the headset's COACH page.</p>
+  <input id="code" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000">
+  <button class="go" id="join" style="width:100%">CONNECT</button>
+  <p class="err" id="loginErr"></p>
+</div>
+
+<div id="app" class="hidden">
+  <div class="bar">
+    <h1>PICKLEBALL '94 COACH</h1>
+    <span class="pill" id="where">—</span>
+  </div>
+
+  <div class="card">
+    <div class="runname" id="runName">In the lobby</div>
+    <div class="stats">
+      <div class="stat"><b id="sScore">–</b><span id="sScoreLabel">Score</span></div>
+      <div class="stat"><b id="sTime">–</b><span>Time left</span></div>
+      <div class="stat"><b id="sStreak">–</b><span>Streak</span></div>
+      <div class="stat"><b id="sPct">–</b><span>Good</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="bar" style="margin-bottom:8px">
+      <h2 style="margin:0">Shot placement</h2>
+      <div class="seg" id="scope">
+        <button data-s="run" class="on">This run</button><button data-s="all">Session</button>
+      </div>
+    </div>
+    <svg id="court" viewBox="0 0 7.1 7.9" aria-label="Their side of the court, net at the bottom"></svg>
+    <div class="legend">
+      <span><i style="background:var(--gold)"></i>On the board</span>
+      <span><i style="background:var(--good)"></i>Good</span>
+      <span><i style="background:var(--bad)"></i>Miss</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Drill</h2>
+    <div class="grid2">
+      <div><label for="drill">Drill</label><select id="drill" data-key="drill"></select></div>
+      <div><label for="level">Difficulty</label><select id="level" data-key="level"></select></div>
+      <div><label for="time">Mode</label><select id="time" data-key="time"></select></div>
+      <div><label for="targets">Targets</label><select id="targets" data-key="targets"><option value="0">Off</option><option value="1">On</option></select></div>
+      <div><label for="side">Partner</label><select id="side" data-key="side"><option value="0">Across</option><option value="1">Cross court</option></select></div>
+      <div><label for="spread">Spread</label><select id="spread" data-key="spread"></select></div>
+    </div>
+    <div class="buttons">
+      <button class="go" id="bStart">START</button>
+      <button id="bPause">PAUSE</button>
+      <button id="bRestart">RESTART</button>
+      <button id="bMenu">MENU</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Records for this setup</h2>
+    <div id="records" class="muted">Pick a timed MODE to keep records.</div>
+  </div>
+
+  <div class="card">
+    <h2>Session by mode</h2>
+    <table>
+      <thead><tr><th>Mode</th><th class="num">Shots</th><th class="num">Good</th><th class="num">m/s</th><th>Most misses</th></tr></thead>
+      <tbody id="summary"><tr><td colspan="5" class="muted">No shots yet.</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Last shots</h2>
+    <ul class="shots" id="shots"><li class="muted">No shots yet.</li></ul>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+};
+let ws = null, state = null, shots = [], runStart = 0, scope = "run", lastWhere = "", retry = 0;
+
+function connect(code) {
+  const port = (parseInt(location.port || "8094", 10) + 1);
+  ws = new WebSocket(`ws://${location.hostname}:${port}`);
+  ws.onopen = () => ws.send(JSON.stringify({ type: "hello", code }));
+  ws.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m.type === "welcome") { store.set("coachCode", code); $("login").classList.add("hidden"); $("app").classList.remove("hidden"); retry = 0; }
+    else if (m.type === "bad_code") { $("loginErr").textContent = "That code didn't match the headset."; ws.close(); }
+    else if (m.type === "state") onState(m);
+    else if (m.type === "shot") onShot(m);
+  };
+  ws.onclose = () => {
+    const pill = $("where"); pill.textContent = "OFFLINE"; pill.className = "pill off";
+    if (!$("app").classList.contains("hidden")) setTimeout(() => connect(code), Math.min(1000 * ++retry, 5000));
+  };
+}
+
+function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+
+function fillSelect(sel, names, value) {
+  if (sel.options.length !== names.length) {
+    sel.innerHTML = names.map((n, i) => `<option value="${i}">${title(n)}</option>`).join("");
+  }
+  if (document.activeElement !== sel) sel.value = String(value);
+}
+const title = (s) => s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+function onState(s) {
+  state = s;
+  const pill = $("where");
+  pill.textContent = s.where.toUpperCase();
+  pill.className = "pill " + (s.where === "lobby" ? "" : s.where);
+  if (s.where === "playing" && lastWhere === "lobby") { runStart = shots.length; }
+  lastWhere = s.where;
+  const u = s.setup;
+  fillSelect($("drill"), u.drills, u.drill);
+  fillSelect($("level"), u.levels, u.level);
+  fillSelect($("time"), u.times, u.time);
+  fillSelect($("spread"), u.spreads, u.spread);
+  if (document.activeElement !== $("targets")) $("targets").value = u.targets ? "1" : "0";
+  if (document.activeElement !== $("side")) $("side").value = u.side ? "1" : "0";
+  const r = s.run;
+  $("runName").textContent = r ? title(r.name) : "In the lobby";
+  $("sScore").textContent = r ? (r.timed ? r.score : r.streak) : "–";
+  $("sScoreLabel").textContent = r && !r.timed ? "Streak" : "Score";
+  $("sStreak").textContent = r ? (r.timed ? r.streak : r.best) : "–";
+  $("sStreak").nextElementSibling.textContent = r && !r.timed ? "Best" : "Streak";
+  $("sTime").textContent = r && r.timed ? (r.done ? "TIME" : `${Math.floor(r.left / 60)}:${String(r.left % 60).padStart(2, "0")}`) : "∞";
+  const mine = runShots();
+  $("sPct").textContent = mine.length ? Math.round(100 * mine.filter((x) => x.good).length / mine.length) + "%" : "–";
+  $("bStart").disabled = s.where !== "lobby";
+  $("bPause").disabled = s.where === "lobby";
+  $("bPause").textContent = s.where === "paused" ? "RESUME" : "PAUSE";
+  $("bRestart").disabled = s.where === "lobby";
+  $("bMenu").disabled = s.where === "lobby";
+  drawRecords(s.records);
+  drawCourt();
+}
+
+function onShot(m) {
+  if (m.tick < (shots.length ? shots[shots.length - 1].tick : 0)) runStart = shots.length;   // a new run
+  shots.push(m);
+  if (shots.length > 2000) shots.shift();
+  drawCourt(); drawSummary(); drawShots();
+}
+
+const runShots = () => shots.slice(runStart);
+
+function drawCourt() {
+  if (!state) return;
+  const c = state.court, m = 0.5, hw = c.hw, hl = c.hl;
+  const X = (x) => (x + hw + m).toFixed(3), Y = (z) => (hl + z + m).toFixed(3);
+  let g = "";
+  g += `<rect x="${X(-hw)}" y="${Y(-hl)}" width="${2 * hw}" height="${hl}" fill="var(--court)"/>`;
+  g += `<rect x="${X(-hw)}" y="${Y(-c.kd)}" width="${2 * hw}" height="${c.kd}" fill="var(--kitchen)"/>`;
+  const line = (x1, z1, x2, z2, extra = "") => `<line x1="${X(x1)}" y1="${Y(z1)}" x2="${X(x2)}" y2="${Y(z2)}" stroke="#f4f4ef" stroke-width="0.05" ${extra}/>`;
+  g += `<rect x="${X(-hw)}" y="${Y(-hl)}" width="${2 * hw}" height="${hl}" fill="none" stroke="#f4f4ef" stroke-width="0.05"/>`;
+  g += line(-hw, -c.kd, hw, -c.kd) + line(0, -c.kd, 0, -hl);
+  g += line(-hw, -c.dink, hw, -c.dink, `stroke-dasharray="0.15 0.12" opacity="0.5"`);
+  g += `<rect x="${X(-hw - 0.2)}" y="${Y(0) - 0.06}" width="${2 * hw + 0.4}" height="0.12" fill="#e8ecf8"/>`;
+  const t = state.target;
+  if (t && t.lit) {
+    const rings = t.rings || [100, 66, 33];
+    rings.forEach((p, i) => {
+      g += `<circle cx="${X(t.x)}" cy="${Y(t.z)}" r="${(t.r * p / 100).toFixed(3)}" fill="rgba(242,194,48,${0.12 + 0.12 * i})" stroke="var(--gold)" stroke-width="0.03"/>`;
+    });
+  }
+  const list = (scope === "run" ? runShots() : shots).filter((s) => s.x !== undefined);
+  list.forEach((s, i) => {
+    const last = i === list.length - 1;
+    const col = s.ring > 0 ? "var(--gold)" : s.good ? "var(--good)" : "var(--bad)";
+    g += `<circle cx="${X(s.x)}" cy="${Y(s.z)}" r="${last ? 0.16 : 0.1}" fill="${col}" fill-opacity="${last ? 1 : 0.75}" stroke="#0b1020" stroke-width="0.03"/>`;
+  });
+  $("court").setAttribute("viewBox", `0 0 ${2 * hw + 2 * m} ${hl + 2 * m}`);
+  $("court").innerHTML = g;
+}
+
+function drawSummary() {
+  const by = {};
+  for (const s of shots) {
+    const k = s.mode || "?";
+    const b = by[k] || (by[k] = { n: 0, good: 0, speed: 0, sn: 0, miss: {} });
+    b.n++; if (s.good) b.good++;
+    if (s.speed) { b.speed += s.speed; b.sn++; }
+    if (!s.good) b.miss[s.result] = (b.miss[s.result] || 0) + 1;
+  }
+  const rows = Object.entries(by).map(([k, b]) => {
+    const top = Object.entries(b.miss).sort((a, z) => z[1] - a[1])[0];
+    return `<tr><td>${title(k)}</td><td class="num">${b.n}</td><td class="num">${Math.round(100 * b.good / b.n)}%</td>` +
+      `<td class="num">${b.sn ? (b.speed / b.sn).toFixed(1) : "–"}</td><td>${top ? title(top[0]) + " (" + top[1] + ")" : "–"}</td></tr>`;
+  });
+  $("summary").innerHTML = rows.join("") || `<tr><td colspan="5" class="muted">No shots yet.</td></tr>`;
+}
+
+function drawShots() {
+  const last = shots.slice(-12).reverse();
+  $("shots").innerHTML = last.map((s) => {
+    const where = s.ring > 0 ? `ring ${s.ring}, ${s.off.toFixed(2)} m off` : s.off >= 0 ? `${s.off.toFixed(2)} m off` : "";
+    const detail = [s.speed ? `${s.speed} m/s` : "", s.height ? `hit at ${s.height} m` : "", s.volley ? "volley" : "", where].filter(Boolean).join(" · ");
+    return `<li><span class="${s.good ? "r-good" : "r-bad"}">${title(s.result)}</span><span class="muted">${detail}</span></li>`;
+  }).join("") || `<li class="muted">No shots yet.</li>`;
+}
+
+function drawRecords(r) {
+  if (!r) { $("records").innerHTML = "Pick a timed MODE to keep records."; return; }
+  if (!r.recent.length) { $("records").innerHTML = `${title(r.name)}: no runs yet.`; return; }
+  const max = Math.max(...r.recent, 1), best = r.best[0];
+  $("records").innerHTML = `<div>${title(r.name)} · best ${r.best.join(", ")}</div>` +
+    `<div class="spark">${r.recent.map((v) => `<div class="${v === best ? "best" : ""}" style="height:${Math.max(6, 100 * v / max)}%" title="${v}"></div>`).join("")}</div>` +
+    `<div class="muted">${r.recent.length === 1 ? "One run so far" : `Last ${r.recent.length} runs, oldest first`}: ${r.recent.join(" · ")}</div>`;
+}
+
+document.querySelectorAll("select[data-key]").forEach((sel) =>
+  sel.addEventListener("change", () => { send({ type: "set", key: sel.dataset.key, value: parseInt(sel.value, 10) }); sel.blur(); }));
+$("bStart").onclick = () => { runStart = shots.length; send({ type: "start" }); };
+$("bPause").onclick = () => send({ type: state && state.where === "paused" ? "resume" : "pause" });
+$("bRestart").onclick = () => { runStart = shots.length; send({ type: "restart" }); };
+$("bMenu").onclick = () => send({ type: "menu" });
+document.querySelectorAll("#scope button").forEach((b) => b.onclick = () => {
+  scope = b.dataset.s;
+  document.querySelectorAll("#scope button").forEach((o) => o.classList.toggle("on", o === b));
+  drawCourt();
+});
+$("join").onclick = () => { $("loginErr").textContent = ""; connect($("code").value.trim()); };
+$("code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("join").click(); });
+const saved = store.get("coachCode");
+if (saved) { $("code").value = saved; }
+</script>
+</body>
+</html>

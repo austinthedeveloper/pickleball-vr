@@ -28,5 +28,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [020](ADR-020-dev-tuning.md) | Developer tuning pages, synced back as the defaults |
 | [021](ADR-021-passthrough.md) | Passthrough: the court in your room |
 | [022](ADR-022-timed-runs.md) | Timed runs and records |
+| [023](ADR-023-coach-companion.md) | The coach companion: a web page served by the headset |
 
-Next: ADR-023.
+Next: ADR-024.

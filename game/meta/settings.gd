@@ -39,6 +39,7 @@ var assist := 2                      ## index into ASSISTS
 var points := 0                      ## index into POINTS
 var win_by_2 := false
 var left_handed := false
+var coach := false                   ## ADR-023: COACH MODE, the companion page served
 var passthrough := false             ## ADR-021: the court in your room (headset)
 var paddle_angle := 1                ## index into ANGLES
 var paddle_profile := 0              ## index into PROFILE_NAMES
@@ -88,6 +89,7 @@ func load_settings() -> void:
 	win_by_2 = c.get_value("match", "win_by_2", win_by_2)
 	left_handed = c.get_value("player", "left_handed", left_handed)
 	passthrough = c.get_value("player", "passthrough", passthrough)
+	coach = c.get_value("player", "coach", coach)
 	paddle_angle = c.get_value("player", "paddle_angle", paddle_angle)
 	paddle_profile = c.get_value("paddle", "profile", paddle_profile)
 	var saved: Array = c.get_value("paddle", "profiles", [])
@@ -129,6 +131,7 @@ func save() -> void:
 	c.set_value("match", "win_by_2", win_by_2)
 	c.set_value("player", "left_handed", left_handed)
 	c.set_value("player", "passthrough", passthrough)
+	c.set_value("player", "coach", coach)
 	c.set_value("player", "paddle_angle", paddle_angle)
 	c.set_value("paddle", "profile", paddle_profile)
 	c.set_value("paddle", "profiles", profiles)
