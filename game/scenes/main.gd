@@ -157,6 +157,8 @@ func _page(id: String) -> Menu3D:
 				m.add_row("reach", "REACH", Settings.PROFILE_REACHES.map(func(c: int) -> String: return "%+d CM" % c if c != 0 else "0 CM"),
 					maxi(Settings.PROFILE_REACHES.find(p["reach"]), 0))
 				m.add_row("reset", "RESET TO DEFAULT")
+			# Drift (ADR-015): face flat on the floor, read it now and later.
+			m.add_row("check", "CHECK: LAY THE FACE FLAT ON THE FLOOR")
 			m.add_row("back", "BACK")
 		"lessons":
 			m.title = "HOW TO PLAY"
@@ -266,6 +268,10 @@ func _on_pressed(id: String) -> void:
 		"to_lessons": lobby.call_deferred("lessons")
 		"to_paddle": lobby.call_deferred("paddle")
 		"to_coach": lobby.call_deferred("coach")
+		"check":
+			var c := _paddle_check_text()
+			if Perf.on and view.xr:
+				view._log_line("PADDLE CHECK | " + c)   # to compare, early and late in a session
 		"to_records":
 			_records_from = page
 			lobby.call_deferred("records")
@@ -363,6 +369,23 @@ func _on_drill_done() -> void:
 	m.add_row("lobby", "MENU")
 	m.pressed.connect(_on_pressed)
 	view.show_menu(m)
+
+
+# --- The paddle check (drift, ADR-015) ------------------------------------------------
+
+func _paddle_check_text() -> String:
+	if view == null or view.xr == null:
+		return "IN THE HEADSET ONLY"
+	var c: Array[float] = view.xr.paddle_check()
+	return "%.1f CM UP, %.1f DEGREES OFF" % [c[0], c[1]]
+
+
+func _process(_delta: float) -> void:
+	# The PADDLE page's check, read live while it's open.
+	if page == "paddle" and menu and not menu.row("check").is_empty():
+		var r: Dictionary = menu.row("check")
+		r["label"] = "CHECK: " + _paddle_check_text()
+		menu.refresh()
 
 
 # --- The coach companion (ADR-023, design/COACHING.md) ---------------------------------

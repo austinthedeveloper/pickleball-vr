@@ -128,6 +128,18 @@ a frame (72-120 Hz), and a fast paddle moves 10+ cm between samples.
   about 9.4 m/s. CPU doubles play the same (mean rally 11.4 before and
   after); the golden traces were regenerated. BLOCK KEEPS PACE stays on
   TUNING > PADDLE.
+- **A full swing is a full swing** (2026-10-28, the coach's machine).
+  Baseline hits "couldn't get anything to go further than 5 feet". In
+  the log the lead stood 8-8.5 m from the net, the paddle came through
+  at 4-10 m/s (curved) and the ball left at 6-9.5 m/s: SHORT every
+  time. The curve's top, 9 -> 5.8 and +0.62 per m/s past it, capped a
+  drive at about half its pace. Now it goes 9 -> 7.0, then 12 -> 11.5,
+  then one for one. Everything up to 6.5 m/s, every dink and the
+  unhurried big swing, is untouched. `test_paddle` drives a machine ball
+  from 8 m back with a 12 m/s low-to-high swing: it now clears the net
+  and lands in, where the old curve put it on your own side. CPU play
+  is the same (mean rally 11.4 doubles, 14.1 singles); the golden traces
+  were regenerated.
 - **A bigger swing that isn't hard** (2026-10-27, the fourth session).
   "It looked like 3 balls all hit that light outline edge and were called
   long ... I did a bigger swing but didn't swing very hard." Only the

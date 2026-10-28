@@ -161,11 +161,12 @@ static func fault_text(f: int) -> String:
 ## swing overhit. The face's effective speed for the hit, as straight
 ## segments through these points (m/s): 2.5 -> 3.05 (touch x1.22),
 ## 4.2 -> 4.0, 6.5 -> 4.15 (a bigger, unhurried swing levels off: a firm,
-## controlled ball, not a long one), 9 -> 5.8, then +0.62 per m/s (a
-## put-away still drives). Only the face's speed at contact counts, not
-## how far it travelled. It only ever rises. um/tick.
-const SWING_CURVE := [[0, 0], [20833, 25417], [35000, 33333], [54167, 34583], [75000, 48333]]
-const SWING_TAIL_256 := 159          ## the slope past the last point, Q8
+## controlled ball, not a long one), 9 -> 7.0, 12 -> 11.5, then one for
+## one: a full swing is a full swing (baseline drives from the machine
+## fell short at the old 9 -> 5.8, +0.62 per m/s). Only the face's speed
+## at contact counts, not how far it travelled. It only ever rises. um/tick.
+const SWING_CURVE := [[0, 0], [20833, 25417], [35000, 33333], [54167, 34583], [75000, 58333], [100000, 95833]]
+const SWING_TAIL_256 := 256          ## the slope past the last point, Q8
 
 
 static func swing_eff(s: int) -> int:

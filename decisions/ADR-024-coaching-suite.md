@@ -123,3 +123,13 @@ Quest in Godot. So the tablet is native:
 - **No phone needed.** It works with COACH MODE off; the desk always
   keeps the session's shots (`live`). Its insights are a GDScript
   version of the page's (`CoachDesk.insights`).
+
+## Amendment (2026-10-28): the tablet follows the drill
+
+In a partner drill the tablet "was still showing the ball machine and the
+config values for it". Now each drill shows its own controls:
+- **A partner drill:** taps for TARGET and FEED, and PACE AND SIZE
+  steppers. These are the drill's own live sliders (C-11), the same
+  list the phone gets.
+- **The ball machine:** taps for TARGET, MACHINE and BOUNCE, and the
+  machine's speed, spin, height and interval with START.

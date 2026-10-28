@@ -66,3 +66,25 @@ now runs from -30 to +20 cm in 1 cm steps; it was 0 to 40 in 2s. A
 negative reach slides the virtual paddle back along its handle toward
 the hand, and 40 cm out was more than any accessory needs. A saved reach
 outside the range loads clamped: an old 40 comes back as 20.
+
+## Amendment (2026-10-28): telling drift apart
+
+"I think it's drifting a bit as I play but I'm not sure how to diagnose
+that." A profile is fixed to the controller in code, so a paddle that
+drifts is one of two things:
+- **Tracking:** the headset loses sight of a controller inside an
+  accessory, and it runs on its own sensors for a while.
+- **The mount:** the controller shifts in the accessory.
+
+The log, bucketed by ten minutes, showed no steady creep in off-centre
+hits within a session, so there are now two measurements:
+- **Tracking, per swing.** Every SWING line in the swing log ends with
+  the paddle hand's OpenXR tracking confidence since the last swing
+  (high, low and lost, %), and the grip in use (angle, turn, twist,
+  reach). Drift together with LOW tracking points at the headset not
+  seeing the controller.
+- **PADDLE > CHECK.** Lay the paddle's face flat on the floor and the
+  row reads, live, how far up its lower side is and how many degrees
+  off level the face is. Pressing it writes a PADDLE CHECK line to the
+  log. Check at the start and again when it feels off: numbers that
+  changed with good tracking mean the controller moved in its mount.

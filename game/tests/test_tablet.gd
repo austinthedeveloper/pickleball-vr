@@ -32,7 +32,7 @@ func test_pointing_clicks_its_buttons() -> void:
 	var t: CoachTablet = main.view.tablet
 	t.lock = 0.0
 	t.settle()
-	var b: Button = t._mode_buttons["MACHINE"]
+	var b: Button = t._mode_buttons["FEED"]
 	var c := b.get_global_rect().get_center()
 	# A ray from in front at that pixel.
 	var local := Vector3((c.x / CoachTablet.PX.x - 0.5) * CoachTablet.SIZE.x, (0.5 - c.y / CoachTablet.PX.y) * CoachTablet.SIZE.y, 0)
@@ -40,7 +40,7 @@ func test_pointing_clicks_its_buttons() -> void:
 	var from := at + t.global_transform.basis.z * 1.0
 	check(t.hit_px(from, at - from) != null, "the ray meets the tablet")
 	check(t.point(from, at - from, true), "and it takes the click")
-	eq(t.mode, "MACHINE", "the button pressed")
+	eq(t.mode, "FEED", "the button pressed")
 	check(not t.point(from + Vector3(9, 0, 0), at - from, true), "a ray past it misses")
 	main.queue_free()
 
@@ -80,3 +80,25 @@ func test_insights_read_the_shots() -> void:
 	check(lines.any(func(l: String) -> bool: return l.contains("LOWER CONTACT")), "misses off low contact")
 	check(lines.any(func(l: String) -> bool: return l.contains("PADDLE UP AS THEY HIT: 100%")), "the ready paddle")
 	eq(CoachDesk.insights([]), ["A FEW MORE SHOTS FIRST: INSIGHTS NEED 8."] as Array[String], "too few to say")
+
+
+## The lead: in a partner drill it "was still showing the ball machine and
+## the config values for it". Each drill gets its own controls.
+func test_it_shows_the_drills_own_controls() -> void:
+	var main := _paused_drill()
+	var t: CoachTablet = main.view.tablet
+	t.refresh()
+	check(t._partner_box.visible and not t._machine_box.visible, "a partner drill: its pace and size, no machine")
+	check(t._mode_buttons["FEED"].visible and not t._mode_buttons["MACHINE"].visible, "taps: target and feed")
+	check(t._slider_ids.has("dink_medium"), "its pace: %s" % str(t._slider_ids))
+	var was := Tune.value("dink_medium")
+	t._tune(t._slider_ids.find("dink_medium"), 1)
+	check(Tune.value("dink_medium") > was, "+ steps it up")
+	Tune.reset()
+	main._start(main.settings.machine_config(), false)
+	main._on_pause()
+	t = main.view.tablet
+	t.refresh()
+	check(t._machine_box.visible and not t._partner_box.visible, "the ball machine: its controls")
+	check(t._mode_buttons["BOUNCE"].visible and not t._mode_buttons["FEED"].visible, "taps: target, machine, bounce")
+	main.queue_free()

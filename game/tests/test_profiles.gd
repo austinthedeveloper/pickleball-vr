@@ -110,3 +110,23 @@ func test_reach_goes_back_toward_the_hand() -> void:
 	s.load_settings()
 	eq(s.profiles[0]["reach"], 20, "an old 40 cm comes back as the most there is now")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))
+
+
+## Drift (ADR-015): the face laid flat on the floor reads about 0 cm up and
+## 0 degrees off; held up and tipped, it says so.
+func test_the_paddle_check() -> void:
+	var rig := XrRig.new()
+	runner.root.add_child(rig)
+	var flat := Basis(Vector3(0, 0, 1), deg_to_rad(90))    # the face's normal (its x) straight up
+	rig.paddle.top_level = true
+	rig.paddle.global_transform = Transform3D(flat, Vector3.ZERO)
+	var centre := rig.paddle.global_transform * PaddleMesh.FACE_CENTER
+	rig.paddle.global_position.y += PaddleMesh.FACE_T / 2 - centre.y   # its lower side on the floor
+	var c := rig.paddle_check()
+	near(int(c[0] * 10), 0, 1, "flat on the floor: 0 cm up (%.1f)" % c[0])
+	near(int(c[1]), 0, 1, "and level (%.1f)" % c[1])
+	rig.paddle.global_transform = Transform3D(flat.rotated(Vector3.RIGHT, deg_to_rad(8)), rig.paddle.global_position + Vector3(0, 0.03, 0))
+	c = rig.paddle_check()
+	check(c[1] > 7.0 and c[1] < 9.0, "tipped 8 degrees reads 8 (%.1f)" % c[1])
+	check(c[0] > 2.0, "and lifted reads up (%.1f cm)" % c[0])
+	rig.queue_free()

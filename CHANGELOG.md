@@ -49,6 +49,13 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
   the scoreboard keeps your POINTS.
 
 ### Changed
+- **Full swings hit full:** a big drive from the baseline now carries
+  over the net. Touch and dinks are unchanged.
+- **The coach tablet shows the drill's own controls:** pace and size in
+  a partner drill, the machine's in the ball machine.
+- **Checking for paddle drift:** PADDLE > CHECK reads the paddle laid
+  flat on the floor, live. The swing log records tracking quality for
+  every hit.
 - **Blocks keep more pace:** stick the paddle out at a hard-hit ball and
   it goes back with up to 72% of its speed (was 60%).
 - **Coach: START NEW** starts the drill the coach just set, mid-run.

@@ -1,9 +1,11 @@
 ## The coach tablet (design/COACHING.md C-22): the companion page's core,
 ## in the headset, standing beside PAUSED. It shows the run, the court with
-## this session's shots, the target and the coach's machine, what the
-## numbers say, and the machine's controls; tap the court to place the
-## target, the next feed, the machine or its bounce. It does all of it
-## through CoachDesk, as the phone does.
+## this session's shots and the target, what the numbers say, and the
+## drill's own controls: in a partner drill, its pace and size, with taps
+## for the target and the partner's next ball; at the ball machine, the
+## machine's speed, spin, height and timing, with taps for where it stands
+## and where its balls bounce. It does all of it through CoachDesk, as the
+## phone does.
 ##
 ## A 2D panel (Controls in a SubViewport) on a quad. The laser or the mouse
 ## points at it like a menu: the hit is turned into the panel's own mouse
@@ -26,6 +28,10 @@ const COURT := Color(0.184, 0.435, 0.839)
 const MINE := Color(0.114, 0.247, 0.525)
 const KITCHEN := Color(0.141, 0.267, 0.561)
 const MODES := ["TARGET", "FEED", "MACHINE", "BOUNCE"]
+## The taps each kind of drill offers.
+const PARTNER_MODES := ["TARGET", "FEED"]
+const MACHINE_MODES := ["TARGET", "MACHINE", "BOUNCE"]
+const MAX_SLIDERS := 5
 ## The machine's steppers: key, label, step, min, max.
 const MACHINE := [["speed", "SPEED", 0.5, 3.0, 20.0], ["spin", "SPIN", 10.0, -100.0, 100.0],
 	["clear", "OVER THE NET", 0.05, 0.05, 3.0], ["every", "A BALL EVERY", 0.25, 1.25, 8.0]]
@@ -38,6 +44,11 @@ var _quad: MeshInstance3D
 var _court: Control
 var _labels := {}                    ## name -> Label
 var _mode_buttons := {}
+var _machine_box: VBoxContainer      ## the ball machine's controls
+var _partner_box: VBoxContainer      ## a partner drill's pace and size
+var _slider_rows: Array = []         ## [HBoxContainer, name Label, value Label], reused
+var _slider_ids: Array = []
+var _machine := false                ## the drill under way is the ball machine
 var _t := 0.0
 var _state := {}
 
@@ -134,7 +145,29 @@ func _build(parent: Node) -> void:
 	ins.custom_minimum_size = Vector2(500, 270)
 	right.add_child(ins)
 	right.add_child(_label("split", "", 24, TEXT))
-	right.add_child(_label("h_mach", "BALL MACHINE", 22, DIM))
+	_partner_box = VBoxContainer.new()
+	_partner_box.add_theme_constant_override("separation", 10)
+	right.add_child(_partner_box)
+	_partner_box.add_child(_label("h_part", "PACE AND SIZE", 22, DIM))
+	for i in MAX_SLIDERS:
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		var name := _label("s_%d_n" % i, "", 24, TEXT)
+		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(name)
+		var at := i
+		h.add_child(_button("-", 32, func() -> void: _tune(at, -1)))
+		var val := _label("s_%d" % i, "", 26, GOLD)
+		val.custom_minimum_size = Vector2(150, 0)
+		val.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		h.add_child(val)
+		h.add_child(_button("+", 32, func() -> void: _tune(at, 1)))
+		_partner_box.add_child(h)
+		_slider_rows.append(h)
+	_machine_box = VBoxContainer.new()
+	_machine_box.add_theme_constant_override("separation", 10)
+	right.add_child(_machine_box)
+	_machine_box.add_child(_label("h_mach", "BALL MACHINE", 22, DIM))
 	for row in MACHINE:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 8)
@@ -148,12 +181,12 @@ func _build(parent: Node) -> void:
 		val.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		h.add_child(val)
 		h.add_child(_button("+", 32, func() -> void: _step(k, 1)))
-		right.add_child(h)
+		_machine_box.add_child(h)
 	var go := _button("START THE MACHINE", 28, func() -> void: desk.handle({"type": "machine_start"}))
 	go.add_theme_stylebox_override("normal", _box(GOLD, 10))
 	go.add_theme_color_override("font_color", Color(0.1, 0.08, 0.0))
 	_labels["go"] = go
-	right.add_child(go)
+	_machine_box.add_child(go)
 	_set_mode(mode)
 
 
@@ -197,6 +230,16 @@ func _set_mode(m: String) -> void:
 	var hints := {"TARGET": "TAP THEIR SIDE: THE TARGET GOES THERE", "FEED": "TAP YOUR SIDE: THEIR NEXT BALL LANDS THERE",
 		"MACHINE": "TAP THEIR SIDE: THE MACHINE STANDS THERE", "BOUNCE": "TAP YOUR SIDE: ITS BALLS BOUNCE THERE"}
 	(_labels["hint"] as Label).text = hints[m]
+
+
+## A partner drill's pace or size (C-11's sliders), a step either way.
+func _tune(i: int, dir: int) -> void:
+	if i >= _slider_ids.size():
+		return
+	var id: String = _slider_ids[i]
+	var e := Tune.entry(id)
+	desk.handle({"type": "tune", "id": id, "value": clampi(Tune.value(id) + dir * int(e[7]), e[8], e[9])})
+	refresh()
 
 
 func _step(key: String, dir: int) -> void:
@@ -248,7 +291,7 @@ func _draw_court() -> void:
 			_court.draw_circle(_px(g, t["x"], t["z"]), float(t["r"]) * s * float(rings[i]) / 100.0,
 				Color(GOLD, 0.15 + 0.15 * i))
 	var mc: Dictionary = _state.get("machine", {})
-	if mc.get("on", false) or mode in ["MACHINE", "BOUNCE"]:
+	if _machine and (mc.get("on", false) or mode in ["MACHINE", "BOUNCE"]):
 		var a := _px(g, mc.get("x", 0.0), mc.get("z", -7.0))
 		var b := _px(g, mc.get("bx", 0.0), mc.get("bz", 4.0))
 		_court.draw_dashed_line(a, b, Color(GOLD, 0.8), w, s * 0.15)
@@ -340,7 +383,31 @@ func refresh() -> void:
 			"every": t = "%.2f S" % v
 		(_labels["m_" + row[0]] as Label).text = t
 	(_labels["go"] as Button).text = "RESTART THE MACHINE" if mc.get("on", false) else "START THE MACHINE"
+	_show_context()
 	_court.queue_redraw()
+
+
+## The drill's own controls: the machine's, or a partner drill's.
+func _show_context() -> void:
+	var v: MatchView = desk.main.view if desk.main else null
+	_machine = v != null and v.sim != null and v.sim.drill != null and not v.sim.drill.partner
+	_machine_box.visible = _machine
+	_partner_box.visible = not _machine
+	var allowed: Array = MACHINE_MODES if _machine else PARTNER_MODES
+	for k in _mode_buttons:
+		(_mode_buttons[k] as Button).visible = allowed.has(k)
+	if not allowed.has(mode):
+		_set_mode(allowed[0])
+	var tunes: Array = _state.get("tunes", [])
+	_slider_ids = []
+	for i in MAX_SLIDERS:
+		var row: HBoxContainer = _slider_rows[i]
+		row.visible = i < tunes.size()
+		if i < tunes.size():
+			var t: Dictionary = tunes[i]
+			_slider_ids.append(t["id"])
+			(_labels["s_%d_n" % i] as Label).text = String(t["label"])
+			(_labels["s_%d" % i] as Label).text = String(t["text"]) + (" *" if t["value"] != t["default"] else "")
 
 
 ## Lays the panel out now, not next frame (tests: like a menu's settle()).

@@ -873,6 +873,11 @@ func _log_swing() -> void:
 		c[14] / 1000, c[15] / 256.0, u.length(), u.z * fwd, u.y, u.x, roundi(rad_to_deg(asin(clampf(n.y, -1, 1)))),
 		roundi(rad_to_deg(atan2(n.x, n.z * fwd))), c[12] / 1e6, absf(c[13]) / 1e6, vin.length(),
 		raw.length(), roundi(rad_to_deg(atan2(raw.y, Vector2(raw.x, raw.z).length()))), _where(lr), _where(la)])
+	if xr:
+		var t: Array = xr.take_tracking()
+		var all := maxi(t[0] + t[1] + t[2], 1)
+		line += " | tracking high %d%% low %d%% lost %d%% | grip a%d u%d t%d r%d" % [100 * t[2] / all, 100 * t[1] / all,
+			100 * t[0] / all, roundi(paddle_tilt), roundi(paddle_turn), roundi(paddle_twist), roundi(paddle_reach * 100)]
 	_log_line(line)
 
 

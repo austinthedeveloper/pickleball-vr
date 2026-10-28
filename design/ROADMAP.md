@@ -96,6 +96,9 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-56 | The coach's ball machine: place, bounce, speed, spin, height (C-21, ADR-024) | `feature/cld-vr-coach-machine` | Ready to test |
 | VR-57 | The coach tablet beside PAUSED (C-22, ADR-024) | `feature/cld-vr-tablet` | Ready to test |
 | VR-58 | REACH -30..+20 cm, 1 cm steps (ADR-015) | `feature/cld-vr-reach` | Ready to test |
+| VR-59 | Full swings hit full: the swing curve's top (ADR-003) | `feature/cld-vr-drives` | Ready to test |
+| VR-60 | The tablet shows the drill's own controls (ADR-024) | `feature/cld-vr-drives` | Ready to test |
+| VR-61 | Drift: tracking in the swing log, PADDLE > CHECK (ADR-015) | `feature/cld-vr-drives` | Ready to test |
 
 ## Phase 1: singles
 
