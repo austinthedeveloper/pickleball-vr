@@ -104,6 +104,21 @@ a frame (72-120 Hz), and a fast paddle moves 10+ cm between samples.
   strokes meet the ball at overlapping closing speeds. Steepening it cut
   the gentle dinks from 38 to 17 to 24 of 47. Logging skips the lobby's
   demo bot now. The golden traces were regenerated.
+- **A block keeps a fast ball's pace** (2026-10-27, from the HANDS
+  log). "Player 1 slams it at Player 2 who just sticks their paddle out.
+  That ball should be going in." The logged blocks (face at 0.4-1.4 m/s,
+  ball in at 9.3-9.6 m/s) came off at 3.3-5.1 m/s and fell short or into
+  the net. The hard-hit restitution (0.34), tuned to keep swings from
+  flying, was applied to the incoming ball's pace too. Now the incoming
+  ball's own normal speed comes back with `K.block_e`: the usual
+  restitution, raised toward 0.6 for a ball faster than 6 m/s (fully at
+  9), and only while the face is slow (fading out at 5 m/s of swing).
+  Dinks and the tuned strokes meet slower balls or swing harder, so they
+  don't change; a still face sends a 13 m/s ball back at about 7.8 m/s.
+  The bot plans with the same formula. `test_paddle` checks the block
+  and that a harder swing still always hits harder. CPU matches play the
+  same (mean rally 13.8 before and after); the golden traces were
+  regenerated.
 - **Flat mode and DEMO** drive the same input from `Bot`, which plans a
   swing through the ball on the sim's own prediction. In flat mode you
   move and aim and the bot swings; in DEMO it does all of it.

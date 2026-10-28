@@ -45,14 +45,14 @@ const VOLLEY_Y := 1000000
 
 ## Where a return must land to count, on the machine's side.
 const ZONE_ANY := 0
-const ZONE_KITCHEN := 1             ## the dink zone: their kitchen and a foot past its line
+const ZONE_KITCHEN := 1             ## the dink zone: their kitchen and 75 cm past its line
 const ZONE_DEEP := 2                 ## the back third
 const ZONE_LEFT := 3                 ## your left as you face the net (-x)
 const ZONE_RIGHT := 4
 const ZONE_NAMES := ["ANY", "KITCHEN", "DEEP", "LEFT", "RIGHT"]
 ## A dink that lands just past the kitchen line is still a good dink
-## (ADR-010 amended): the zone runs 30 cm (a foot) past it.
-const DINK_ZONE := K.KITCHEN_DEPTH + 300000
+## (ADR-010 amended twice): the zone runs 75 cm (2.5 ft) past it.
+const DINK_ZONE := K.KITCHEN_DEPTH + 750000
 
 ## Lesson rules.
 const RULE_NO_VOLLEY := 1            ## let it bounce first
@@ -89,6 +89,10 @@ const PARTNER_REACT := 22            ## ticks after your hit it starts moving (0
 ## The partner volleys at you at DIFFICULTY's pace (7, 10, 13 m/s), waist to
 ## chest high, and reads your volley faster than a dink.
 const HANDS_PACE := [60000, 85000, 110000]
+## A rally starts soft and straight at you, then speeds up: the feed at
+## 5 m/s, full pace by your HANDS_RAMP'th ball back (ADR-014 amended).
+const HANDS_FEED := 42000
+const HANDS_RAMP := 3
 const HANDS_REACT := 12              ## 0.1 s
 const HANDS_HEIGHT := 950000         ## where it comes at you, give or take 15 cm
 const HANDS_HIGH := 1800000          ## a chest-high volley is still a volley to plan for
@@ -237,7 +241,8 @@ func update(sim: Sim, tossed: bool) -> void:
 					_serve_ready(sim)
 				elif partner:
 					var q := sim.players[2]
-					_partner_dink(sim, q.x - 300000, 500000, q.z + 300000)   # a fresh rally
+					# A fresh rally: dinks from low, a HANDS feed from the waist.
+					_partner_dink(sim, q.x - 300000, HANDS_HEIGHT if hands else 500000, q.z + 300000)
 				else:
 					_feed(sim)
 			else:
@@ -537,12 +542,13 @@ func _partner_volley(sim: Sim, x: int, y: int, z: int) -> void:
 	var q := sim.players[2]
 	var r: Array = SPREADS[clampi(spread, 0, SPREADS.size() - 1)]
 	var off: int = r[0] + sim.random(r[1] - r[0] + 1)
-	if sim.random(100) < 20:
-		off = sim.random(150001)
+	if sim.random(100) < 20 or rally == 0:
+		off = sim.random(150001)         # the feed comes at you: you know where to look
 	var tx := clampi(p.x + (off if sim.random(2) == 0 else -off), -K.COURT_HALF_WIDTH + 300000,
 		K.COURT_HALF_WIDTH - 300000)
 	var ty := HANDS_HEIGHT + sim.scatter(150000)
-	var pace: int = HANDS_PACE[clampi(partner_pace, 0, 2)]
+	var full: int = HANDS_PACE[clampi(partner_pace, 0, 2)]
+	var pace := HANDS_FEED + (full - HANDS_FEED) * mini(rally, HANDS_RAMP) / HANDS_RAMP
 	var w := Aim.topspin(tx - x, p.z - z, 250000)
 	var v := Aim.through(x, maxi(y, 300000), z, tx, ty, p.z, pace, w)
 	var b := sim.ball

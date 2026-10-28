@@ -7,6 +7,8 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ## [Unreleased]
 
 ### Added
+- **Blocks keep their pace:** stick your paddle out against a hard-hit
+  ball and it goes back with real speed, not a dead drop into the net.
 - **HANDS:** a new PRACTICE PARTNER drill (DRILL: HANDS). You and the
   partner stand at your kitchen lines and volley hard at each other; it
   takes every ball out of the air and sends it back at you. DIFFICULTY
@@ -14,6 +16,9 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ### Changed
 - DINK PARTNER is now PRACTICE PARTNER, with DINKS and HANDS drills.
+- **HANDS starts each rally with a soft feed** straight at you, then
+  speeds up over the next few balls to the DIFFICULTY's pace.
+- **The dink zone** now runs 2.5 ft past the kitchen line.
 - **FOCUS is much stronger:** it starts at 5 in a row and the world is
   nearly black around the court by 13.
 

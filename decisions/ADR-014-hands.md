@@ -33,10 +33,19 @@ your ball comes back at you, wherever you sent it.
   ball to plan for; HANDS uses 1.8 m instead of the usual comfort height.
 - FOCUS (ADR-013) works the same: the streak is hands in a row.
 
+## Amended: a soft feed, then faster
+
+"It would help if they were softer on the feed ball, then speed up. It's
+hard to react when you have no idea what direction it's coming from."
+Each rally now starts with a feed from the partner's waist, straight at
+you, at 5 m/s over the ground: about 0.9 s in the air. Each of your
+balls back raises the pace a third of the way to the DIFFICULTY's,
+so the third reply and on are at full pace (`HANDS_FEED`, `HANDS_RAMP`).
+
 ## Consequences
 
 - The demo CPU rallies at every level (36 in a row on HARD in the bot
   test); `test_partner.gd` checks the volleys never bounce, harder is
   faster, the partner stays up at the net, the menu and the save.
 - The bot used to walk to (0, 0) when it had nothing to plan; it now goes
-  home to its spot. Golden traces are unchanged.
+  home to its spot. Golden traces were unchanged by HANDS itself.
