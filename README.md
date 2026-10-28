@@ -44,6 +44,8 @@ default.
 
 ## Practice
 
+- **PADDLE** (on MAIN): your paddle hand and angle, and profiles for
+  paddle accessories: ANGLE, TWIST and REACH per profile (ADR-015).
 - **PRACTICE PARTNER:** a CPU at their kitchen line.
   - DINKS: it keeps a dinking rally going, every ball back to you. You
     can set the DIFFICULTY (how low it skims the net) and turn on floor

@@ -72,6 +72,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-32 | The dink zone 2.5 ft past the kitchen line (ADR-010) | `feature/cld-vr-blocks` | Ready to test |
 | VR-33 | A bigger, unhurried swing lands shorter (swing curve, ADR-003) | `feature/cld-vr-blocks` | Ready to test |
 | VR-34 | HANDS: more power after the feed (ADR-014) | `feature/cld-vr-blocks` | Ready to test |
+| VR-35 | PADDLE page: profiles for paddle accessories (ADR-015) | `feature/cld-vr-paddle-profiles` | Ready to test |
+| VR-36 | Kitchen drills: proposals (design/KITCHEN_DRILLS.md) | `feature/cld-vr-paddle-profiles` | Waiting on the lead's pick |
 
 ## Phase 1: singles
 
@@ -135,6 +137,11 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
 
+**VR-35, ready to test.** MAIN > PADDLE. With an accessory on, pick
+PROFILE 1 and step ANGLE, TWIST and REACH until the paddle you see sits
+where the real one is. Does anything else need setting (the face further
+to one side, say)?
+
 **VR-33 / VR-34, ready to test.** DINKS: a bigger but unhurried swing
 should land in the zone, not on its edge. Do drives from the baseline
 still feel right (average swings are up to 10% softer)? HANDS: the ball
@@ -185,6 +192,9 @@ against different teams (the GOTH CLUB play in SPACE). In the headset,
 does the SUNSET's low sun get in your eyes too much?
 
 ## For you
+
+- **Kitchen drills** (VR-36): which of design/KITCHEN_DRILLS.md to build
+  first. The suggestion is CALL THE SPOT.
 
 1. **The first session in the headset** (VR-05): wake the controllers, open
    Library > Unknown Sources > Pickleball '94 VR, and check the paddle in

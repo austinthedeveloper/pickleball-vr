@@ -54,7 +54,10 @@ func _new_view() -> MatchView:
 	menu = null
 	view = MatchView.new()
 	view.left_handed = settings.left_handed
-	view.paddle_tilt = settings.tilt()
+	var pose := settings.paddle_pose()
+	view.paddle_tilt = pose[0]
+	view.paddle_twist = pose[1]
+	view.paddle_reach = pose[2]
 	add_child(view)
 	return view
 
@@ -94,8 +97,6 @@ func _page(id: String) -> Menu3D:
 			m.add_row("points", "POINTS", POINTS, settings.points)
 			m.add_row("win_by_2", "WIN BY 2", OFF_ON, 1 if settings.win_by_2 else 0)
 			m.add_row("hand", "PADDLE HAND", HANDS, 1 if settings.left_handed else 0)
-			if use_xr:
-				m.add_row("angle", "PADDLE ANGLE", ANGLES, settings.paddle_angle)
 			m.add_row("play", "PLAY")
 			m.add_row("back", "BACK")
 		"machine":
@@ -120,6 +121,24 @@ func _page(id: String) -> Menu3D:
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
 			m.add_row("pstart", "START")
 			m.add_row("back", "BACK")
+		"paddle":
+			# Paddle profiles (ADR-015): DEFAULT is the angle you had; the
+			# others fit an accessory, live in your hand as you change them.
+			m.title = "PADDLE"
+			m.add_row("profile", "PROFILE", Settings.PROFILE_NAMES, settings.paddle_profile)
+			m.add_row("hand", "PADDLE HAND", HANDS, 1 if settings.left_handed else 0)
+			var p: Variant = settings.profile()
+			if p == null:
+				m.add_row("angle", "ANGLE", ANGLES, settings.paddle_angle)
+			else:
+				m.add_row("angle", "ANGLE", _degrees(Settings.PROFILE_ANGLES),
+					maxi(Settings.PROFILE_ANGLES.find(p["angle"]), 0))
+				m.add_row("twist", "TWIST", _degrees(Settings.PROFILE_TWISTS),
+					maxi(Settings.PROFILE_TWISTS.find(p["twist"]), 0))
+				m.add_row("reach", "REACH", Settings.PROFILE_REACHES.map(func(c: int) -> String: return "%d CM" % c),
+					maxi(Settings.PROFILE_REACHES.find(p["reach"]), 0))
+				m.add_row("reset", "RESET TO DEFAULT")
+			m.add_row("back", "BACK")
 		"lessons":
 			m.title = "HOW TO PLAY"
 			for i in Lessons.count():
@@ -133,6 +152,7 @@ func _page(id: String) -> Menu3D:
 			m.add_row("to_partner", "PRACTICE PARTNER")
 			m.add_row("to_machine", "BALL MACHINE")
 			m.add_row("to_lessons", "HOW TO PLAY")
+			m.add_row("to_paddle", "PADDLE")
 			if not use_xr:
 				m.add_row("quit", "QUIT")
 	return m
@@ -148,7 +168,14 @@ func _on_changed(id: String, index: int) -> void:
 		"points": settings.points = index
 		"win_by_2": settings.win_by_2 = index == 1
 		"hand": settings.left_handed = index == 1
-		"angle": settings.paddle_angle = index
+		"angle":
+			if settings.profile() == null:
+				settings.paddle_angle = index
+			else:
+				settings.profile()["angle"] = Settings.PROFILE_ANGLES[index]
+		"profile": settings.paddle_profile = index
+		"twist": settings.profile()["twist"] = Settings.PROFILE_TWISTS[index]
+		"reach": settings.profile()["reach"] = Settings.PROFILE_REACHES[index]
 		"shot": settings.machine_shot = index
 		"target": settings.machine_target = index
 		"rate": settings.machine_rate = index
@@ -162,7 +189,7 @@ func _on_changed(id: String, index: int) -> void:
 		"spread": settings.partner_spread = index
 		"drill": settings.partner_hands = index == 1
 	settings.save()
-	if id in ["mode", "vs", "venue", "hand", "angle", "shot", "target", "zone", "machine_at", "speed",
+	if id in ["mode", "vs", "venue", "hand", "angle", "profile", "twist", "reach", "shot", "target", "zone", "machine_at", "speed",
 			"targets", "level", "ptargets", "side", "spread", "drill"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
@@ -177,6 +204,14 @@ func _on_pressed(id: String) -> void:
 		"to_partner": lobby.call_deferred("partner")
 		"pstart": _start.call_deferred(settings.partner_config(), false)
 		"to_lessons": lobby.call_deferred("lessons")
+		"to_paddle": lobby.call_deferred("paddle")
+		"reset":
+			# The profile back to the DEFAULT paddle: its angle, no twist or reach.
+			settings.profile()["angle"] = int(settings.tilt())
+			settings.profile()["twist"] = 0
+			settings.profile()["reach"] = 0
+			settings.save()
+			lobby.call_deferred()
 		"back": lobby.call_deferred("main")
 		"play": _start.call_deferred(settings.match_config(), false)
 		"start": _start.call_deferred(settings.machine_config(), false)
@@ -270,3 +305,7 @@ func _on_pause() -> void:
 	m.add_row("lobby", "MENU")
 	m.pressed.connect(_on_pressed)
 	view.show_menu(m)
+
+
+static func _degrees(values: Array) -> Array:
+	return values.map(func(d: int) -> String: return str(d))

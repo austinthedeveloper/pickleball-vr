@@ -7,6 +7,10 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ## [Unreleased]
 
 ### Added
+- **PADDLE** (on MAIN), with profiles for paddle accessories. DEFAULT is
+  the paddle you had. PROFILE 1-3 set the ANGLE (-30 to 90), TWIST and
+  REACH (how far out the face sits) to fit an accessory, and the paddle
+  in your hand moves as you change them.
 - **Blocks keep their pace:** stick your paddle out against a hard-hit
   ball and it goes back with real speed, not a dead drop into the net.
 - **HANDS:** a new PRACTICE PARTNER drill (DRILL: HANDS). You and the
@@ -16,6 +20,8 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ### Changed
 - DINK PARTNER is now PRACTICE PARTNER, with DINKS and HANDS drills.
+- PADDLE ANGLE moved from MATCH SETUP to the PADDLE page, so it's
+  reachable from practice too.
 - **HANDS starts each rally with a soft feed** straight at you, then
   speeds up quickly to the DIFFICULTY's pace, which is a little harder
   than before.
