@@ -320,7 +320,15 @@ func hide_menu() -> void:
 ## Each sound family is its variants (0_hit, 0_hit_2 ..), one 3D player
 ## each, a variant picked per play (display only: the view's own roll).
 const FAMILIES := {"0_hit": 4, "0_hit_drive": 4, "0_hit_soft": 4, "0_hit_slice": 3,
-	"0_hit_smash": 2, "1_bounce": 3, "2_net": 1, "3_whistle": 1, "4_applause": 1}
+	"0_hit_smash": 2, "1_bounce": 3, "2_net": 1, "3_whistle": 1, "4_applause": 1, "5_ding": 1}
+## The target ding's pitch by ring: outer, inner, bullseye (a rising major
+## chord: 1, a third, a fifth).
+const DING_PITCH := [1.0, 1.26, 1.5]
+## Hit vibration (tuned: Tune's PADDLE page): strength in %, at rest and
+## gained per 10 m/s of ball speed; how long a clean hit buzzes, ms.
+static var HAPTIC_BASE := 50
+static var HAPTIC_GAIN := 40
+static var HAPTIC_MS := 50
 
 
 func _sounds() -> void:
@@ -353,6 +361,12 @@ func _play(n: String, at: Vector3, pitch := 1.0, db := 0.0) -> void:
 	p.pitch_scale = pitch
 	p.volume_db = db
 	p.play()
+
+
+## A ball on a dartboard: a light ding from the board, higher the closer
+## to the bullseye.
+func _ding(ring: int, at: Vector3) -> void:
+	_play("5_ding", at + Vector3(0, 0.3, 0), DING_PITCH[clampi(ring, 1, 3) - 1], -2.0)
 
 
 ## The hit's sound from the shot it made: a smash, a slice (backspin), a
@@ -507,7 +521,7 @@ func _on_event(e: Array) -> void:
 			if floor_target:
 				floor_target.flare()
 			board.announce(Drill.RING_TEXT[clampi(e[3], 1, 3)], Color(1, 0.85, 0.2), 1.0)
-			_play("4_applause", World.m(e[1], 0, e[2]), 1.3, -10.0)
+			_ding(e[3], World.m(e[1], 0, e[2]))
 		K.EVENT_DRILL:
 			var r: int = e[1]
 			if Perf.on and not demo:
@@ -525,6 +539,7 @@ func _on_event(e: Array) -> void:
 					announcer.say([COUNT_CALLS[n]], Announcer.HIGH)
 				if sim.drill.spots and sim.drill.last_ring > 0:
 					board.announce(Drill.RING_TEXT[sim.drill.last_ring], Color(0.5, 1, 0.5), 1.0)
+					_ding(sim.drill.last_ring, World.m(sim.drill.target_x, 0, sim.drill.target_z))
 			else:
 				board.announce(Drill.RESULT_TEXT[r], Color(0.5, 1, 0.5) if r == Drill.RESULT_GOOD else Color(1, 0.5, 0.35), 1.2)
 			const CALLS := {Drill.RESULT_OUT: "out", Drill.RESULT_NET: "net", Drill.RESULT_KITCHEN: "kitchen",
@@ -546,7 +561,8 @@ func _on_event(e: Array) -> void:
 			if xr and e[1] == 0:
 				# Crisp from the sweet spot, a duller, longer buzz off the rim.
 				var off := clampf(sim.last_offset / float(K.PADDLE_FACE_RADIUS), 0.0, 1.0)
-				xr.pulse((0.35 + speed / 250000.0) * (1.0 - 0.4 * off), 0.04 + 0.06 * off)
+				var strength := (HAPTIC_BASE + HAPTIC_GAIN * speed / 83333.0) / 100.0
+				xr.pulse(strength * (1.0 - 0.4 * off), HAPTIC_MS / 1000.0 + 0.06 * off)
 		K.EVENT_BOUNCE:
 			_play("1_bounce", World.m(e[1], 0, e[2]), 1.0, -4.0)
 		K.EVENT_NET:

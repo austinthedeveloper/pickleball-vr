@@ -18,6 +18,7 @@ const CM := "cm"                     ## um, as centimetres
 const MPS := "m/s"                   ## um per tick, as m/s
 const PCT := "%"
 const SEC := "s"                     ## ticks, as seconds
+const MS := "ms"                     ## milliseconds
 const RAW := ""
 
 ## Every tunable: id, group, label, script, name, index (-1 a scalar),
@@ -51,6 +52,9 @@ const ALL := [
 	["float_hard", "VOLLEYS", "PACE HARD", "res://sim/drill.gd", "FLOAT_PACE", 2, MPS, 1000, 15000, 90000],
 	["high", "ATTACK", "HIGH BALLS", "res://sim/drill.gd", "ATTACK_HIGH_PCT", -1, PCT, 5, 0, 100],
 	["block", "PADDLE", "BLOCK KEEPS PACE", "res://sim/k.gd", "BLOCK_E_256", -1, PCT, 3, 0, 256],
+	["buzz", "PADDLE", "HIT VIBRATION", "res://view/match_view.gd", "HAPTIC_BASE", -1, PCT, 5, 0, 100],
+	["buzz_gain", "PADDLE", "VIBRATION PER 10 M/S", "res://view/match_view.gd", "HAPTIC_GAIN", -1, PCT, 5, 0, 100],
+	["buzz_ms", "PADDLE", "VIBRATION LENGTH", "res://view/match_view.gd", "HAPTIC_MS", -1, MS, 5, 10, 200],
 ]
 
 static var _defaults := {}           ## id -> the source's value, read before any override
@@ -117,6 +121,7 @@ static func text(id: String, v: int) -> String:
 		MPS: return "%.1f M/S" % (v * K.TICK_HZ / 1e6)
 		PCT: return "%d%%" % (roundi(v * 100.0 / 256.0) if e[4] == "BLOCK_E_256" else v)
 		SEC: return "%.2f S" % (v / float(K.TICK_HZ))
+		MS: return "%d MS" % v
 	return str(v)
 
 

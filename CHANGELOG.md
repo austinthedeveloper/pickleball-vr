@@ -22,6 +22,8 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
   the scoreboard keeps your POINTS.
 
 ### Changed
+- **Stronger hit vibration**, and a light **ding** when a ball lands on
+  a target, higher toward the bullseye.
 - **Paddle profiles turn any way:** TWIST goes a full turn, ANGLE runs
   from -90 to 90, and a new TURN swings the face left or right. That
   covers paddle accessories that only hold the controller one way.

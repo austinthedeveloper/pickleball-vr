@@ -62,3 +62,14 @@ itself.
   Determinism within a run is untouched.
 - A new tunable is one line in `Tune.ALL`, plus `const` → `static var`.
   `test_tune` checks that every entry can be synced.
+
+## Amendment (2026-10-28): hit vibration
+
+The lead found the hit vibration "a bit too low". It's stronger now:
+- 50% at rest, up from 35%;
+- plus 40% per 10 m/s of ball speed, up from 33%;
+- a 50 ms pulse on a clean hit, up from 40 ms.
+
+All three are tunables on the PADDLE page (they live in
+`view/match_view.gd`): Tune reaches any script's static vars, not only
+the sim's.

@@ -88,6 +88,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-48 | DINKS: the target follows you across (ADR-019) | `feature/cld-vr-tuning` | Ready to test |
 | VR-49 | Passthrough: the court in your room (ADR-021) | `feature/cld-vr-timed` | Ready to test |
 | VR-50 | Timed runs (MODE) and RECORDS (ADR-022) | `feature/cld-vr-timed` | Ready to test |
+| VR-51 | Stronger hit vibration (tunable); a ding on target hits | `feature/cld-vr-timed` | Ready to test |
 
 ## Phase 1: singles
 

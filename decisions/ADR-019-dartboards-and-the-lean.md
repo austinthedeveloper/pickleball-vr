@@ -60,3 +60,12 @@ only moved after a hit. A partner drill's floor target now sits in the
 partner's half of their kitchen: straight across from you, or the
 diagonal on CROSS COURT. If you cross to the other side, more than
 40 cm past the middle, it moves to the new half before the next feed.
+
+## Amendment (2026-10-28): a ding
+
+A ball that lands on a board now plays a light ding from the board. The
+pitch rises with the ring: the outer ring is the root, the inner ring a
+third up, the bullseye a fifth up. It replaces the quiet applause the
+floor targets had. The tone is synthesized by
+`game/tools/make_ding.py` (a bell's partials, 0.7 s), so it's ours and
+can be remade.
