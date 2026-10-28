@@ -24,8 +24,12 @@ can show the real room behind the game.
   the score.
 - **The headset.** `MatchView.set_passthrough` makes the viewport's
   background transparent and sets OpenXR's environment blend mode to
-  ALPHA_BLEND when the runtime offers it. Meta's passthrough is enabled
-  in the export as optional (`meta_xr_features/passthrough=1`). On a
+  ALPHA_BLEND when the runtime offers it. Meta's passthrough needs two switches:
+  the Meta passthrough extension in the project
+  (`xr/openxr/extensions/meta/passthrough`), and the export option
+  (`meta_xr_features/passthrough=1`, optional), which puts
+  `com.oculus.feature.PASSTHROUGH` in the manifest. The export option
+  alone does nothing. On a
   runtime without alpha blend, or in flat mode, it stays opaque, and
   only the scenery is gone.
 - **FOCUS** has nothing left to dim except the court-side scoreboard.
