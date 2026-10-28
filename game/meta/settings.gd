@@ -18,6 +18,9 @@ const PROFILE_REACHES := [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28,
 
 ## Tests point this at their own file (the runner does), never the player's.
 static var default_path := "user://settings.cfg"
+## Tests pin the seed (the runner does): a match's is the clock's otherwise,
+## and a test that passes on one second and fails on the next is no test.
+static var seed_override := -1
 
 var path := default_path
 var doubles := false
@@ -157,7 +160,7 @@ func match_config() -> SimTypes.MatchConfig:
 	cfg.assist = ASSISTS[clampi(assist, 0, 3)]
 	cfg.points_to_win = POINTS[clampi(points, 0, 3)]
 	cfg.win_by_2 = win_by_2
-	cfg.seed = int(Time.get_unix_time_from_system()) & 0x7fffffff
+	cfg.seed = seed_override if seed_override >= 0 else int(Time.get_unix_time_from_system()) & 0x7fffffff
 	Opponents.apply(cfg, opponent)
 	cfg.venue = Venues.resolve(venue, opponent)
 	return cfg
