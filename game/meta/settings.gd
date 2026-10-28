@@ -21,6 +21,12 @@ static var default_path := "user://settings.cfg"
 ## Tests pin the seed (the runner does): a match's is the clock's otherwise,
 ## and a test that passes on one second and fails on the next is no test.
 static var seed_override := -1
+## Developer tools (the TUNING pages, ADR-020): debug builds, not tests.
+static var dev := OS.is_debug_build()
+
+
+static func dev_tools() -> bool:
+	return dev
 
 var path := default_path
 var doubles := false

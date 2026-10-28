@@ -52,7 +52,8 @@ const ZONE_RIGHT := 4
 const ZONE_NAMES := ["ANY", "KITCHEN", "DEEP", "LEFT", "RIGHT"]
 ## A dink that lands just past the kitchen line is still a good dink
 ## (ADR-010 amended twice): the zone runs 75 cm (2.5 ft) past it.
-const DINK_ZONE := K.KITCHEN_DEPTH + 750000
+static var DINK_PAST := 750000        ## tuned (Tune); DINK_ZONE follows it
+static var DINK_ZONE := K.KITCHEN_DEPTH + DINK_PAST
 
 ## Lesson rules.
 const RULE_NO_VOLLEY := 1            ## let it bounce first
@@ -92,15 +93,15 @@ const KIND_COUNTS := ["DINKS", "HANDS", "RESETS", "SPOTS", "LANES", "VOLLEYS", "
 ## CALL THE SPOT: the spot is a dartboard (ADR-019) this big, and when it
 ## lights: EASY as they hit, MEDIUM as the ball crosses the net, HARD as it
 ## bounces on your side.
-const SPOT_RADIUS := [1000000, 850000, 700000]
+static var SPOT_RADIUS := [1000000, 850000, 700000]
 ## A dartboard's rings, from the outside in: the outer ring, the inner
 ## ring, the bullseye, at these fractions of its radius; each scores its
 ## number (1, 2, 3).
-const RING_EDGES := [100, 66, 33]
+static var RING_EDGES := [100, 66, 33]
 const RING_TEXT := ["", "+1", "+2", "BULLSEYE! +3"]
 ## Practice judges the kitchen from your headset, and you lean: you're in
 ## only when your head is this far past the line (ADR-019).
-const KITCHEN_LEAN := 450000
+static var KITCHEN_LEAN := 450000
 ## LINE AND CROSS: which lane counts.
 const LANE_LINE := 0
 const LANE_CROSS := 1
@@ -108,13 +109,13 @@ const LANE_ALTERNATE := 2
 const LANE_NAMES := ["LINE", "CROSS", "ALTERNATE"]
 ## VOLLEY DINKS: a floater through your kitchen line at this height, slow.
 const FLOAT_Y := [850000, 750000, 650000]
-const FLOAT_PACE := [36000, 42000, 48000]
+static var FLOAT_PACE := [36000, 42000, 48000]
 ## ATTACK OR DINK: 30% come up high, landing in your kitchen to sit up at
 ## your line.
 ## DIFFICULTY is how little higher they are than the rest (over the net:
 ## 1 m against 30 cm on EASY, 55 against 12 on HARD). A speed-up is a ball
 ## you send back at 7 m/s or more over the ground.
-const ATTACK_HIGH_PCT := 30
+static var ATTACK_HIGH_PCT := 30
 const ATTACK_HIGH_CLEAR := [1000000, 750000, 550000]
 const ATTACK_LOW_CLEAR := [300000, 200000, K.NET_CLEAR]
 const SPEEDUP_V := 58333
@@ -130,7 +131,7 @@ const SETUP := 6                     ## the partner shows the next ball, drops i
 ## Every fresh partner feed has a lead-in you can read (ADR-016 amended):
 ## the ball held up in their hand, then dropped and struck as it falls,
 ## so you see where it comes from and when; the shot itself stays fast.
-const HOLD_TICKS := 42               ## 0.35 s held up
+static var HOLD_TICKS := 42               ## 0.35 s held up
 const HOLD_Y := 1200000             ## chest high, in front of the free hand
 const DROP_VY := 12000               ## a little lift as it leaves the hand (1.4 m/s)
 
@@ -138,16 +139,16 @@ const DROP_VY := 12000               ## a little lift as it leaves the hand (1.4
 ## rally to go on: every ball it reaches comes back as a dink about a metre
 ## in front of you, never away from you, never a winner.
 const PARTNER_Z := -(K.KITCHEN_DEPTH + 350000)
-const PARTNER_SPEED := 30000         ## 3.6 m/s
+static var PARTNER_SPEED := 30000         ## 3.6 m/s
 const PARTNER_REACT := 22            ## ticks after your hit it starts moving (0.18 s)
 ## HANDS (ADR-014): both at the kitchen line, keeping it alive in the air.
 ## The partner volleys at you at DIFFICULTY's pace (7, 10, 13 m/s), waist to
 ## chest high, and reads your volley faster than a dink.
-const HANDS_PACE := [65000, 93000, 120000]   ## 7.8, 11.2, 14.4 m/s
+static var HANDS_PACE := [65000, 93000, 120000]   ## 7.8, 11.2, 14.4 m/s
 ## A rally starts soft and straight at you, then speeds up: the feed at
 ## 5 m/s, then a jump (the reply to your first ball is already half way
 ## to full pace), full by your HANDS_RAMP'th ball back (ADR-014 amended).
-const HANDS_FEED := 42000
+static var HANDS_FEED := 42000
 const HANDS_RAMP := 3
 const HANDS_REACT := 12              ## 0.1 s
 const HANDS_HEIGHT := 950000         ## where it comes at you, give or take 15 cm
@@ -157,19 +158,19 @@ const HANDS_HIGH := 1800000          ## a chest-high volley is still a volley to
 ## into their dink zone, under the pop-up line. DIFFICULTY is the drive's
 ## pace (9, 11, 13 m/s) and how low the line is over the net (60, 45, 30 cm).
 const RESET_SPOT_Z := K.KITCHEN_DEPTH + 1800000   ## mid-court, about 3.9 m from the net
-const RESET_PACE := [75000, 92000, 108000]
+static var RESET_PACE := [75000, 92000, 108000]
 const RESET_HEIGHT := 550000         ## at you: shins to hips, give or take 20 cm
-const POPUP_OVER := [600000, 450000, 300000]
+static var POPUP_OVER := [600000, 450000, 300000]
 ## A dink's difficulty is how low it skims the tape: EASY floats 60 cm
 ## over it (slow, a big bounce), HARD skims 12 cm (fast and low).
 const PARTNER_CLEAR := [600000, 300000, K.NET_CLEAR]
-const PARTNER_PACE := [30000, 38000, 46000]
+static var PARTNER_PACE := [30000, 38000, 46000]
 const PACE_NAMES := ["EASY", "MEDIUM", "HARD"]
 ## SPREAD: how far to your side its dinks come, um: [nearest, furthest].
 const SPREADS := [[100000, 350000], [250000, 750000], [500000, 1200000]]
 const SPREAD_NAMES := ["TIGHT", "NORMAL", "WIDE"]
 ## Floor targets: a dartboard on their side; land on it for points.
-const TARGET_RADIUS := 800000
+static var TARGET_RADIUS := 800000
 
 ## The machine: centred, the nozzle at 90 cm.
 const MACHINE_Y := 900000

@@ -67,6 +67,7 @@ func show_from(sim: Sim, delta: float) -> void:
 	var at := World.m(d.target_x, 0, d.target_z) + Vector3(0, 0.025, 0)
 	position = position.lerp(at, clampf(delta * 8.0, 0.0, 1.0)) if _flash > 0.0 and not spot else at
 	var pulse := 1.0 + 0.04 * sin(_t * 4.0) + 0.6 * _flash
+	pulse *= (d.spot_radius() if spot else Drill.TARGET_RADIUS) / float(radius)   # tuned live (ADR-020)
 	scale = Vector3(pulse, 1, pulse)
 	for i in _discs.size():
 		(_discs[i].material_override as StandardMaterial3D).albedo_color.a = DISC_ALPHA[i] + 0.5 * _flash

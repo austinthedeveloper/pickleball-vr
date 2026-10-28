@@ -28,6 +28,8 @@ func _ready() -> void:
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 		use_xr = true
 	settings.load_settings()
+	if Settings.dev_tools():
+		Tune.load_saved()
 	var args := OS.get_cmdline_user_args()
 	if args.has("demo") or args.has("play") or args.has("doubles"):
 		if args.has("doubles"):
@@ -148,6 +150,10 @@ func _page(id: String) -> Menu3D:
 				var done: bool = settings.lessons_done.has(l["id"])
 				m.add_row("lesson_%d" % i, "%d  %s%s" % [i + 1, l["title"], "   - DONE" if done else ""])
 			m.add_row("back", "BACK")
+		"tune":
+			m = _tune_menu("")
+		_ when id.begins_with("tune_"):
+			m = _tune_menu(id.trim_prefix("tune_"))
 		_:
 			m.title = "PICKLEBALL '94 VR"
 			m.add_row("to_match", "PLAY A MATCH")
@@ -155,12 +161,19 @@ func _page(id: String) -> Menu3D:
 			m.add_row("to_machine", "BALL MACHINE")
 			m.add_row("to_lessons", "HOW TO PLAY")
 			m.add_row("to_paddle", "PADDLE")
+			if Settings.dev_tools():
+				m.add_row("to_tune", "TUNING")
 			if not use_xr:
 				m.add_row("quit", "QUIT")
 	return m
 
 
 func _on_changed(id: String, index: int) -> void:
+	if id.begins_with("tune:"):
+		var t := id.trim_prefix("tune:")
+		Tune.set_value(t, _tune_steps[t][index])
+		Tune.save()
+		return
 	match id:
 		"mode": settings.doubles = index == 1
 		"vs": settings.opponent = index
@@ -198,6 +211,9 @@ func _on_changed(id: String, index: int) -> void:
 
 
 func _on_pressed(id: String) -> void:
+	if id == "to_tune" or id.begins_with("tune"):
+		_tune_pressed(id)
+		return
 	if id.begins_with("lesson_"):
 		_start_lesson.call_deferred(int(id.trim_prefix("lesson_")))
 		return
@@ -305,9 +321,74 @@ func _on_pause() -> void:
 	m.title = "PAUSED"
 	m.add_row("resume", "RESUME")
 	m.add_row("again", "RESTART")
+	if Settings.dev_tools():
+		m.add_row("to_tune", "TUNING")
 	m.add_row("lobby", "MENU")
 	m.pressed.connect(_on_pressed)
 	view.show_menu(m)
+
+
+# --- Developer tuning (ADR-020) --------------------------------------------------------
+
+var _tune_steps := {}                ## tunable id -> the raw values its row steps through
+
+
+## The TUNING pages: the groups (`group` ""), or one group's numbers. A
+## value with a * differs from the source's.
+func _tune_menu(group: String) -> Menu3D:
+	var m := Menu3D.new()
+	if group == "":
+		m.title = "TUNING"
+		for g in Tune.GROUPS:
+			var n := Tune.in_group(g).filter(func(e: Array) -> bool: return Tune.changed(e[0])).size()
+			m.add_row("tune_" + g, g + ("   *%d" % n if n > 0 else ""))
+		m.add_row("tune_reset:", "RESET ALL")
+	else:
+		m.title = "TUNING: " + group
+		for e in Tune.in_group(group):
+			var steps := Tune.steps(e[0])
+			_tune_steps[e[0]] = steps
+			var dflt := Tune.default_of(e[0])
+			var names := steps.map(func(v: int) -> String: return Tune.text(e[0], v) + ("" if v == dflt else " *"))
+			m.add_row("tune:" + e[0], e[2], names, steps.find(Tune.value(e[0])))
+		m.add_row("tune_reset:" + group, "RESET " + group)
+	if _playing():
+		m.add_row("resume", "RESUME")
+	m.add_row("tune_back:" + group, "BACK")
+	return m
+
+
+## A match or drill is on (paused), not the lobby.
+func _playing() -> bool:
+	return view != null and not view.spectate
+
+
+func _tune_pressed(id: String) -> void:
+	var to := ""                     # the TUNING page to show next
+	if id.begins_with("tune_reset:"):
+		var g := id.trim_prefix("tune_reset:")
+		Tune.reset(g)
+		Tune.save()
+		to = "tune_" + g if g != "" else "tune"
+	elif id.begins_with("tune_back:"):
+		if id == "tune_back:":
+			if _playing():
+				_on_pause()
+			else:
+				lobby.call_deferred("main")
+			return
+		to = "tune"
+	else:
+		to = id                      # "to_tune" or "tune_GROUP"
+		if to == "to_tune":
+			to = "tune"
+	if _playing():
+		var m := _page(to)
+		m.changed.connect(_on_changed)
+		m.pressed.connect(_on_pressed)
+		view.show_menu(m)
+	else:
+		lobby.call_deferred(to)
 
 
 static func _degrees(values: Array) -> Array:

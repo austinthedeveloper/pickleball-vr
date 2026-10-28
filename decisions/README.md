@@ -25,5 +25,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [017](ADR-017-kitchen-drills.md) | Four kitchen drills, and the swing log by mode |
 | [018](ADR-018-rigged-bodies.md) | Rigged bodies for the partner and the CPU players |
 | [019](ADR-019-dartboards-and-the-lean.md) | Dartboard targets, and a lean allowance at the kitchen line |
+| [020](ADR-020-dev-tuning.md) | Developer tuning pages, synced back as the defaults |
 
-Next: ADR-020.
+Next: ADR-021.

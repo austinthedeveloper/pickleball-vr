@@ -83,6 +83,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-43 | Cloth shells: a real shirt and shorts (ADR-018) | `feature/cld-vr-body` | Ready to test |
 | VR-44 | Dartboard targets: rings and points (ADR-019) | `feature/cld-vr-dartboard` | Ready to test |
 | VR-45 | Practice: leaning over the kitchen line isn't a fault (ADR-019) | `feature/cld-vr-dartboard` | Ready to test |
+| VR-46 | TUNING pages (debug builds) and tune.sh sync (ADR-020) | `feature/cld-vr-tuning` | Ready to test |
 
 ## Phase 1: singles
 
@@ -145,6 +146,10 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-46, ready to test.** PAUSED > TUNING (debug builds): step the
+drills' numbers while you play. Say "sync the tuning" and
+`game/tools/tune.sh sync` makes them the defaults.
 
 **VR-43 to VR-45, ready to test.** The partner wears a real shirt and
 shorts (ADR-018). Targets are dartboards that score 1, 2 or 3 points,

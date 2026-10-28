@@ -63,7 +63,7 @@ const PADDLE_HARD_V := 75000         ## 9 m/s
 ## 0.6, not the hard-hit 0.34, when the face barely moves. It ramps in from
 ## 6 m/s of incoming speed (full at 9) and fades out as the swing reaches
 ## 5 m/s, so dinks and swings keep the tuning above.
-const BLOCK_E_256 := 154
+static var BLOCK_E_256 := 154
 const BLOCK_FROM_V := 50000          ## 6 m/s
 const BLOCK_FULL_V := 75000          ## 9 m/s
 const BLOCK_SWING_V := 41667         ## 5 m/s: a full swing gets no block bonus
