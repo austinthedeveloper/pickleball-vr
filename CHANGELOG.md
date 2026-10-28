@@ -7,6 +7,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ## [Unreleased]
 
 ### Added
+- **The coach tablet in the headset:** pause a practice drill and the
+  coaching panel stands beside you. It shows your run, where your shots
+  landed and what the numbers say. Point at it to place the target, the
+  next feed, the machine and its bounce, or to set and start the
+  machine.
 - **The coach's ball machine:** from the phone, start the machine, place
   it anywhere on their side, tap where its balls should bounce, and set
   their speed, spin, height over the net and how often they come.

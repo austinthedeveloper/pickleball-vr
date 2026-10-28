@@ -96,3 +96,30 @@ to bounce. They can also control ball speed, spin, and height."
 `test_coach` checks the bounce lands within 30 cm of the coach's spot
 across speeds, spins, heights and positions, and that it crosses the net
 at least as high as asked.
+
+## Amendment (2026-10-28): the coach tablet in the headset (C-22)
+
+"What if the coach companion app also had a representation in the game?
+So when you pause, you'll see the companion off to the side."
+
+The phone's page can't run in the headset: there's no web view on the
+Quest in Godot. So the tablet is native:
+- **What it is.** A 2D panel of Godot Controls in a SubViewport, on a
+  quad. It stands about 50° to your left of PAUSED, turned to you. It
+  appears only in practice drills: not matches, not lessons.
+- **Pointing.** The laser or the mouse hits the quad, and the hit
+  becomes the panel's own mouse events, so its buttons are real buttons.
+  A new panel ignores the click that opened it, as menus do.
+- **What it shows.** The run (score or streak, time, good %, net
+  clearance), the court with this session's shots, the target, the feed
+  and the coach's machine, what the numbers say, and forehand against
+  backhand.
+- **What it does.** Court taps place the target, the next feed, the
+  machine or its bounce. Steppers set the machine's speed, spin, height
+  and interval, and START THE MACHINE starts it.
+- **Same paths as the phone.** Everything goes through
+  `CoachDesk.handle`, so the commands are the phone's: sim commands stay
+  sim commands.
+- **No phone needed.** It works with COACH MODE off; the desk always
+  keeps the session's shots (`live`). Its insights are a GDScript
+  version of the page's (`CoachDesk.insights`).

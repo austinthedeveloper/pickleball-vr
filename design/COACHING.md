@@ -35,6 +35,7 @@ deterministic: a rally can be re-run exactly.
 | C-19 | Two coaches or a parent watching | Built | Several phones can connect at once already |
 | C-20 | Remote coaching over the internet | Later | Needs a relay server: cost and hosting |
 | C-21 | The coach's ball machine | Built | START THE MACHINE; tap Machine (their side) and Bounce (yours); speed 3-20 m/s, spin from backspin to topspin, height over the net, a ball every 1.25-8 s. `CMD_MACHINE`; ADR-024 |
+| C-22 | The coach tablet in the headset | Built | Beside PAUSED in practice drills: the run, the court (tap: target, feed, machine, bounce), insights, forehand/backhand, the machine's steppers and START. `view/coach_tablet.gd`, through CoachDesk; works with COACH MODE off |
 
 ## Built in one go (2026-10-28, ADR-024)
 

@@ -23,6 +23,8 @@ var session: Sessions
 var challenge := {}                  ## {kind, n, progress, done}
 var workout := {}                    ## {name, steps, step}
 var marks: Array = []                ## [shape, a: Vector2, b: Vector2], put back on every new view
+var live: Array = []                 ## this session's shots, for the tablet (C-22)
+const LIVE_KEEP := 400
 var machine_on := false              ## the coach started the ball machine: their settings feed it (C-21)
 var _t := 0.0
 
@@ -88,6 +90,9 @@ func on_shot(info: Dictionary) -> void:
 	if session == null or session.player != s.player:
 		session = Sessions.start(s.player)
 	session.add_shot(info)
+	live.append(info)
+	if live.size() > LIVE_KEEP:
+		live.pop_front()
 	_challenge_shot(info)
 	_send(info)
 
@@ -111,6 +116,75 @@ func on_time_up(score: int, good: int, best: int) -> void:
 	get_tree().create_timer(NEXT_STEP).timeout.connect(func() -> void:
 		if not workout.is_empty() and int(workout["step"]) == at:
 			_run_step())
+
+
+# --- What the numbers say (C-15, for the tablet; the phone's page has its own) -----
+
+const READY_M := 0.8
+
+
+static func _mean(a: Array, key: String) -> float:
+	var t := 0.0
+	for s in a:
+		t += float(s[key])
+	return t / a.size() if not a.is_empty() else 0.0
+
+
+static func _good_pct(a: Array) -> int:
+	return roundi(100.0 * a.filter(func(s: Dictionary) -> bool: return s.get("good", false)).size() / a.size()) if not a.is_empty() else 0
+
+
+## Plain findings from the shots: net clearance, the weaker side, low
+## contact, the ready paddle, standing back.
+static func insights(shots: Array) -> Array[String]:
+	var out: Array[String] = []
+	var hit := shots.filter(func(s: Dictionary) -> bool: return s.has("speed"))
+	if hit.size() < 8:
+		out.append("A FEW MORE SHOTS FIRST: INSIGHTS NEED 8.")
+		return out
+	var cl := hit.filter(func(s: Dictionary) -> bool: return s.has("clear") and float(s["clear"]) >= 0.0)
+	var nets := hit.filter(func(s: Dictionary) -> bool: return String(s.get("result", "")).contains("NET")).size()
+	if cl.size() >= 6:
+		var a := _mean(cl, "clear")
+		if a > 0.45:
+			out.append("BALLS CROSS %d CM OVER THE NET: BRING THEM DOWN." % roundi(a * 100))
+		elif a < 0.15 and nets >= 3:
+			out.append("SKIMMING THE TAPE (%d CM), %d IN THE NET: A TOUCH MORE LIFT." % [roundi(a * 100), nets])
+		else:
+			out.append("NET CLEARANCE %d CM: RIGHT FOR A DINK." % roundi(a * 100))
+	var fh := hit.filter(func(s: Dictionary) -> bool: return s.get("side", "") == "FH")
+	var bh := hit.filter(func(s: Dictionary) -> bool: return s.get("side", "") == "BH")
+	if fh.size() >= 5 and bh.size() >= 5:
+		var f := _good_pct(fh)
+		var b := _good_pct(bh)
+		if absi(f - b) >= 15:
+			out.append("%s IS THE WEAKER SIDE: %d%% GOOD AGAINST %d%%." % ["BACKHAND" if f > b else "FOREHAND", mini(f, b), maxi(f, b)])
+	var good := hit.filter(func(s: Dictionary) -> bool: return s.get("good", false))
+	var miss := hit.filter(func(s: Dictionary) -> bool: return not s.get("good", false) and not String(s.get("result", "")).contains("NET"))
+	if good.size() >= 5 and miss.size() >= 5:
+		var hg := _mean(good, "height")
+		var hm := _mean(miss, "height")
+		if hg - hm > 0.08:
+			out.append("MISSES COME OFF LOWER CONTACT (%.2f M AGAINST %.2f): GET LOWER." % [hm, hg])
+	var rd := hit.filter(func(s: Dictionary) -> bool: return s.has("ready"))
+	if rd.size() >= 8:
+		var up := rd.filter(func(s: Dictionary) -> bool: return float(s["ready"]) >= READY_M).size()
+		out.append("PADDLE UP AS THEY HIT: %d%% OF THE TIME." % roundi(100.0 * up / rd.size()))
+	var bl := hit.filter(func(s: Dictionary) -> bool: return s.has("behind"))
+	if bl.size() >= 6 and _mean(bl, "behind") > 0.4:
+		out.append("STANDING %d CM BEHIND THE KITCHEN LINE: MOVE UP." % roundi(_mean(bl, "behind") * 100))
+	if out.is_empty():
+		out.append("NOTHING STANDS OUT YET: KEEP GOING.")
+	return out
+
+
+## Forehand against backhand, good %, one line.
+static func split_line(shots: Array) -> String:
+	var fh := shots.filter(func(s: Dictionary) -> bool: return s.get("side", "") == "FH")
+	var bh := shots.filter(func(s: Dictionary) -> bool: return s.get("side", "") == "BH")
+	if fh.is_empty() and bh.is_empty():
+		return ""
+	return "FOREHAND %d%% OF %d   BACKHAND %d%% OF %d" % [_good_pct(fh), fh.size(), _good_pct(bh), bh.size()]
 
 
 # --- Challenges (C-12) ---------------------------------------------------------------
@@ -304,6 +378,7 @@ func handle(msg: Dictionary) -> void:
 				s.players.append(name)
 			s.player = name
 			s.save()
+			live = []
 			session = null                   # the next shot starts their session
 		"sessions":
 			_send({"type": "sessions", "list": Sessions.list(s.player)})

@@ -57,6 +57,7 @@ var lesson_label: Label3D
 var cue_label: Label3D               ## a coach's cue, over the net (C-7)
 var challenge_label: Label3D         ## a coach's challenge and how it's going (C-12)
 var marks: Node3D                    ## a coach's zones and lines on the court (C-14)
+var tablet: CoachTablet              ## the coach tablet beside PAUSED (C-22)
 const MAX_MARKS := 8
 var _path: Array = []                ## the ball since the last hit: [x, y, z] in m, every PATH_EVERY ticks (C-17)
 const PATH_EVERY := 3
@@ -407,6 +408,26 @@ func show_menu(m: Menu3D) -> void:
 func hide_menu() -> void:
 	if menu:
 		menu.visible = false
+	if tablet:
+		tablet.visible = false
+
+
+## The coach tablet (C-22): beside the menu, to your left, turned to you.
+func show_tablet(desk: CoachDesk) -> void:
+	if tablet == null:
+		tablet = CoachTablet.new()
+		tablet.desk = desk
+		add_child(tablet)
+	var head := xr.head_position() if xr else flat.head_position()
+	var fwd := xr.forward() if xr else flat.forward()
+	var right := fwd.cross(Vector3.UP).normalized()
+	var at := head + fwd.rotated(Vector3.UP, 0.85) * 1.4
+	at.y = head.y - 0.15
+	tablet.global_position = at
+	tablet.look_at(at + (at - head) * Vector3(1, 0, 1), Vector3.UP)
+	tablet.lock = Menu3D.SWITCH_LOCK
+	tablet.visible = true
+	tablet.refresh()
 
 
 ## Each sound family is its variants (0_hit, 0_hit_2 ..), one 3D player
@@ -579,6 +600,8 @@ func _drive_menu() -> void:
 		return
 	var ray: Array[Vector3] = xr.pointer() if xr else flat.pointer()
 	var click := xr.click if xr else flat.click
+	if tablet and tablet.visible and tablet.point(ray[0], ray[1], click):
+		return                           # on the tablet: not the menu's
 	var nav := xr.nav if xr else flat.nav
 	if nav.y != 0:
 		menu.move(nav.y)

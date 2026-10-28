@@ -448,6 +448,8 @@ func _on_pause() -> void:
 	m.add_row("lobby", "MENU")
 	m.pressed.connect(_on_pressed)
 	view.show_menu(m)
+	if view.sim.drill and view.sim.drill.goal == 0:
+		view.show_tablet(desk)           # the coach tablet, beside it (C-22)
 
 
 # --- Developer tuning (ADR-020) --------------------------------------------------------
