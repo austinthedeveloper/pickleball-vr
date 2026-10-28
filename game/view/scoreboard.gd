@@ -58,7 +58,7 @@ func _label(parent: Node3D, at: Vector3, size: int, c: Color) -> Label3D:
 func show_from(sim: Sim, delta: float) -> void:
 	if drill:
 		var d := sim.drill
-		var tgt := "   TARGETS %d" % d.target_hits if d.targets else ""
+		var tgt := "   POINTS %d" % d.points if d.targets or d.spots else ""
 		if d.partner:
 			# Dinks in their kitchen in a row: a ball outside it starts again.
 			score_label.text = "%d" % d.streak

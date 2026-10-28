@@ -8,8 +8,16 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ### Added
 - **The partner and the CPU players have real bodies:** a full 3D person
-  instead of shapes, with a shirt, shorts, shoes and hair, moving just
-  as before. In doubles, the ladder's players are men and women.
+  instead of shapes, in a real T-shirt and shorts, with shoes and hair,
+  moving just as before. In doubles, the ladder's players are men and
+  women.
+- **Targets are dartboards:** bigger, with an outer ring (1 point), an
+  inner ring (2) and a bullseye (3). Anywhere on the board counts, and
+  the scoreboard keeps your POINTS.
+
+### Changed
+- **Leaning over the kitchen line isn't a fault in practice:** you're
+  only in when your head is 45 cm past the line.
 - **Four new kitchen drills** on PRACTICE PARTNER:
   - **CALL THE SPOT:** a green spot lights on their side for each ball;
     dink onto it. It lights later and gets smaller the harder you set it.

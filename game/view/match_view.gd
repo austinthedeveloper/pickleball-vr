@@ -474,12 +474,15 @@ func _on_event(e: Array) -> void:
 		K.EVENT_TARGET:
 			if floor_target:
 				floor_target.flare()
-			board.announce("TARGET!", Color(1, 0.85, 0.2), 1.0)
+			board.announce(Drill.RING_TEXT[clampi(e[3], 1, 3)], Color(1, 0.85, 0.2), 1.0)
 			_play("4_applause", World.m(e[1], 0, e[2]), 1.3, -10.0)
 		K.EVENT_DRILL:
 			var r: int = e[1]
 			if Perf.on and not demo:
-				_log_line("RESULT %s | streak %d" % [Drill.RESULT_TEXT[r], e[2]])
+				var board_at := ""
+				if sim.drill.last_off >= 0:
+					board_at = " | ring %d, %.2f m off" % [sim.drill.last_ring, sim.drill.last_off / float(K.M)]
+				_log_line("RESULT %s | streak %d%s" % [Drill.RESULT_TEXT[r], e[2], board_at])
 			var rallying := sim.drill.partner and r == Drill.RESULT_GOOD
 			if rallying:
 				# The clips that say the number, so the call matches the board.
@@ -488,6 +491,8 @@ func _on_event(e: Array) -> void:
 				var n: int = e[2]                # the streak
 				if COUNT_CALLS.has(n):
 					announcer.say([COUNT_CALLS[n]], Announcer.HIGH)
+				if sim.drill.spots and sim.drill.last_ring > 0:
+					board.announce(Drill.RING_TEXT[sim.drill.last_ring], Color(0.5, 1, 0.5), 1.0)
 			else:
 				board.announce(Drill.RESULT_TEXT[r], Color(0.5, 1, 0.5) if r == Drill.RESULT_GOOD else Color(1, 0.5, 0.35), 1.2)
 			const CALLS := {Drill.RESULT_OUT: "out", Drill.RESULT_NET: "net", Drill.RESULT_KITCHEN: "kitchen",

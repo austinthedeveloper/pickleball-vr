@@ -24,5 +24,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [016](ADR-016-resets.md) | RESETS, blocking speed-ups into the kitchen |
 | [017](ADR-017-kitchen-drills.md) | Four kitchen drills, and the swing log by mode |
 | [018](ADR-018-rigged-bodies.md) | Rigged bodies for the partner and the CPU players |
+| [019](ADR-019-dartboards-and-the-lean.md) | Dartboard targets, and a lean allowance at the kitchen line |
 
-Next: ADR-019.
+Next: ADR-020.

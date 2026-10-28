@@ -1,5 +1,6 @@
 ## The kitchen drills (ADR-017): CALL THE SPOT, LINE AND CROSS, VOLLEY
-## DINKS and ATTACK OR DINK; and the swing log's mode names.
+## DINKS and ATTACK OR DINK; and the swing log's mode names. Dartboards
+## and the kitchen lean (ADR-019).
 extends TestSuite
 
 
@@ -214,3 +215,39 @@ func test_the_lane_row_and_mode_names() -> void:
 	s.partner_lane = Drill.LANE_CROSS
 	eq(s.partner_config().drill.mode_name(), "LINE AND CROSS HARD CROSS", "with the lane")
 	eq(s.machine_config().drill.mode_name(), "MACHINE DRIVE MEDIUM", "the machine")
+
+
+func test_dartboard_rings_score() -> void:
+	var r := 900000
+	eq(Drill.ring(0, r), 3, "dead centre: the bullseye")
+	eq(Drill.ring(r * 33 / 100, r), 3, "the bullseye's edge")
+	eq(Drill.ring(r / 2, r), 2, "the inner ring")
+	eq(Drill.ring(r * 9 / 10, r), 1, "the outer ring")
+	eq(Drill.ring(r + 1, r), 0, "off the board")
+	# A spot: on the board is good and scores its ring; off it isn't.
+	var d := Drill.new()
+	d.partner = true
+	d.zone = Drill.ZONE_KITCHEN
+	d.kind = Drill.KIND_SPOTS
+	d.partner_pace = 1
+	d.target_x = 1500000
+	d.target_z = -1000000
+	eq(d._placed(1500000, -1000000), Drill.RESULT_GOOD, "the bullseye")
+	eq(d.points, 3, "3 points")
+	eq(d._placed(1500000 + 700000, -1000000), Drill.RESULT_GOOD, "70 cm off: the outer ring, still on")
+	eq(d.points, 4, "and 1 more")
+	eq(d._placed(1500000 + 900000, -1000000), Drill.RESULT_SPOT, "90 cm off: off the board at MEDIUM")
+	eq(d.last_ring, 0, "no ring")
+	check(Drill.SPOT_RADIUS[0] > Drill.SPOT_RADIUS[2], "the board shrinks as it gets harder")
+
+
+func test_leaning_over_the_kitchen_line_is_not_a_fault() -> void:
+	var d := Drill.new()
+	var p := SimTypes.Player.new()
+	p.x = 0
+	p.z = K.KITCHEN_DEPTH + 100000
+	check(not d.in_kitchen(p), "behind the line")
+	p.z = K.KITCHEN_DEPTH - 300000
+	check(not d.in_kitchen(p), "head 30 cm over the line: leaning, not in")
+	p.z = K.KITCHEN_DEPTH - 600000
+	check(d.in_kitchen(p), "head 60 cm in: you stepped in")

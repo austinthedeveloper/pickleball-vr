@@ -89,9 +89,18 @@ const KIND_ATTACK := 6               ## ATTACK OR DINK: speed up the high ones, 
 const KIND_NAMES := ["DINKS", "HANDS", "RESETS", "CALL THE SPOT", "LINE AND CROSS", "VOLLEY DINKS",
 	"ATTACK OR DINK"]
 const KIND_COUNTS := ["DINKS", "HANDS", "RESETS", "SPOTS", "LANES", "VOLLEYS", "GOOD CALLS"]
-## CALL THE SPOT: the spot's radius, and when it lights: EASY as they hit,
-## MEDIUM as the ball crosses the net, HARD as it bounces on your side.
-const SPOT_RADIUS := [600000, 450000, 350000]
+## CALL THE SPOT: the spot is a dartboard (ADR-019) this big, and when it
+## lights: EASY as they hit, MEDIUM as the ball crosses the net, HARD as it
+## bounces on your side.
+const SPOT_RADIUS := [1000000, 850000, 700000]
+## A dartboard's rings, from the outside in: the outer ring, the inner
+## ring, the bullseye, at these fractions of its radius; each scores its
+## number (1, 2, 3).
+const RING_EDGES := [100, 66, 33]
+const RING_TEXT := ["", "+1", "+2", "BULLSEYE! +3"]
+## Practice judges the kitchen from your headset, and you lean: you're in
+## only when your head is this far past the line (ADR-019).
+const KITCHEN_LEAN := 450000
 ## LINE AND CROSS: which lane counts.
 const LANE_LINE := 0
 const LANE_CROSS := 1
@@ -159,8 +168,8 @@ const PACE_NAMES := ["EASY", "MEDIUM", "HARD"]
 ## SPREAD: how far to your side its dinks come, um: [nearest, furthest].
 const SPREADS := [[100000, 350000], [250000, 750000], [500000, 1200000]]
 const SPREAD_NAMES := ["TIGHT", "NORMAL", "WIDE"]
-## Floor targets: a circle on their side; land in it for a TARGET HIT.
-const TARGET_RADIUS := 450000
+## Floor targets: a dartboard on their side; land on it for points.
+const TARGET_RADIUS := 800000
 
 ## The machine: centred, the nozzle at 90 cm.
 const MACHINE_Y := 900000
@@ -221,6 +230,9 @@ var read_at := 0                     ## when the partner reads your shot
 var target_x := 0
 var target_z := 0
 var target_hits := 0
+var points := 0                      ## dartboard points (spots and floor targets)
+var last_ring := 0                   ## the ring the last ball landed in (0 off the board)
+var last_off := -1                   ## how far it landed from the board's centre, um (-1: no board)
 var toss_at := 0                     ## SETUP: when the held ball is dropped
 var spot_lit := false                ## CALL THE SPOT: the spot (target_x, target_z) is showing
 var spot_i := -1                     ## which spot
@@ -276,6 +288,9 @@ func reset(sim: Sim) -> void:
 	sim.players[0].x = spot_x
 	sim.players[0].z = spot_z
 	target_hits = 0
+	points = 0
+	last_ring = 0
+	last_off = -1
 	rally = 0
 	if partner:
 		var q := sim.players[2]
@@ -428,7 +443,7 @@ func _fly(sim: Sim, p: SimTypes.Player) -> void:
 		_result(sim, RESULT_VOLLEY)
 	elif not volley and rules & RULE_VOLLEY:
 		_result(sim, RESULT_BOUNCE)
-	elif volley and rules & RULE_KITCHEN and K.in_kitchen(p.x, p.z, 0):
+	elif volley and rules & RULE_KITCHEN and in_kitchen(p):
 		_result(sim, RESULT_KITCHEN)
 	else:
 		stage = RETURN
@@ -463,10 +478,16 @@ func _return(sim: Sim) -> void:
 	if not K.in_court(x, z):
 		_result(sim, RESULT_OUT)
 		return
-	if targets and Fx.length(x - target_x, 0, z - target_z) <= TARGET_RADIUS:
-		target_hits += 1
-		sim.emit(K.EVENT_TARGET, x, z, target_hits)
-		_new_target(sim)
+	last_ring = 0
+	last_off = -1
+	if targets:
+		last_off = Fx.length(x - target_x, 0, z - target_z)
+		last_ring = ring(last_off, TARGET_RADIUS)
+		if last_ring > 0:
+			target_hits += 1
+			points += last_ring
+			sim.emit(K.EVENT_TARGET, x, z, last_ring)
+			_new_target(sim)
 	var r := RESULT_GOOD
 	if partner:
 		r = _placed(x, z)
@@ -913,6 +934,22 @@ func _call_spot(sim: Sim) -> void:
 	spot_lit = partner_pace <= 0 or kind == KIND_VOLLEYS
 
 
+## The dartboard ring at `off` um from the centre of one `radius` across:
+## 3 the bullseye .. 1 the outer ring, 0 off it.
+static func ring(off: int, radius: int) -> int:
+	var r := 0
+	for i in RING_EDGES.size():
+		if off * 100 <= radius * RING_EDGES[i]:
+			r = i + 1
+	return r
+
+
+## You, in your kitchen as practice judges it: the head past the line by
+## more than a lean.
+func in_kitchen(p: SimTypes.Player) -> bool:
+	return K.in_kitchen(p.x, p.z + KITCHEN_LEAN, 0)
+
+
 func spot_radius() -> int:
 	return SPOT_RADIUS[clampi(partner_pace, 0, 2)]
 
@@ -941,8 +978,12 @@ func _placed(x: int, z: int) -> int:
 			return RESULT_ATTACK
 	if not in_zone(x, z):
 		return RESULT_ZONE
-	if spots and Fx.length(x - target_x, 0, z - target_z) > spot_radius():
-		return RESULT_SPOT
+	if spots:
+		last_off = Fx.length(x - target_x, 0, z - target_z)
+		last_ring = ring(last_off, spot_radius())
+		if last_ring == 0:
+			return RESULT_SPOT
+		points += last_ring
 	if lanes and signi(x) != signi(target_x):
 		return RESULT_LANE
 	return RESULT_GOOD
@@ -994,4 +1035,4 @@ func snapshot() -> Array:
 	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
 		hit_at, machine_z, partner_plan, read_at, target_x, target_z, target_hits, rally, best_rally,
 		1 if partner else 0, kind, lane, toss_at, 1 if spot_lit else 0, spot_i, 1 if lane_cross else 0,
-		1 if high_ball else 0, 1 if you_fast else 0]
+		1 if high_ball else 0, 1 if you_fast else 0, points, last_ring, last_off]
