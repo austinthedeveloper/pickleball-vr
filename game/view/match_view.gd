@@ -29,6 +29,7 @@ var announcer: Announcer
 var paddle_tilt := 0.0               ## degrees: the paddle's angle in the hand (XR)
 var paddle_twist := 0.0              ## degrees, about the handle (paddle profiles, ADR-015)
 var paddle_reach := 0.0              ## metres along the handle
+var popup_line: MeshInstance3D       ## RESETS: how high a reset may cross the net
 var board: Scoreboard
 var avatars: Array[Avatar] = []
 var ball_mesh: MeshInstance3D
@@ -179,6 +180,19 @@ func _practice_court() -> void:
 		zone_mesh.material_override = mat
 		zone_mesh.position = Vector3(r.get_center().x, 0.022, r.get_center().y)
 		add_child(zone_mesh)
+	if d.resets:
+		# RESETS: the pop-up line, a faint band over the net. Above it, a
+		# reset would be put away (ADR-016).
+		popup_line = MeshInstance3D.new()
+		var lm := BoxMesh.new()
+		lm.size = Vector3(K.NET_POST_X * 2 / float(K.M), 0.04, 0.012)
+		popup_line.mesh = lm
+		var pm := World.material(Color(1.0, 0.35, 0.25, 0.7))
+		pm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		popup_line.material_override = pm
+		popup_line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		popup_line.position = Vector3(0, d.popup_y() / float(K.M), 0)
+		add_child(popup_line)
 
 
 ## A lesson's title and instructions, standing over the far court.

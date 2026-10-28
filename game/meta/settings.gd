@@ -47,7 +47,11 @@ var partner_level := 1
 var partner_targets := true
 var partner_cross := false
 var partner_spread := 1
-var partner_hands := false           ## DRILL: DINKS or HANDS (ADR-014)
+const PARTNER_DRILLS := ["DINKS", "HANDS", "RESETS"]
+var partner_drill := 0               ## DRILL: DINKS, HANDS (ADR-014) or RESETS (ADR-016)
+var partner_hands: bool:
+	get: return partner_drill == 1
+	set(v): partner_drill = 1 if v else 0
 var partner_best := 0
 
 
@@ -84,7 +88,8 @@ func load_settings() -> void:
 	partner_best = c.get_value("partner", "best", partner_best)
 	partner_cross = c.get_value("partner", "cross", partner_cross)
 	partner_spread = c.get_value("partner", "spread", partner_spread)
-	partner_hands = c.get_value("partner", "hands", partner_hands)
+	# An older save kept HANDS as a flag.
+	partner_drill = c.get_value("partner", "drill", 1 if c.get_value("partner", "hands", false) else 0)
 
 
 func save() -> void:
@@ -115,7 +120,7 @@ func save() -> void:
 	c.set_value("partner", "best", partner_best)
 	c.set_value("partner", "cross", partner_cross)
 	c.set_value("partner", "spread", partner_spread)
-	c.set_value("partner", "hands", partner_hands)
+	c.set_value("partner", "drill", partner_drill)
 	c.save(path)
 
 
@@ -187,10 +192,11 @@ func partner_config() -> SimTypes.MatchConfig:
 	d.cross = partner_cross
 	d.spread = partner_spread
 	d.hands = partner_hands
+	d.resets = partner_drill == 2
 	if partner_hands:
 		d.zone = Drill.ZONE_ANY          # a volley that lands anywhere in counts too
 		d.targets = false                # no placing: volleys, not dinks
-	d.spot_z = K.KITCHEN_DEPTH + 300000
+	d.spot_z = Drill.RESET_SPOT_Z if d.resets else K.KITCHEN_DEPTH + 300000
 	if partner_cross:
 		d.spot_x = K.COURT_HALF_WIDTH / 2      # your right court, the partner diagonal
 	cfg.drill = d

@@ -304,9 +304,14 @@ func _target(b: Ball) -> Array[int]:
 			# HANDS: a firm volley at the partner (it passes them waist high).
 			var q := sim.players[2]
 			return [q.x, os * (K.KITCHEN_DEPTH + 2500000), 80000]
+		# RESETS: from mid-court a slow ball loops over the pop-up line, so
+		# a reset is firmer and flatter (7 m/s), deep in their kitchen.
+		var soft_pace := 58000 if sim.drill.resets else 40000
 		if sim.drill.targets:
 			var soft := sim.drill.zone == Drill.ZONE_KITCHEN or sim.drill.partner
-			return [sim.drill.target_x, sim.drill.target_z, 40000 if soft else pace]
+			return [sim.drill.target_x, sim.drill.target_z, soft_pace if soft else pace]
+		if sim.drill.resets:
+			return [0, os * K.KITCHEN_DEPTH * 8 / 10, soft_pace]
 		match sim.drill.zone:
 			Drill.ZONE_KITCHEN: return [0, os * K.KITCHEN_DEPTH * 6 / 10, 40000]
 			Drill.ZONE_LEFT: return [-K.COURT_HALF_WIDTH / 2, os * (K.COURT_HALF_LENGTH - 1500000), pace]

@@ -459,7 +459,7 @@ func _track_swing(sim: Sim, body: Vector3, ball: Vector3, delta: float) -> void:
 		var right := _face.cross(Vector3.UP)
 		_backhand = (_contact - body).dot(right) < -0.1
 		_out = Vector3(0, 0, K.side_sign(1 - p.team))
-		_soft = sim.drill != null and sim.drill.partner and not sim.drill.hands
+		_soft = sim.drill != null and sim.drill.partner and not sim.drill.hands and not sim.drill.resets
 	else:
 		_until = maxf(_until - delta, 0.0)
 
