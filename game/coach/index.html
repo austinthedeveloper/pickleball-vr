@@ -4,13 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pickleball '94 Coach</title>
-<!-- The coach companion (ADR-023): served by the game on the headset; talks
-     to it over a WebSocket on the next port. One file, no libraries. -->
+<!-- The coach companion (ADR-023, design/COACHING.md): served by the game on
+     the headset; talks to it over a WebSocket on the next port. One file,
+     no libraries, no outside requests. -->
 <style>
   :root {
     --bg: #0b1020; --panel: #141b31; --panel2: #1b2440; --line: #2a355a;
     --text: #e8ecf8; --dim: #8e9ac0; --gold: #f2c230; --good: #3ddc84;
     --bad: #ff6b5a; --net: #9aa3bd; --blue: #2f6fd6; --kitchen: #24448f; --court: #2f6fd6;
+    --mine: #1d3f86; --mark: #4ff0ff; --warn: #ffb347;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
@@ -18,7 +20,7 @@
   body { padding: 12px 16px 40px; max-width: 760px; margin: 0 auto; }
   h1 { font-size: 17px; margin: 0; letter-spacing: .04em; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin: 0 0 8px; font-weight: 600; }
-  .bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
   .pill { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--panel2); color: var(--dim); }
   .pill.playing { background: #123a26; color: var(--good); }
   .pill.paused { background: #3a3012; color: var(--gold); }
@@ -31,38 +33,68 @@
   .runname { font-weight: 700; margin-bottom: 10px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 4px; }
-  select { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+  select, input[type=text], input[type=number] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--line);
     border-radius: 10px; padding: 10px; font-size: 15px; }
   .buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .row > * { flex: 1; }
+  .row > .shrink { flex: 0 0 auto; }
   button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 10px;
     padding: 12px 6px; font-size: 14px; font-weight: 700; letter-spacing: .03em; }
+  button.small { padding: 8px 10px; font-size: 12px; }
   button.go { background: var(--gold); color: #1b1400; border-color: var(--gold); }
+  button.cue { padding: 10px 8px; font-size: 13px; }
   button:disabled { opacity: .35; }
   button:active:not(:disabled) { transform: translateY(1px); }
+  .cues { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   svg { width: 100%; height: auto; display: block; }
+  svg#court { touch-action: manipulation; max-height: 78vh; }
   .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--dim); margin-top: 8px; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
-  .seg { display: inline-flex; background: var(--panel2); border-radius: 10px; padding: 3px; }
+  .seg { display: inline-flex; background: var(--panel2); border-radius: 10px; padding: 3px; flex-wrap: wrap; }
   .seg button { border: 0; padding: 6px 10px; font-size: 12px; background: transparent; color: var(--dim); }
   .seg button.on { background: var(--line); color: var(--text); }
+  .hint { font-size: 12px; color: var(--gold); min-height: 1.3em; margin-top: 6px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
   th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
   th { color: var(--dim); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
   td.num, th.num { text-align: right; }
-  .shots li { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .shots li { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .shots li.tap { cursor: pointer; }
   .shots { list-style: none; margin: 0; padding: 0; }
   .shots .r-good { color: var(--good); } .shots .r-bad { color: var(--bad); }
   .muted { color: var(--dim); font-size: 13px; }
   .spark { display: flex; align-items: flex-end; gap: 4px; height: 48px; margin-top: 6px; }
   .spark div { flex: 1; background: var(--blue); border-radius: 3px 3px 0 0; min-height: 3px; position: relative; }
   .spark div.best { background: var(--gold); }
+  .insights { margin: 0; padding-left: 18px; }
+  .insights li { margin: 6px 0; }
+  .slider { margin: 10px 0; }
+  .slider .top { display: flex; justify-content: space-between; font-size: 13px; }
+  .slider input { width: 100%; accent-color: var(--gold); }
+  .steps li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .banner { background: #3a3012; color: var(--gold); border-radius: 10px; padding: 8px 12px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
   #login { max-width: 360px; margin: 18vh auto 0; text-align: center; }
   #login input { width: 100%; font-size: 34px; letter-spacing: .4em; text-align: center; padding: 12px;
     border-radius: 12px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); margin: 14px 0; }
   #login p { color: var(--dim); }
   .err { color: var(--bad); min-height: 1.4em; }
   .hidden { display: none !important; }
-  @media (max-width: 420px) { .stat b { font-size: 22px; } .buttons { grid-template-columns: repeat(2, 1fr); } }
+  #replay { position: fixed; inset: 0; background: var(--bg); z-index: 10; padding: 12px 16px; overflow: auto; }
+  #replay .card { padding: 10px; margin-bottom: 8px; }
+  #rTop { max-height: 44vh; }
+  #rSide { max-height: 22vh; }
+  #replay .inner { max-width: 640px; margin: 0 auto; }
+  #report { display: none; }
+  @media (max-width: 420px) { .stat b { font-size: 22px; } .buttons { grid-template-columns: repeat(2, 1fr); } .cues { grid-template-columns: repeat(2, 1fr); } }
+  @media print {
+    body { background: #fff; color: #111; max-width: none; }
+    #app, #login, #replay { display: none !important; }
+    #report { display: block !important; }
+    #report h1 { font-size: 20px; } #report h2 { color: #333; margin-top: 18px; }
+    #report table th, #report table td { border-bottom: 1px solid #ccc; color: #111; }
+  }
 </style>
 </head>
 <body>
@@ -82,6 +114,15 @@
   </div>
 
   <div class="card">
+    <div class="row" style="margin-top:0">
+      <div><label for="player">Player</label><select id="player"></select></div>
+      <button class="small shrink" id="bNewPlayer" style="margin-top:18px">NEW PLAYER</button>
+    </div>
+  </div>
+
+  <div class="banner hidden" id="pastBanner"><span id="pastText"></span><button class="small" id="bLive">BACK TO LIVE</button></div>
+
+  <div class="card">
     <div class="runname" id="runName">In the lobby</div>
     <div class="stats">
       <div class="stat"><b id="sScore">–</b><span id="sScoreLabel">Score</span></div>
@@ -89,20 +130,30 @@
       <div class="stat"><b id="sStreak">–</b><span>Streak</span></div>
       <div class="stat"><b id="sPct">–</b><span>Good</span></div>
     </div>
+    <div class="hint" id="challengeLine"></div>
   </div>
 
   <div class="card">
     <div class="bar" style="margin-bottom:8px">
-      <h2 style="margin:0">Shot placement</h2>
+      <h2 style="margin:0">Court</h2>
       <div class="seg" id="scope">
         <button data-s="run" class="on">This run</button><button data-s="all">Session</button>
       </div>
     </div>
-    <svg id="court" viewBox="0 0 7.1 7.9" aria-label="Their side of the court, net at the bottom"></svg>
-    <div class="legend">
-      <span><i style="background:var(--gold)"></i>On the board</span>
-      <span><i style="background:var(--good)"></i>Good</span>
-      <span><i style="background:var(--bad)"></i>Miss</span>
+    <div class="bar" style="margin-bottom:6px">
+      <div class="seg" id="tapMode">
+        <button data-m="watch" class="on">Watch</button><button data-m="target">Target</button><button data-m="feed">Feed</button><button data-m="zone">Zone</button><button data-m="line">Line</button>
+      </div>
+      <div class="seg" id="colorBy">
+        <button data-c="result" class="on">Result</button><button data-c="clear">Net height</button>
+      </div>
+    </div>
+    <svg id="court" aria-label="The court from above: their side at the top, yours at the bottom"></svg>
+    <div class="hint" id="tapHint"></div>
+    <div class="legend" id="legend"></div>
+    <div class="row">
+      <button class="small" id="bFreeTarget">LET THE TARGET MOVE</button>
+      <button class="small" id="bClearMarks">CLEAR MARKS</button>
     </div>
   </div>
 
@@ -125,6 +176,77 @@
   </div>
 
   <div class="card">
+    <h2>Cues to the headset</h2>
+    <div class="cues" id="cues"></div>
+    <div class="row">
+      <input type="text" id="cueText" maxlength="24" placeholder="Your own cue">
+      <button class="small shrink" id="bCue">SEND</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Challenge</h2>
+    <div class="row" style="margin-top:0">
+      <select id="chKind">
+        <option value="streak">Good in a row</option>
+        <option value="board">On the board in a row</option>
+        <option value="good">Good balls</option>
+        <option value="score">Reach a score</option>
+      </select>
+      <input type="number" id="chN" value="8" min="1" max="999" class="shrink" style="width:80px">
+    </div>
+    <div class="row">
+      <button class="small go" id="bChallenge">SET CHALLENGE</button>
+      <button class="small" id="bChallengeClear">CLEAR</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="bar" style="margin-bottom:4px"><h2 style="margin:0">Pace and size, live</h2><button class="small" id="bTuneReset">RESET</button></div>
+    <div id="sliders" class="muted">—</div>
+  </div>
+
+  <div class="card">
+    <h2>Workout</h2>
+    <div class="muted" id="workoutNow"></div>
+    <ul class="steps" id="steps"></ul>
+    <div class="row">
+      <button class="small" id="bAddStep">ADD THE DRILL ABOVE</button>
+      <button class="small go" id="bRunSteps">RUN</button>
+      <button class="small" id="bStopWorkout">STOP</button>
+    </div>
+    <div class="row">
+      <input type="text" id="wName" maxlength="20" placeholder="Name it">
+      <button class="small shrink" id="bSaveWorkout">SAVE</button>
+    </div>
+    <h2 style="margin-top:14px">Saved</h2>
+    <ul class="steps" id="saved"><li class="muted">None yet.</li></ul>
+  </div>
+
+  <div class="card">
+    <h2>What the numbers say</h2>
+    <ul class="insights" id="insights"><li class="muted">After a few shots.</li></ul>
+  </div>
+
+  <div class="card">
+    <h2>Breakdown</h2>
+    <table>
+      <thead><tr><th></th><th class="num">Shots</th><th class="num">Good</th><th class="num">Net +cm</th><th class="num">Contact m</th></tr></thead>
+      <tbody id="split"></tbody>
+    </table>
+    <div class="grid2" style="margin-top:10px">
+      <div class="stat"><b id="sReady">–</b><span>Paddle ready</span></div>
+      <div class="stat"><b id="sBehind">–</b><span>Behind the line</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Sweet spot</h2>
+    <svg id="face" viewBox="-130 -165 260 330" style="max-width:220px;margin:0 auto" aria-label="The paddle face: where the ball met it"></svg>
+    <div class="muted" id="faceNote" style="text-align:center"></div>
+  </div>
+
+  <div class="card">
     <h2>Records for this setup</h2>
     <div id="records" class="muted">Pick a timed MODE to keep records.</div>
   </div>
@@ -138,10 +260,36 @@
   </div>
 
   <div class="card">
-    <h2>Last shots</h2>
+    <h2>Last shots <span class="muted" style="text-transform:none;letter-spacing:0">(tap to replay)</span></h2>
     <ul class="shots" id="shots"><li class="muted">No shots yet.</li></ul>
   </div>
+
+  <div class="card">
+    <div class="bar" style="margin-bottom:6px"><h2 style="margin:0">History</h2><button class="small" id="bHistory">LOAD</button></div>
+    <div id="trend"></div>
+    <ul class="shots" id="history"><li class="muted">Every session is kept on the headset. Load them to compare.</li></ul>
+  </div>
+
+  <div class="card">
+    <h2>Report</h2>
+    <div class="row" style="margin-top:0">
+      <button class="small" id="bPrint">PRINT / SAVE PDF</button>
+      <button class="small" id="bCopy">COPY SUMMARY</button>
+    </div>
+    <div class="hint" id="copyNote"></div>
+  </div>
 </div>
+
+<div id="replay" class="hidden">
+  <div class="inner">
+    <div class="bar"><h1 id="replayTitle">Replay</h1><button class="small" id="bCloseReplay">CLOSE</button></div>
+    <div class="card"><h2>From above</h2><svg id="rTop"></svg></div>
+    <div class="card"><h2>From the side</h2><svg id="rSide"></svg><div class="muted" id="rNote"></div></div>
+    <div class="row"><button class="small go" id="bReplayAgain">PLAY AGAIN</button></div>
+  </div>
+</div>
+
+<div id="report"></div>
 
 <script>
 "use strict";
@@ -150,8 +298,15 @@ const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
 };
-let ws = null, state = null, shots = [], runStart = 0, scope = "run", lastWhere = "", retry = 0;
+const title = (s) => String(s).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const READY_M = 0.8;
 
+let ws = null, state = null, shots = [], runStart = 0, scope = "run", colorBy = "result", lastWhere = "", retry = 0;
+let tapMode = "watch", pending = null, steps = [], past = null;
+const marks = () => (state && state.marks) || [];
+
+// --- Connection -------------------------------------------------------------------
 function connect(code) {
   const port = (parseInt(location.port || "8094", 10) + 1);
   ws = new WebSocket(`ws://${location.hostname}:${port}`);
@@ -162,31 +317,35 @@ function connect(code) {
     else if (m.type === "bad_code") { $("loginErr").textContent = "That code didn't match the headset."; ws.close(); }
     else if (m.type === "state") onState(m);
     else if (m.type === "shot") onShot(m);
+    else if (m.type === "sessions") drawHistory(m.list);
+    else if (m.type === "session") openPast(m.data);
   };
   ws.onclose = () => {
     const pill = $("where"); pill.textContent = "OFFLINE"; pill.className = "pill off";
     if (!$("app").classList.contains("hidden")) setTimeout(() => connect(code), Math.min(1000 * ++retry, 5000));
   };
 }
-
 function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
 
-function fillSelect(sel, names, value) {
-  if (sel.options.length !== names.length) {
-    sel.innerHTML = names.map((n, i) => `<option value="${i}">${title(n)}</option>`).join("");
+function fillSelect(sel, names, value, keepText) {
+  const want = names.map((n) => keepText ? n : title(n)).join("|");
+  if (sel.dataset.opts !== want) {
+    sel.innerHTML = names.map((n, i) => `<option value="${keepText ? esc(n) : i}">${esc(keepText ? n : title(n))}</option>`).join("");
+    sel.dataset.opts = want;
   }
   if (document.activeElement !== sel) sel.value = String(value);
 }
-const title = (s) => s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
+// --- State and shots --------------------------------------------------------------
 function onState(s) {
   state = s;
   const pill = $("where");
   pill.textContent = s.where.toUpperCase();
   pill.className = "pill " + (s.where === "lobby" ? "" : s.where);
-  if (s.where === "playing" && lastWhere === "lobby") { runStart = shots.length; }
+  if (s.where === "playing" && lastWhere === "lobby") runStart = shots.length;
   lastWhere = s.where;
   const u = s.setup;
+  fillSelect($("player"), s.players, s.player, true);
   fillSelect($("drill"), u.drills, u.drill);
   fillSelect($("level"), u.levels, u.level);
   fillSelect($("time"), u.times, u.time);
@@ -202,11 +361,20 @@ function onState(s) {
   $("sTime").textContent = r && r.timed ? (r.done ? "TIME" : `${Math.floor(r.left / 60)}:${String(r.left % 60).padStart(2, "0")}`) : "∞";
   const mine = runShots();
   $("sPct").textContent = mine.length ? Math.round(100 * mine.filter((x) => x.good).length / mine.length) + "%" : "–";
-  $("bStart").textContent = s.where === "lobby" ? "START" : "START NEW";   // mid-run: the drill as set now
-  $("bPause").disabled = s.where === "lobby";
+  const playing = s.where !== "lobby";
+  $("bStart").textContent = playing ? "START NEW" : "START";
+  $("bPause").disabled = !playing;
   $("bPause").textContent = s.where === "paused" ? "RESUME" : "PAUSE";
-  $("bRestart").disabled = s.where === "lobby";
-  $("bMenu").disabled = s.where === "lobby";
+  $("bRestart").disabled = !playing;
+  $("bMenu").disabled = !playing;
+  $("bFreeTarget").disabled = !(s.target && s.target.pinned);
+  $("bClearMarks").disabled = !marks().length;
+  const ch = s.challenge || {};
+  const kinds = { streak: "in a row", board: "in a row on the board", good: "good", score: "score" };
+  $("challengeLine").textContent = ch.kind ? (ch.done ? "Challenge done!" : `Challenge: ${ch.progress} / ${ch.n} ${kinds[ch.kind]}`) : "";
+  drawCues(s.cues);
+  drawSliders(s.tunes);
+  drawWorkout(s);
   drawRecords(s.records);
   drawCourt();
 }
@@ -215,43 +383,241 @@ function onShot(m) {
   if (m.tick < (shots.length ? shots[shots.length - 1].tick : 0)) runStart = shots.length;   // a new run
   shots.push(m);
   if (shots.length > 2000) shots.shift();
-  drawCourt(); drawSummary(); drawShots();
+  if (!past) drawAnalysis();
+  drawCourt(); drawShots();
 }
 
 const runShots = () => shots.slice(runStart);
+const analysisShots = () => past ? past.shots : shots;
+
+// --- The court --------------------------------------------------------------------
+function courtGeom() {
+  const c = state.court, m = 0.5;
+  return { c, m, X: (x) => x + c.hw + m, Y: (z) => z + c.hl + m, w: 2 * c.hw + 2 * m, h: 2 * c.hl + 2 * m };
+}
+
+function dotColor(s) {
+  if (colorBy === "clear") {
+    if (s.clear === undefined) return "var(--net)";
+    return s.clear < 0 ? "var(--bad)" : s.clear <= 0.3 ? "var(--good)" : s.clear <= 0.6 ? "var(--warn)" : "var(--bad)";
+  }
+  return s.ring > 0 ? "var(--gold)" : s.good ? "var(--good)" : "var(--bad)";
+}
 
 function drawCourt() {
   if (!state) return;
-  const c = state.court, m = 0.5, hw = c.hw, hl = c.hl;
-  const X = (x) => (x + hw + m).toFixed(3), Y = (z) => (hl + z + m).toFixed(3);
+  const { c, X, Y, w, h } = courtGeom();
+  const f = (v) => v.toFixed(3);
   let g = "";
-  g += `<rect x="${X(-hw)}" y="${Y(-hl)}" width="${2 * hw}" height="${hl}" fill="var(--court)"/>`;
-  g += `<rect x="${X(-hw)}" y="${Y(-c.kd)}" width="${2 * hw}" height="${c.kd}" fill="var(--kitchen)"/>`;
-  const line = (x1, z1, x2, z2, extra = "") => `<line x1="${X(x1)}" y1="${Y(z1)}" x2="${X(x2)}" y2="${Y(z2)}" stroke="#f4f4ef" stroke-width="0.05" ${extra}/>`;
-  g += `<rect x="${X(-hw)}" y="${Y(-hl)}" width="${2 * hw}" height="${hl}" fill="none" stroke="#f4f4ef" stroke-width="0.05"/>`;
-  g += line(-hw, -c.kd, hw, -c.kd) + line(0, -c.kd, 0, -hl);
-  g += line(-hw, -c.dink, hw, -c.dink, `stroke-dasharray="0.15 0.12" opacity="0.5"`);
-  g += `<rect x="${X(-hw - 0.2)}" y="${Y(0) - 0.06}" width="${2 * hw + 0.4}" height="0.12" fill="#e8ecf8"/>`;
+  g += `<rect x="${f(X(-c.hw))}" y="${f(Y(-c.hl))}" width="${2 * c.hw}" height="${c.hl}" fill="var(--court)"/>`;
+  g += `<rect x="${f(X(-c.hw))}" y="${f(Y(0))}" width="${2 * c.hw}" height="${c.hl}" fill="var(--mine)"/>`;
+  g += `<rect x="${f(X(-c.hw))}" y="${f(Y(-c.kd))}" width="${2 * c.hw}" height="${2 * c.kd}" fill="var(--kitchen)" opacity="0.85"/>`;
+  const line = (x1, z1, x2, z2, extra = "") => `<line x1="${f(X(x1))}" y1="${f(Y(z1))}" x2="${f(X(x2))}" y2="${f(Y(z2))}" stroke="#f4f4ef" stroke-width="0.05" ${extra}/>`;
+  g += `<rect x="${f(X(-c.hw))}" y="${f(Y(-c.hl))}" width="${2 * c.hw}" height="${2 * c.hl}" fill="none" stroke="#f4f4ef" stroke-width="0.05"/>`;
+  g += line(-c.hw, -c.kd, c.hw, -c.kd) + line(-c.hw, c.kd, c.hw, c.kd) + line(0, -c.kd, 0, -c.hl) + line(0, c.kd, 0, c.hl);
+  g += line(-c.hw, -c.dink, c.hw, -c.dink, `stroke-dasharray="0.15 0.12" opacity="0.5"`);
+  g += `<rect x="${f(X(-c.hw - 0.2))}" y="${f(Y(0) - 0.05)}" width="${2 * c.hw + 0.4}" height="0.1" fill="#e8ecf8"/>`;
+  g += `<text x="${f(X(0))}" y="${f(Y(c.hl) + 0.38)}" fill="var(--dim)" font-size="0.32" text-anchor="middle">YOU</text>`;
+  for (const mk of marks()) {
+    if (mk.shape === "zone") g += `<rect x="${f(X(Math.min(mk.ax, mk.bx)))}" y="${f(Y(Math.min(mk.az, mk.bz)))}" width="${f(Math.abs(mk.bx - mk.ax))}" height="${f(Math.abs(mk.bz - mk.az))}" fill="var(--mark)" fill-opacity="0.25" stroke="var(--mark)" stroke-width="0.04"/>`;
+    else g += `<line x1="${f(X(mk.ax))}" y1="${f(Y(mk.az))}" x2="${f(X(mk.bx))}" y2="${f(Y(mk.bz))}" stroke="var(--mark)" stroke-width="0.08" stroke-linecap="round"/>`;
+  }
   const t = state.target;
   if (t && t.lit) {
-    const rings = t.rings || [100, 66, 33];
-    rings.forEach((p, i) => {
-      g += `<circle cx="${X(t.x)}" cy="${Y(t.z)}" r="${(t.r * p / 100).toFixed(3)}" fill="rgba(242,194,48,${0.12 + 0.12 * i})" stroke="var(--gold)" stroke-width="0.03"/>`;
+    (t.rings || [100, 66, 33]).forEach((p, i) => {
+      g += `<circle cx="${f(X(t.x))}" cy="${f(Y(t.z))}" r="${f(t.r * p / 100)}" fill="rgba(242,194,48,${0.12 + 0.12 * i})" stroke="var(--gold)" stroke-width="${t.pinned ? 0.06 : 0.03}"/>`;
     });
   }
-  const list = (scope === "run" ? runShots() : shots).filter((s) => s.x !== undefined);
+  if (state.feed) {
+    const x = X(state.feed.x), y = Y(state.feed.z), d = 0.18;
+    g += `<path d="M${f(x - d)} ${f(y - d)}L${f(x + d)} ${f(y + d)}M${f(x + d)} ${f(y - d)}L${f(x - d)} ${f(y + d)}" stroke="var(--gold)" stroke-width="0.07"/>`;
+  }
+  if (pending) g += `<circle cx="${f(X(pending.x))}" cy="${f(Y(pending.z))}" r="0.12" fill="var(--mark)"/>`;
+  const list = (past ? past.shots : scope === "run" ? runShots() : shots).filter((s) => s.x !== undefined);
   list.forEach((s, i) => {
-    const last = i === list.length - 1;
-    const col = s.ring > 0 ? "var(--gold)" : s.good ? "var(--good)" : "var(--bad)";
-    g += `<circle cx="${X(s.x)}" cy="${Y(s.z)}" r="${last ? 0.16 : 0.1}" fill="${col}" fill-opacity="${last ? 1 : 0.75}" stroke="#0b1020" stroke-width="0.03"/>`;
+    const last = !past && i === list.length - 1;
+    g += `<circle cx="${f(X(s.x))}" cy="${f(Y(s.z))}" r="${last ? 0.16 : 0.1}" fill="${dotColor(s)}" fill-opacity="${last ? 1 : 0.75}" stroke="#0b1020" stroke-width="0.03"/>`;
   });
-  $("court").setAttribute("viewBox", `0 0 ${2 * hw + 2 * m} ${hl + 2 * m}`);
+  $("court").setAttribute("viewBox", `0 0 ${f(w)} ${f(h)}`);
   $("court").innerHTML = g;
+  $("legend").innerHTML = colorBy === "clear"
+    ? `<span><i style="background:var(--good)"></i>Up to 30 cm over</span><span><i style="background:var(--warn)"></i>30-60 cm</span><span><i style="background:var(--bad)"></i>Higher, or in the net</span>`
+    : `<span><i style="background:var(--gold)"></i>On the board</span><span><i style="background:var(--good)"></i>Good</span><span><i style="background:var(--bad)"></i>Miss</span>`;
 }
 
-function drawSummary() {
+const HINTS = { watch: "", target: "Tap their side: the target goes there and stays.", feed: "Tap your side: the partner's next ball goes there.",
+  zone: "Tap two corners: a zone glows on the court.", line: "Tap two points: a line glows on the court." };
+
+function courtTap(ev) {
+  if (!state || tapMode === "watch") return;
+  const svg = $("court"), pt = svg.createSVGPoint();
+  pt.x = ev.clientX; pt.y = ev.clientY;
+  const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const { c, m } = courtGeom();
+  const x = Math.max(-c.hw, Math.min(c.hw, p.x - c.hw - m)), z = Math.max(-c.hl, Math.min(c.hl, p.y - c.hl - m));
+  const r2 = (v) => Math.round(v * 100) / 100;
+  if (tapMode === "target") {
+    if (z >= 0) { $("tapHint").textContent = "The target goes on their side: tap above the net."; return; }
+    send({ type: "target", x: r2(x), z: r2(z) });
+  } else if (tapMode === "feed") {
+    if (z <= 0) { $("tapHint").textContent = "Feeds land on your side: tap below the net."; return; }
+    send({ type: "feed", x: r2(x), z: r2(z) });
+  } else {
+    if (!pending) { pending = { x, z }; $("tapHint").textContent = "Now the other " + (tapMode === "zone" ? "corner." : "end."); drawCourt(); return; }
+    send({ type: "mark", shape: tapMode, ax: r2(pending.x), az: r2(pending.z), bx: r2(x), bz: r2(z) });
+    pending = null;
+    $("tapHint").textContent = HINTS[tapMode];
+  }
+  drawCourt();
+}
+
+// --- Controls ---------------------------------------------------------------------
+function drawCues(list) {
+  const want = (list || []).join("|");
+  if ($("cues").dataset.list === want) return;
+  $("cues").dataset.list = want;
+  $("cues").innerHTML = (list || []).map((c) => `<button class="cue" data-cue="${esc(c)}">${esc(c)}</button>`).join("");
+  $("cues").querySelectorAll("button").forEach((b) => b.onclick = () => send({ type: "cue", text: b.dataset.cue }));
+}
+
+function drawSliders(list) {
+  const box = $("sliders");
+  if (!list || !list.length) { box.innerHTML = "—"; return; }
+  const want = list.map((t) => t.id).join("|");
+  if (box.dataset.list !== want) {
+    box.dataset.list = want;
+    box.innerHTML = list.map((t) => `<div class="slider"><div class="top"><span>${esc(title(t.label))}</span><b id="tv_${t.id}"></b></div>` +
+      `<input type="range" id="tr_${t.id}" min="${t.min}" max="${t.max}" step="${t.step}"></div>`).join("");
+    list.forEach((t) => {
+      const inp = $("tr_" + t.id);
+      inp.onchange = () => send({ type: "tune", id: t.id, value: parseInt(inp.value, 10) });
+    });
+  }
+  list.forEach((t) => {
+    const inp = $("tr_" + t.id);
+    if (document.activeElement !== inp) inp.value = t.value;
+    $("tv_" + t.id).textContent = title(t.text) + (t.value !== t.default ? " *" : "");
+  });
+}
+
+function stepName(st) {
+  const u = state.setup;
+  return `${title(u.drills[st.drill])} ${title(u.levels[st.level])}, ${title(u.times[st.time])}${st.targets ? ", targets" : ""}`;
+}
+
+function drawWorkout(s) {
+  const w = s.workout || {};
+  $("workoutNow").textContent = w.name ? `Running ${title(w.name)}: drill ${w.step + 1} of ${w.of}` : steps.length ? "" : "Add drills below, then run them back to back.";
+  $("steps").innerHTML = steps.map((st, i) => `<li><span>${i + 1}. ${esc(stepName(st))}</span><button class="small" data-del="${i}">REMOVE</button></li>`).join("");
+  $("steps").querySelectorAll("button").forEach((b) => b.onclick = () => { steps.splice(parseInt(b.dataset.del, 10), 1); drawWorkout(state); });
+  $("bRunSteps").disabled = !steps.length;
+  $("bSaveWorkout").disabled = !steps.length;
+  $("bStopWorkout").disabled = !w.name;
+  const saved = s.workouts || [];
+  const want = JSON.stringify(saved);
+  if ($("saved").dataset.list !== want) {
+    $("saved").dataset.list = want;
+    $("saved").innerHTML = saved.map((x, i) => `<li><span>${esc(title(x.name))} <span class="muted">(${x.steps.length} drills)</span></span>` +
+      `<span><button class="small" data-run="${i}">RUN</button> <button class="small" data-edit="${i}">EDIT</button> <button class="small" data-rm="${i}">DELETE</button></span></li>`).join("") || `<li class="muted">None yet.</li>`;
+    $("saved").querySelectorAll("button").forEach((b) => b.onclick = () => {
+      const x = saved[parseInt(b.dataset.run ?? b.dataset.edit ?? b.dataset.rm, 10)];
+      if (b.dataset.run !== undefined) send({ type: "workout_run", name: x.name });
+      else if (b.dataset.edit !== undefined) { steps = x.steps.map((st) => Object.assign({}, st)); $("wName").value = title(x.name); drawWorkout(state); }
+      else if (confirm(`Delete ${title(x.name)}?`)) send({ type: "workout_delete", name: x.name });
+    });
+  }
+}
+
+// --- Analysis ---------------------------------------------------------------------
+const avg = (a) => a.length ? a.reduce((s, v) => s + v, 0) / a.length : NaN;
+const pct = (a, f) => a.length ? Math.round(100 * a.filter(f).length / a.length) : NaN;
+const cm = (m) => Math.round(m * 100);
+
+function insights(list) {
+  const out = [];
+  const hit = list.filter((s) => s.hit !== false && s.speed !== undefined);
+  if (hit.length < 8) return ["A few more shots first: insights need at least 8."];
+  const cl = hit.filter((s) => s.clear !== undefined && s.clear >= 0);
+  const net = hit.filter((s) => /NET/.test(s.result));
+  if (cl.length >= 6) {
+    const a = avg(cl.map((s) => s.clear));
+    if (a > 0.45) out.push(`Balls cross ${cm(a)} cm over the net on average: bring them down, about 15-30 cm is a good dink.`);
+    else if (a < 0.15 && net.length >= 3) out.push(`Balls skim the tape (${cm(a)} cm over on average) and ${net.length} went in the net: a touch more lift.`);
+    else out.push(`Net clearance averages ${cm(a)} cm: right where a dink should be.`);
+  }
+  const fh = hit.filter((s) => s.side === "FH"), bh = hit.filter((s) => s.side === "BH");
+  if (fh.length >= 5 && bh.length >= 5) {
+    const f = pct(fh, (s) => s.good), b = pct(bh, (s) => s.good);
+    if (Math.abs(f - b) >= 15) out.push(`${f > b ? "Backhand" : "Forehand"} is the weaker side: ${Math.min(f, b)}% good against ${Math.max(f, b)}%.`);
+  }
+  const good = hit.filter((s) => s.good), miss = hit.filter((s) => !s.good && !/NET/.test(s.result));
+  if (good.length >= 5 && miss.length >= 5) {
+    const hg = avg(good.map((s) => s.height)), hm = avg(miss.map((s) => s.height));
+    if (hg - hm > 0.08) out.push(`Misses come off lower contact (${hm.toFixed(2)} m) than the good ones (${hg.toFixed(2)} m): get lower, or take it earlier.`);
+    const sg = avg(good.map((s) => s.speed)), sm = avg(miss.map((s) => s.speed));
+    if (sm - sg > 0.8) out.push(`Misses leave the paddle faster (${sm.toFixed(1)} m/s) than the good ones (${sg.toFixed(1)} m/s): softer hands.`);
+  }
+  const rd = hit.filter((s) => s.ready !== undefined);
+  if (rd.length >= 8) {
+    const up = rd.filter((s) => s.ready >= READY_M), down = rd.filter((s) => s.ready < READY_M);
+    const p = Math.round(100 * up.length / rd.length);
+    if (down.length >= 4 && up.length >= 4) {
+      const gu = pct(up, (s) => s.good), gd = pct(down, (s) => s.good);
+      if (gu - gd >= 10) out.push(`With the paddle up as they hit, ${gu}% are good; with it down, ${gd}%. Paddle up: ${p}% of the time.`);
+      else out.push(`Paddle up as they hit: ${p}% of the time.`);
+    } else out.push(`Paddle up as they hit: ${p}% of the time.`);
+  }
+  const bl = hit.filter((s) => s.behind !== undefined);
+  if (bl.length >= 6) {
+    const b = avg(bl.map((s) => s.behind));
+    if (b > 0.4) out.push(`You stand ${cm(b)} cm behind the kitchen line on average: move up, toes near the line.`);
+  }
+  const rings = hit.filter((s) => s.off >= 0);
+  if (rings.length >= 6) {
+    const o = avg(rings.map((s) => s.off));
+    out.push(`Landings average ${o.toFixed(2)} m from the target's centre${rings.filter((s) => s.ring === 3).length ? `, with ${rings.filter((s) => s.ring === 3).length} bullseyes` : ""}.`);
+  }
+  return out.length ? out : ["Nothing stands out yet: keep going."];
+}
+
+function drawAnalysis() {
+  const list = analysisShots();
+  $("insights").innerHTML = insights(list).map((t) => `<li>${esc(t)}</li>`).join("");
+  const hit = list.filter((s) => s.speed !== undefined);
+  const row = (name, a) => {
+    if (!a.length) return `<tr><td>${name}</td><td class="num">0</td><td class="num">–</td><td class="num">–</td><td class="num">–</td></tr>`;
+    const cl = a.filter((s) => s.clear !== undefined && s.clear >= 0);
+    return `<tr><td>${name}</td><td class="num">${a.length}</td><td class="num">${pct(a, (s) => s.good)}%</td>` +
+      `<td class="num">${cl.length ? cm(avg(cl.map((s) => s.clear))) : "–"}</td><td class="num">${avg(a.map((s) => s.height)).toFixed(2)}</td></tr>`;
+  };
+  $("split").innerHTML = row("Forehand", hit.filter((s) => s.side === "FH")) + row("Backhand", hit.filter((s) => s.side === "BH")) +
+    row("Volleys", hit.filter((s) => s.volley)) + row("All", hit);
+  const rd = hit.filter((s) => s.ready !== undefined);
+  $("sReady").textContent = rd.length ? pct(rd, (s) => s.ready >= READY_M) + "%" : "–";
+  const bl = hit.filter((s) => s.behind !== undefined);
+  $("sBehind").textContent = bl.length ? cm(avg(bl.map((s) => s.behind))) + " cm" : "–";
+  drawFace(hit);
+  drawSummary(list);
+}
+
+function drawFace(hit) {
+  const pts = hit.filter((s) => s.face_u !== undefined);
+  let g = `<rect x="-99" y="-130" width="198" height="260" rx="50" fill="#20305e" stroke="#e8ecf8" stroke-width="3"/>`;
+  g += `<rect x="-14" y="130" width="28" height="30" rx="6" fill="#111"/>`;
+  g += `<circle cx="0" cy="-10" r="35" fill="none" stroke="var(--gold)" stroke-width="2" stroke-dasharray="6 5" opacity="0.7"/>`;
+  pts.forEach((s) => {
+    g += `<circle cx="${Math.max(-120, Math.min(120, s.face_v))}" cy="${Math.max(-160, Math.min(160, -s.face_u))}" r="7" fill="${s.good ? "var(--good)" : "var(--bad)"}" fill-opacity="0.75"/>`;
+  });
+  $("face").innerHTML = g;
+  if (pts.length) {
+    const off = avg(pts.map((s) => Math.hypot(s.face_u, s.face_v)));
+    $("faceNote").textContent = `${pts.length} hits, ${Math.round(off)} mm from the centre on average.`;
+  } else $("faceNote").textContent = "Shown for hits in the headset.";
+}
+
+function drawSummary(list) {
   const by = {};
-  for (const s of shots) {
+  for (const s of list) {
     const k = s.mode || "?";
     const b = by[k] || (by[k] = { n: 0, good: 0, speed: 0, sn: 0, miss: {} });
     b.n++; if (s.good) b.good++;
@@ -260,45 +626,171 @@ function drawSummary() {
   }
   const rows = Object.entries(by).map(([k, b]) => {
     const top = Object.entries(b.miss).sort((a, z) => z[1] - a[1])[0];
-    return `<tr><td>${title(k)}</td><td class="num">${b.n}</td><td class="num">${Math.round(100 * b.good / b.n)}%</td>` +
-      `<td class="num">${b.sn ? (b.speed / b.sn).toFixed(1) : "–"}</td><td>${top ? title(top[0]) + " (" + top[1] + ")" : "–"}</td></tr>`;
+    return `<tr><td>${esc(title(k))}</td><td class="num">${b.n}</td><td class="num">${Math.round(100 * b.good / b.n)}%</td>` +
+      `<td class="num">${b.sn ? (b.speed / b.sn).toFixed(1) : "–"}</td><td>${top ? esc(title(top[0])) + " (" + top[1] + ")" : "–"}</td></tr>`;
   });
   $("summary").innerHTML = rows.join("") || `<tr><td colspan="5" class="muted">No shots yet.</td></tr>`;
 }
 
 function drawShots() {
-  const last = shots.slice(-12).reverse();
-  $("shots").innerHTML = last.map((s) => {
+  const last = shots.map((s, i) => [s, i]).slice(-12).reverse();
+  $("shots").innerHTML = last.map(([s, i]) => {
     const where = s.ring > 0 ? `ring ${s.ring}, ${s.off.toFixed(2)} m off` : s.off >= 0 ? `${s.off.toFixed(2)} m off` : "";
-    const detail = [s.speed ? `${s.speed} m/s` : "", s.height ? `hit at ${s.height} m` : "", s.volley ? "volley" : "", where].filter(Boolean).join(" · ");
-    return `<li><span class="${s.good ? "r-good" : "r-bad"}">${title(s.result)}</span><span class="muted">${detail}</span></li>`;
+    const detail = [s.side, s.speed ? `${s.speed} m/s` : "", s.clear !== undefined ? `${cm(s.clear)} cm over` : "", s.volley ? "volley" : "", where].filter(Boolean).join(" · ");
+    return `<li class="${s.path ? "tap" : ""}" data-i="${i}"><span class="${s.good ? "r-good" : "r-bad"}">${esc(title(s.result))}</span><span class="muted">${esc(detail)}</span></li>`;
   }).join("") || `<li class="muted">No shots yet.</li>`;
+  $("shots").querySelectorAll("li.tap").forEach((li) => li.onclick = () => openReplay(shots[parseInt(li.dataset.i, 10)]));
 }
 
 function drawRecords(r) {
   if (!r) { $("records").innerHTML = "Pick a timed MODE to keep records."; return; }
-  if (!r.recent.length) { $("records").innerHTML = `${title(r.name)}: no runs yet.`; return; }
+  if (!r.recent.length) { $("records").innerHTML = `${esc(title(r.name))}: no runs yet.`; return; }
   const max = Math.max(...r.recent, 1), best = r.best[0];
-  $("records").innerHTML = `<div>${title(r.name)} · best ${r.best.join(", ")}</div>` +
+  $("records").innerHTML = `<div>${esc(title(r.name))} · best ${r.best.join(", ")}</div>` +
     `<div class="spark">${r.recent.map((v) => `<div class="${v === best ? "best" : ""}" style="height:${Math.max(6, 100 * v / max)}%" title="${v}"></div>`).join("")}</div>` +
     `<div class="muted">${r.recent.length === 1 ? "One run so far" : `Last ${r.recent.length} runs, oldest first`}: ${r.recent.join(" · ")}</div>`;
 }
 
+// --- History ----------------------------------------------------------------------
+function drawHistory(list) {
+  if (!list.length) { $("history").innerHTML = `<li class="muted">No sessions saved for this player yet.</li>`; $("trend").innerHTML = ""; return; }
+  const chron = list.slice().reverse().slice(-12);
+  const gp = chron.map((s) => s.shots ? Math.round(100 * s.good / s.shots) : 0);
+  $("trend").innerHTML = `<div class="muted">Good %, session by session (oldest first)</div><div class="spark">` +
+    gp.map((v, i) => `<div style="height:${Math.max(6, v)}%" title="${chron[i].started}: ${v}%"></div>`).join("") + `</div>`;
+  $("history").innerHTML = list.map((s) => `<li class="tap" data-id="${esc(s.id)}"><span>${esc(s.started)}</span>` +
+    `<span class="muted">${s.shots} shots · ${s.shots ? Math.round(100 * s.good / s.shots) : 0}% good${s.clear >= 0 ? ` · ${cm(s.clear)} cm over` : ""}</span></li>`).join("");
+  $("history").querySelectorAll("li.tap").forEach((li) => li.onclick = () => send({ type: "session", id: li.dataset.id }));
+}
+
+function openPast(data) {
+  if (!data || !data.shots) return;
+  past = data;
+  $("pastText").textContent = `Viewing ${data.summary.started}: ${data.summary.shots} shots`;
+  $("pastBanner").classList.remove("hidden");
+  drawAnalysis(); drawCourt();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// --- Replay -----------------------------------------------------------------------
+let replayTimer = null;
+function openReplay(s) {
+  if (!s || !s.path) return;
+  $("replay").classList.remove("hidden");
+  $("replayTitle").textContent = title(s.result);
+  const pts = (s.in_path || []).concat(s.path);
+  const split = (s.in_path || []).length;
+  const c = state.court, m = 0.4;
+  const X = (x) => x + c.hw + m, Y = (z) => z + c.hl + m;
+  const top = $("rTop"), side = $("rSide");
+  top.setAttribute("viewBox", `0 0 ${2 * c.hw + 2 * m} ${2 * c.hl + 2 * m}`);
+  const maxY = Math.max(2.2, ...pts.map((p) => p[1])) + 0.3;
+  const SZ = (z) => z + c.hl + m, SY = (y) => maxY - y;
+  side.setAttribute("viewBox", `0 0 ${2 * c.hl + 2 * m} ${maxY + 0.1}`);
+  const base = `<rect x="${X(-c.hw)}" y="${Y(-c.hl)}" width="${2 * c.hw}" height="${2 * c.hl}" fill="var(--court)" stroke="#f4f4ef" stroke-width="0.05"/>` +
+    `<rect x="${X(-c.hw)}" y="${Y(-c.kd)}" width="${2 * c.hw}" height="${2 * c.kd}" fill="var(--kitchen)"/>` +
+    `<rect x="${X(-c.hw - 0.2)}" y="${Y(0) - 0.05}" width="${2 * c.hw + 0.4}" height="0.1" fill="#e8ecf8"/>` +
+    (s.me ? `<circle cx="${X(s.me[0])}" cy="${Y(s.me[1])}" r="0.2" fill="none" stroke="var(--gold)" stroke-width="0.05"/>` : "");
+  const sideBase = `<line x1="${SZ(-c.hl)}" y1="${SY(0)}" x2="${SZ(c.hl)}" y2="${SY(0)}" stroke="#f4f4ef" stroke-width="0.04"/>` +
+    `<line x1="${SZ(0)}" y1="${SY(0)}" x2="${SZ(0)}" y2="${SY(0.86)}" stroke="#e8ecf8" stroke-width="0.06"/>` +
+    `<line x1="${SZ(-c.kd)}" y1="${SY(0)}" x2="${SZ(-c.kd)}" y2="${SY(0.05)}" stroke="#f4f4ef" stroke-width="0.04"/>` +
+    `<line x1="${SZ(c.kd)}" y1="${SY(0)}" x2="${SZ(c.kd)}" y2="${SY(0.05)}" stroke="#f4f4ef" stroke-width="0.04"/>`;
+  $("rNote").textContent = [s.speed ? `${s.speed} m/s off the paddle` : "", s.height ? `contact at ${s.height} m` : "",
+    s.clear !== undefined ? `${cm(s.clear)} cm over the net` : ""].filter(Boolean).join(" · ");
+  let n = 0;
+  clearInterval(replayTimer);
+  const frame = () => {
+    n = Math.min(n + 1, pts.length);
+    const seg = (a, b, col, map) => a < b ? `<polyline points="${pts.slice(a, b).map(map).join(" ")}" fill="none" stroke="${col}" stroke-width="0.06" stroke-linejoin="round"/>` : "";
+    const tm = (p) => `${X(p[0]).toFixed(3)},${Y(p[2]).toFixed(3)}`, sm = (p) => `${SZ(p[2]).toFixed(3)},${SY(p[1]).toFixed(3)}`;
+    const cur = pts[n - 1];
+    top.innerHTML = base + seg(0, Math.min(n, split), "var(--net)", tm) + seg(Math.max(split - 1, 0), n, "var(--gold)", tm) +
+      (cur ? `<circle cx="${X(cur[0])}" cy="${Y(cur[2])}" r="0.12" fill="#d8ff3a"/>` : "");
+    side.innerHTML = sideBase + seg(0, Math.min(n, split), "var(--net)", sm) + seg(Math.max(split - 1, 0), n, "var(--gold)", sm) +
+      (cur ? `<circle cx="${SZ(cur[2])}" cy="${SY(cur[1])}" r="0.08" fill="#d8ff3a"/>` : "");
+    if (n >= pts.length) clearInterval(replayTimer);
+  };
+  replayTimer = setInterval(frame, 25);   // each point is 3 ticks: about real time
+  $("bReplayAgain").onclick = () => openReplay(s);
+}
+
+// --- Report -----------------------------------------------------------------------
+function summaryText() {
+  const list = analysisShots();
+  const hit = list.filter((s) => s.speed !== undefined);
+  const lines = [`Pickleball '94 coaching: ${state ? title(state.player) : ""}`, past ? `Session ${past.summary.started}` : `Session ${new Date().toLocaleString()}`,
+    `${list.length} shots, ${list.length ? pct(list, (s) => s.good) : 0}% good.`];
+  const cl = hit.filter((s) => s.clear !== undefined && s.clear >= 0);
+  if (cl.length) lines.push(`Net clearance ${cm(avg(cl.map((s) => s.clear)))} cm on average.`);
+  lines.push("", ...insights(list).map((t) => "- " + t));
+  return lines.join("\n");
+}
+
+function printReport() {
+  drawAnalysis();
+  const svg = $("court").outerHTML;
+  $("report").innerHTML = `<h1>Pickleball '94 coaching report</h1><p>${esc(summaryText()).replace(/\n/g, "<br>")}</p>` +
+    `<h2>Shot placement</h2><div style="max-width:320px">${svg}</div>` +
+    `<h2>Breakdown</h2><table>${$("split").parentElement.innerHTML}</table>` +
+    `<h2>By mode</h2><table>${$("summary").parentElement.innerHTML}</table>`;
+  window.print();
+}
+
+// --- Wiring -----------------------------------------------------------------------
 document.querySelectorAll("select[data-key]").forEach((sel) =>
   sel.addEventListener("change", () => { send({ type: "set", key: sel.dataset.key, value: parseInt(sel.value, 10) }); sel.blur(); }));
+$("player").addEventListener("change", () => { send({ type: "player", name: $("player").value }); shots = []; runStart = 0; past = null; $("pastBanner").classList.add("hidden"); drawAnalysis(); drawShots(); });
+$("bNewPlayer").onclick = () => { const n = prompt("Player's name"); if (n) send({ type: "player", name: n }); };
 $("bStart").onclick = () => { runStart = shots.length; send({ type: "start" }); };
 $("bPause").onclick = () => send({ type: state && state.where === "paused" ? "resume" : "pause" });
 $("bRestart").onclick = () => { runStart = shots.length; send({ type: "restart" }); };
 $("bMenu").onclick = () => send({ type: "menu" });
+$("bFreeTarget").onclick = () => send({ type: "target_free" });
+$("bClearMarks").onclick = () => { pending = null; send({ type: "clear_marks" }); };
+$("bCue").onclick = () => { const t = $("cueText").value.trim(); if (t) { send({ type: "cue", text: t }); $("cueText").value = ""; } };
+$("cueText").addEventListener("keydown", (e) => { if (e.key === "Enter") $("bCue").click(); });
+$("bChallenge").onclick = () => send({ type: "challenge", kind: $("chKind").value, n: parseInt($("chN").value, 10) || 5 });
+$("bChallengeClear").onclick = () => send({ type: "challenge_clear" });
+$("bTuneReset").onclick = () => send({ type: "tune_reset" });
+$("bAddStep").onclick = () => {
+  if (!state) return;
+  const u = state.setup;
+  steps.push({ drill: u.drill, level: u.level, time: Math.max(1, u.time), targets: u.targets });
+  drawWorkout(state);
+};
+$("bRunSteps").onclick = () => send({ type: "workout_run", name: $("wName").value || "Workout", steps });
+$("bStopWorkout").onclick = () => send({ type: "workout_stop" });
+$("bSaveWorkout").onclick = () => { send({ type: "workout_save", name: $("wName").value, steps }); };
+$("bHistory").onclick = () => send({ type: "sessions" });
+$("bLive").onclick = () => { past = null; $("pastBanner").classList.add("hidden"); drawAnalysis(); drawCourt(); };
+$("bPrint").onclick = printReport;
+$("bCopy").onclick = async () => {
+  try { await navigator.clipboard.writeText(summaryText()); $("copyNote").textContent = "Copied."; }
+  catch (e) { $("copyNote").textContent = "Couldn't copy here; use Print instead."; }
+};
+$("bCloseReplay").onclick = () => { clearInterval(replayTimer); $("replay").classList.add("hidden"); };
+$("court").addEventListener("click", courtTap);
 document.querySelectorAll("#scope button").forEach((b) => b.onclick = () => {
   scope = b.dataset.s;
   document.querySelectorAll("#scope button").forEach((o) => o.classList.toggle("on", o === b));
   drawCourt();
 });
+document.querySelectorAll("#colorBy button").forEach((b) => b.onclick = () => {
+  colorBy = b.dataset.c;
+  document.querySelectorAll("#colorBy button").forEach((o) => o.classList.toggle("on", o === b));
+  drawCourt();
+});
+document.querySelectorAll("#tapMode button").forEach((b) => b.onclick = () => {
+  tapMode = b.dataset.m; pending = null;
+  document.querySelectorAll("#tapMode button").forEach((o) => o.classList.toggle("on", o === b));
+  $("tapHint").textContent = HINTS[tapMode];
+  drawCourt();
+});
 $("join").onclick = () => { $("loginErr").textContent = ""; connect($("code").value.trim()); };
 $("code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("join").click(); });
 const saved = store.get("coachCode");
-if (saved) { $("code").value = saved; }
+if (saved) $("code").value = saved;
+drawAnalysis();
 </script>
 </body>
 </html>

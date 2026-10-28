@@ -238,6 +238,10 @@ var read_at := 0                     ## when the partner reads your shot
 var target_x := 0
 var target_z := 0
 var target_hits := 0
+var target_pinned := false           ## a coach put the target there: it stays (C-8)
+var feed_set := false                ## a coach chose where the partner's next ball goes (C-9)
+var feed_x := 0
+var feed_z := 0
 var target_side := 0                 ## the half (sign of x) a partner drill's target is in
 var ends_at := -1                    ## a timed run's last tick
 var points := 0                      ## dartboard points (spots and floor targets)
@@ -720,6 +724,10 @@ func _partner_shot(sim: Sim, x: int, y: int, z: int, tz: int, clear: int) -> voi
 	var want_x := p.x + (off if sim.random(2) == 0 else -off)
 	var tx := clampi(x + (want_x - x) * (tz - z) / maxi(p.z - z, 1), -K.COURT_HALF_WIDTH + 300000,
 		K.COURT_HALF_WIDTH - 300000)
+	if feed_set:
+		feed_set = false                 # the coach's spot, once
+		tx = feed_x
+		tz = feed_z
 	var level := clampi(partner_pace, 0, 2)
 	var pace: int = PARTNER_PACE[level]
 	var w := Aim.topspin(tx - x, tz - z, -150000)
@@ -955,6 +963,9 @@ func _partner_floater(sim: Sim, x: int, y: int, z: int) -> void:
 ## lights as they hit (EASY), as it crosses the net (MEDIUM) or as it
 ## bounces on your side (HARD); VOLLEY DINKS light it as they hit.
 func _call_spot(sim: Sim) -> void:
+	if target_pinned:
+		spot_lit = partner_pace <= 0 or kind == KIND_VOLLEYS
+		return
 	var q := sim.players[2]
 	var kd := K.KITCHEN_DEPTH
 	var wx := K.COURT_HALF_WIDTH - 700000
@@ -967,6 +978,30 @@ func _call_spot(sim: Sim) -> void:
 	target_x = at[i][0]
 	target_z = at[i][1]
 	spot_lit = partner_pace <= 0 or kind == KIND_VOLLEYS
+
+
+## A coach's target (C-8): there, and staying there (`pin`), or back to
+## moving as the drill moves it. Their side, in court, a board's reach
+## from the net. A drill without a board gets the floor target.
+func pin_target(sim: Sim, x: int, z: int, pin: bool) -> void:
+	target_pinned = pin
+	if not pin:
+		if targets:
+			_new_target(sim)
+		return
+	if not spots and not lanes:
+		targets = true
+	target_x = clampi(x, -K.COURT_HALF_WIDTH + 300000, K.COURT_HALF_WIDTH - 300000)
+	target_z = clampi(z, -(K.COURT_HALF_LENGTH - 300000), -300000)
+	target_side = signi(target_x) if target_x != 0 else 1
+	spot_lit = spot_lit or spots
+
+
+## A coach's spot for the partner's next ball (C-9): your side, in court.
+func feed_to(x: int, z: int) -> void:
+	feed_set = true
+	feed_x = clampi(x, -K.COURT_HALF_WIDTH + 300000, K.COURT_HALF_WIDTH - 300000)
+	feed_z = clampi(z, 600000, K.COURT_HALF_LENGTH - 300000)
 
 
 ## The dartboard ring at `off` um from the centre of one `radius` across:
@@ -1037,6 +1072,8 @@ func mode_name() -> String:
 ## A new target in the return zone (their kitchen for a partner), not on
 ## top of the last one.
 func _new_target(sim: Sim) -> void:
+	if target_pinned:
+		return
 	var hw := K.COURT_HALF_WIDTH - 600000
 	var lo := 1000000
 	var hi := K.COURT_HALF_LENGTH - 600000
@@ -1073,4 +1110,5 @@ func snapshot() -> Array:
 	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
 		hit_at, machine_z, partner_plan, read_at, target_x, target_z, target_hits, rally, best_rally,
 		1 if partner else 0, kind, lane, toss_at, 1 if spot_lit else 0, spot_i, 1 if lane_cross else 0,
-		1 if high_ball else 0, 1 if you_fast else 0, points, last_ring, last_off, target_side, time_limit, ends_at]
+		1 if high_ball else 0, 1 if you_fast else 0, points, last_ring, last_off, target_side, time_limit, ends_at,
+		1 if target_pinned else 0, 1 if feed_set else 0, feed_x, feed_z]

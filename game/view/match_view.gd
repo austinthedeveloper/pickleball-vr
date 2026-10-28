@@ -54,8 +54,18 @@ var machine: Machine
 var floor_target: FloorTarget
 var partner_avatar: Avatar
 var lesson_label: Label3D
+var cue_label: Label3D               ## a coach's cue, over the net (C-7)
+var challenge_label: Label3D         ## a coach's challenge and how it's going (C-12)
+var marks: Node3D                    ## a coach's zones and lines on the court (C-14)
+const MAX_MARKS := 8
+var _path: Array = []                ## the ball since the last hit: [x, y, z] in m, every PATH_EVERY ticks (C-17)
+const PATH_EVERY := 3
+var _cue_left := 0.0
+const CUE_SECONDS := 3.5
 var zone_mesh: MeshInstance3D
 var _shot := {}                      ## your ball in play: its hit, then where it landed
+var _ready_y := -1.0                 ## your paddle's height when the other side last struck (m)
+var _ball_z_was := 0                 ## the ball's z last tick, to catch it crossing the net
 var paused := false                  ## the sim isn't stepped while a pause menu is up
 var focus := 0.0                     ## FOCUS (ADR-013): how dim the world is now
 var _placed := false                 ## XR: turned to the court and moved to the start, once tracked
@@ -233,6 +243,86 @@ func _practice_court() -> void:
 
 
 ## A lesson's title and instructions, standing over the far court.
+## A coach's cue (C-7): big, over the middle of the net, facing you, for a
+## few seconds, with a soft ding to catch your eye.
+func cue(text: String) -> void:
+	if cue_label == null:
+		cue_label = Label3D.new()
+		cue_label.font_size = 96
+		cue_label.pixel_size = 0.004
+		cue_label.outline_size = 18
+		cue_label.modulate = Color(1, 0.86, 0.25)
+		cue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cue_label.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+		cue_label.position = Vector3(0, 1.9, -0.2)
+		add_child(cue_label)
+	cue_label.text = text
+	cue_label.visible = true
+	cue_label.modulate.a = 1.0
+	_cue_left = CUE_SECONDS
+	_play("5_ding", Vector3(0, 1.9, 0), 0.75, -6.0)
+
+
+func _cue_fade(delta: float) -> void:
+	if cue_label == null or not cue_label.visible:
+		return
+	_cue_left -= delta
+	cue_label.modulate.a = clampf(_cue_left / 0.6, 0.0, 1.0)
+	cue_label.visible = _cue_left > 0.0
+
+
+## A coach's challenge (C-12): a line under the cue spot while it's on;
+## "" takes it down.
+func show_challenge(text: String) -> void:
+	if challenge_label == null:
+		challenge_label = Label3D.new()
+		challenge_label.font_size = 48
+		challenge_label.pixel_size = 0.004
+		challenge_label.outline_size = 12
+		challenge_label.modulate = Color(0.55, 1.0, 0.7)
+		challenge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		challenge_label.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+		challenge_label.position = Vector3(0, 2.45, -0.2)   # above the cue, clear of the play
+		add_child(challenge_label)
+	challenge_label.text = text
+	challenge_label.visible = text != ""
+
+
+## A coach's mark on the court (C-14): a zone between two corners, or a
+## line between two points (metres, on the court), glowing on the floor.
+## `clear` takes them all away.
+func add_mark(shape: String, a: Vector2, b: Vector2) -> void:
+	if marks == null:
+		marks = Node3D.new()
+		add_child(marks)
+	if marks.get_child_count() >= MAX_MARKS:
+		marks.get_child(0).free()
+	var m := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	var mat := World.material(Color(0.0, 0.85, 1.0, 0.55 if shape == "zone" else 1.0))   # strong cyan: tone mapping pales it
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.render_priority = 10             # after the net's tinted mesh, not under it
+	m.material_override = mat
+	m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if shape == "zone":
+		bm.size = Vector3(maxf(absf(b.x - a.x), 0.1), 0.004, maxf(absf(b.y - a.y), 0.1))
+		m.position = Vector3((a.x + b.x) / 2, 0.03, (a.y + b.y) / 2)
+	else:
+		var d := b - a
+		bm.size = Vector3(0.1, 0.004, maxf(d.length(), 0.1))
+		m.position = Vector3((a.x + b.x) / 2, 0.032, (a.y + b.y) / 2)
+		m.rotation.y = atan2(d.x, d.y)
+	m.mesh = bm
+	marks.add_child(m)
+
+
+func clear_marks() -> void:
+	if marks:
+		for c in marks.get_children():
+			c.free()
+
+
 func show_lesson(title: String, lines: Array) -> void:
 	if lesson_label == null:
 		lesson_label = Label3D.new()
@@ -365,10 +455,43 @@ func _play(n: String, at: Vector3, pitch := 1.0, db := 0.0) -> void:
 	p.play()
 
 
+## Your hit, as the coach sees it (ADR-023, design/COACHING.md C-3..C-6):
+## speed, contact height, forehand or backhand, how far behind the kitchen
+## line you were, where on the face it struck (mm: along the face toward
+## the tip, and across it), and your paddle's height as they struck.
+func _shot_start(speed: int, volley: bool) -> Dictionary:
+	var p := sim.players[0]
+	var b := sim.ball
+	var right := 1 if not left_handed else -1
+	var info := {"speed": snappedf(speed * K.TICK_HZ / 1e6, 0.1), "height": snappedf(b.y / 1e6, 0.01),
+		"from_x": snappedf(b.x / 1e6, 0.01), "from_z": snappedf(b.z / 1e6, 0.01), "volley": volley,
+		# Facing -z, your right is +x: the ball on your paddle side is a forehand.
+		"side": "FH" if (b.x - p.x) * right >= 0 else "BH",
+		"behind": snappedf((p.z - K.KITCHEN_DEPTH) / 1e6, 0.01)}
+	if _ready_y >= 0.0:
+		info["ready"] = snappedf(_ready_y, 0.01)
+	var pm: PaddleMesh = xr.paddle if xr else (flat.paddle if flat else null)
+	if pm and pm.is_inside_tree():
+		var local := pm.global_transform.affine_inverse() * World.m(b.x, b.y, b.z)
+		info["face_u"] = roundi((PaddleMesh.FACE_CENTER.z - local.z) * 1000)   # toward the tip
+		info["face_v"] = roundi(local.y * 1000)
+	return info
+
+
+## Net clearance (C-3): how high over the tape your ball crossed.
+func _track_net() -> void:
+	var b := sim.ball
+	if not _shot.is_empty() and not _shot.has("clear") and _ball_z_was > 0 and b.z <= 0:
+		_shot["clear"] = snappedf((b.y - K.net_height(b.x)) / 1e6, 0.01)
+	_ball_z_was = b.z
+
+
 ## A drill result: your shot, as the coach sees it (ADR-023).
 func _shot_ended(r: int, streak: int) -> void:
 	var d := sim.drill
 	var info := _shot.duplicate()
+	if not _shot.is_empty():
+		info["path"] = _path.duplicate()         # your ball, from the paddle to here (C-17)
 	info.merge({"type": "shot", "result": Drill.RESULT_TEXT[r], "good": r == Drill.RESULT_GOOD,
 		"ring": d.last_ring, "off": snappedf(d.last_off / 1e6, 0.01) if d.last_off >= 0 else -1.0,
 		"streak": streak, "mode": _mode(), "tick": sim.tick, "hit": not _shot.is_empty()})
@@ -490,6 +613,11 @@ func _tick(alpha: float, first: bool) -> void:
 	sim.step([h], _commands)
 	Perf.add("sim", Time.get_ticks_usec() - ts)
 	_commands = []
+	_track_net()
+	if sim.tick % PATH_EVERY == 0 and not sim.ball.held:
+		_path.append([snappedf(sim.ball.x / 1e6, 0.01), snappedf(sim.ball.y / 1e6, 0.01), snappedf(sim.ball.z / 1e6, 0.01)])
+		if _path.size() > 400:
+			_path.pop_front()
 	if sim.phase != _last_phase:
 		_on_phase(sim.phase)
 		_last_phase = sim.phase
@@ -571,8 +699,12 @@ func _on_event(e: Array) -> void:
 		K.EVENT_HIT:
 			var speed: int = e[2]
 			if e[1] == 0:
-				_shot = {"speed": snappedf(speed * K.TICK_HZ / 1e6, 0.1), "height": snappedf(sim.ball.y / 1e6, 0.01),
-					"from_x": snappedf(sim.ball.x / 1e6, 0.01), "from_z": snappedf(sim.ball.z / 1e6, 0.01), "volley": e[3] == 1}
+				_shot = _shot_start(speed, e[3] == 1)
+				_shot["in_path"] = _path.duplicate()     # how the ball came to you
+				_shot["me"] = [snappedf(sim.players[0].x / 1e6, 0.01), snappedf(sim.players[0].z / 1e6, 0.01)]
+			elif e[1] >= 2:
+				_ready_y = sim.players[0].py / 1e6   # your paddle as they strike: ready or not
+			_path = [[snappedf(sim.ball.x / 1e6, 0.01), snappedf(sim.ball.y / 1e6, 0.01), snappedf(sim.ball.z / 1e6, 0.01)]]
 			if e[1] == 0 and Perf.on and not demo:     # your swings, not the lobby's bot
 				_log_swing()
 			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf())
@@ -645,8 +777,12 @@ func _draw(delta: float) -> void:
 		a.show_from(sim, delta)
 	if machine:
 		machine.show_from(sim, delta)
+	if floor_target == null and sim.drill and sim.drill.targets:
+		floor_target = FloorTarget.new()     # a coach put a target down (C-8)
+		add_child(floor_target)
 	if floor_target:
 		floor_target.show_from(sim, delta)
+	_cue_fade(delta)
 	if zone_mesh and sim.drill and sim.drill.lanes:
 		zone_mesh.position.x = sim.drill.target_x / float(K.M)
 	board.show_from(sim, delta)

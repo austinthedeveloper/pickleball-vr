@@ -25,6 +25,9 @@ func _run() -> void:
 	Settings.default_path = "user://test_settings.cfg"   # never the player's
 	Settings.seed_override = 1994                        # never the clock's
 	Settings.dev = false                                 # no TUNING overrides (ADR-020)
+	Sessions.dir = "user://test_sessions/"              # never the player's coaching sessions
+	for f in DirAccess.get_files_at(Sessions.dir):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(Sessions.dir + f))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
 	var filter := ""
 	var args := OS.get_cmdline_user_args()

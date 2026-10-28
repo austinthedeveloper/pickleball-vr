@@ -92,6 +92,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-52 | Floor targets move after a miss too (ADR-019) | `feature/cld-vr-timed` | Ready to test |
 | VR-53 | Coach companion: a web page from the headset (ADR-023) | `feature/cld-vr-coach` | Played: "worked so well" |
 | VR-54 | Coach START NEW mid-run; stronger vibration; blocks keep 72% (ADR-003, 023) | `feature/cld-vr-coach` | Ready to test |
+| VR-55 | The coaching suite: C-3..C-18 (ADR-024, design/COACHING.md) | `feature/cld-vr-coaching` | Ready to test |
 
 ## Phase 1: singles
 
@@ -154,6 +155,11 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-55, ready to test.** The coaching suite (design/COACHING.md tracks
+each idea). On the phone: tap modes on the court (Target, Feed, Zone,
+Line), cues, a challenge, the sliders, a workout, then tap a shot to
+replay it and LOAD the history.
 
 **VR-53, ready to test.** MAIN > COACH > COACH MODE ON, then on a phone
 on the same Wi-Fi open the address it shows and enter the code. Run a

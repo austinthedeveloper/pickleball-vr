@@ -7,6 +7,20 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ## [Unreleased]
 
 ### Added
+- **Coaching, much more** (design/COACHING.md):
+  - **Placement:** the coach taps to place the target or choose where the
+    partner's next ball goes, and draws zones and lines that glow on
+    your court.
+  - **Messages:** cues ("PADDLE UP") and challenges ("8 in a row on the
+    board") appear over the net.
+  - **During the drill:** live pace and target-size sliders, and
+    workouts that run several drills back to back.
+  - **Per shot:** net clearance, forehand/backhand, contact height,
+    ready position, footwork and a sweet-spot map.
+  - **Analysis:** plain-English insights, rally replays from above and
+    the side, and a printable report.
+  - **History:** every session is saved on the headset with history and
+    trends, and each player has their own profile and records.
 - **Coach companion:** turn on MAIN > COACH, and a coach opens the address
   it shows on a phone on the same Wi-Fi, then enters the code. They see
   your score, clock and streak live, where every shot landed, a session

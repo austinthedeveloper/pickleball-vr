@@ -29,5 +29,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [021](ADR-021-passthrough.md) | Passthrough: the court in your room |
 | [022](ADR-022-timed-runs.md) | Timed runs and records |
 | [023](ADR-023-coach-companion.md) | The coach companion: a web page served by the headset |
+| [024](ADR-024-coaching-suite.md) | The coaching suite |
 
-Next: ADR-024.
+Next: ADR-025.

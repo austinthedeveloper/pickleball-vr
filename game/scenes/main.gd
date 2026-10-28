@@ -66,7 +66,8 @@ func _new_view() -> MatchView:
 	view.paddle_reach = pose[2]
 	view.paddle_turn = pose[3]
 	add_child(view)
-	view.shot_done.connect(_on_shot)
+	view.shot_done.connect(desk.on_shot)
+	desk.on_new_view(view)
 	return view
 
 
@@ -300,6 +301,7 @@ func _start(cfg: SimTypes.MatchConfig, demo: bool) -> void:
 	view.match_over.connect(_on_match_over)
 	view.drill_done.connect(_on_drill_done)
 	view.time_up.connect(_on_time_up)
+	view.time_up.connect(desk.on_time_up)
 	view.pause_requested.connect(_on_pause)
 
 
@@ -362,104 +364,26 @@ func _on_drill_done() -> void:
 	view.show_menu(m)
 
 
-# --- The coach companion (ADR-023) ----------------------------------------------------
+# --- The coach companion (ADR-023, design/COACHING.md) ---------------------------------
 
-const COACH_EVERY := 0.25            ## seconds between state messages
-
-var coach: Coach
-var _coach_t := 0.0
+var desk: CoachDesk                  ## the coach's side: CoachDesk does the work
+var coach: Coach:
+	get: return desk.coach if desk else null
 
 
 func _coach_on(on: bool) -> void:
-	if on and coach == null:
-		coach = Coach.new()
-		add_child(coach)
-		coach.command.connect(_on_coach)
-	elif not on and coach != null:
-		coach.queue_free()
-		coach = null
+	if desk == null:
+		desk = CoachDesk.new(self)
+		add_child(desk)
+	desk.set_on(on)
 
 
-func _process(delta: float) -> void:
-	if coach == null or coach.coaches() == 0:
-		return
-	_coach_t += delta
-	if _coach_t >= COACH_EVERY:
-		_coach_t = 0.0
-		coach.broadcast(coach_state())
-
-
-func _on_shot(info: Dictionary) -> void:
-	if coach:
-		coach.broadcast(info)
-
-
-## What the coach's page shows: where the player is, the drill as set, the
-## run so far, the target, the court's size (metres).
 func coach_state() -> Dictionary:
-	var where := "lobby"
-	if _playing():
-		where = "paused" if view.paused else "playing"
-	var st := {"type": "state", "where": where,
-		"court": {"hw": K.COURT_HALF_WIDTH / 1e6, "hl": K.COURT_HALF_LENGTH / 1e6, "kd": K.KITCHEN_DEPTH / 1e6,
-			"dink": Drill.DINK_ZONE / 1e6},
-		"setup": {"drill": settings.partner_drill, "drills": Drill.KIND_NAMES, "level": settings.partner_level,
-			"levels": Drill.PACE_NAMES, "time": settings.partner_time, "times": Drill.TIME_NAMES,
-			"targets": settings.partner_targets, "side": settings.partner_cross, "spread": settings.partner_spread,
-			"spreads": Drill.SPREAD_NAMES}}
-	var d: Drill = view.sim.drill if view and view.sim and _playing() else null
-	if d:
-		st["run"] = {"name": Settings.run_name(d) if d.time_limit > 0 else d.mode_name(), "score": d.score(),
-			"good": d.good, "streak": d.streak, "best": d.best, "points": d.points, "timed": d.time_limit > 0,
-			"left": ceili(d.time_left(view.sim) / float(K.TICK_HZ)), "done": d.stage == Drill.DONE}
-		if d.targets or d.spots:
-			st["target"] = {"x": d.target_x / 1e6, "z": d.target_z / 1e6, "lit": d.spot_lit or d.targets,
-				"r": (d.spot_radius() if d.spots else Drill.TARGET_RADIUS) / 1e6, "rings": Drill.RING_EDGES}
-	var cfg := settings.partner_config()
-	cfg.drill.time_limit = Drill.TIMES[settings.partner_time] * K.TICK_HZ
-	if cfg.drill.time_limit > 0:
-		var name := Settings.run_name(cfg.drill)
-		st["records"] = {"name": name, "best": settings.best_runs(name, 3).map(func(r: Array) -> int: return r[0]),
-			"recent": settings.recent_scores(name, 8)}
-	return st
+	return desk.state()
 
 
-## A coach's message: the PRACTICE PARTNER setup, or start / pause /
-## resume / restart / menu, as the headset's own menus would do them.
-## START mid-run starts the drill as it's set now (the coach changed it).
 func _on_coach(msg: Dictionary) -> void:
-	match String(msg.get("type", "")):
-		"set":
-			var v := int(msg.get("value", 0))
-			match String(msg.get("key", "")):
-				"drill": settings.partner_drill = clampi(v, 0, Drill.KIND_NAMES.size() - 1)
-				"level": settings.partner_level = clampi(v, 0, 2)
-				"time": settings.partner_time = clampi(v, 0, Drill.TIMES.size() - 1)
-				"targets": settings.partner_targets = v != 0
-				"side": settings.partner_cross = v != 0
-				"spread": settings.partner_spread = clampi(v, 0, Drill.SPREADS.size() - 1)
-				_: return
-			settings.save()
-			if not _playing():
-				lobby.call_deferred("partner")   # the headset shows what the coach set
-		"start":
-			if _playing():
-				_keep_best()
-			_start.call_deferred(settings.partner_config(), false)
-		"pause":
-			if _playing() and not view.paused:
-				_on_pause()
-		"resume":
-			if _playing() and view.paused:
-				_on_pressed("resume")
-		"restart":
-			if _playing():
-				_on_pressed("again")
-		"menu":
-			if _playing():
-				_on_pressed("lobby")
-	if coach:
-		coach.broadcast(coach_state())
+	desk.handle(msg)
 
 
 # --- Timed runs and records (ADR-022) ----------------------------------------------------

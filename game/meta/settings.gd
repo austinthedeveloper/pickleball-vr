@@ -71,9 +71,22 @@ var partner_best := 0
 ## Timed runs (ADR-022): MODE, an index into Drill.TIMES (0 free play).
 var partner_time := 0
 var machine_time := 0
-## Every timed run kept: run name (Settings.run_name) -> [[score, date,
-## good, best streak], ...], oldest first, the last RUNS_KEPT.
-var records := {}
+## Every timed run kept, per player (C-18): player -> run name
+## (Settings.run_name) -> [[score, date, good, best streak], ...], oldest
+## first, the last RUNS_KEPT. `records` is the current player's.
+var player := "PLAYER 1"
+var players: Array = ["PLAYER 1"]
+var records_by := {}
+var records: Dictionary:
+	get:
+		if not records_by.has(player):
+			records_by[player] = {}
+		return records_by[player]
+	set(v):
+		records_by[player] = v
+## A coach's saved workouts (C-13): [{name, steps: [{drill, level, time,
+## targets}]}].
+var workouts: Array = []
 const RUNS_KEPT := 100
 
 
@@ -117,7 +130,12 @@ func load_settings() -> void:
 	partner_lane = c.get_value("partner", "lane", partner_lane)
 	partner_time = c.get_value("partner", "time", partner_time)
 	machine_time = c.get_value("machine", "time", machine_time)
-	records = c.get_value("records", "runs", records)
+	player = c.get_value("player", "name", player)
+	players = c.get_value("player", "names", players)
+	records_by = c.get_value("records", "by_player", {})
+	if records_by.is_empty() and c.has_section_key("records", "runs"):
+		records_by[player] = c.get_value("records", "runs")   # before profiles: the first player's
+	workouts = c.get_value("coach", "workouts", workouts)
 
 
 func save() -> void:
@@ -148,7 +166,10 @@ func save() -> void:
 	c.set_value("partner", "level", partner_level)
 	c.set_value("partner", "time", partner_time)
 	c.set_value("machine", "time", machine_time)
-	c.set_value("records", "runs", records)
+	c.set_value("player", "name", player)
+	c.set_value("player", "names", players)
+	c.set_value("records", "by_player", records_by)
+	c.set_value("coach", "workouts", workouts)
 	c.set_value("partner", "targets", partner_targets)
 	c.set_value("partner", "best", partner_best)
 	c.set_value("partner", "cross", partner_cross)

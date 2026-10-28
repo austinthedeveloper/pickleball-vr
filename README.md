@@ -89,7 +89,7 @@ game/assets/  audio; people (Quaternius' Universal Base Characters, CC0)
 game/scenes/  main (XR or flat)
 game/tests/   headless suites, golden traces
 game/tools/   test.sh, screenshot.gd, rally_stats.gd
-design/       ROADMAP, KNOWN_ISSUES, QUEST_SETUP, FROM_THE_PORT_KIT
+design/       ROADMAP, KNOWN_ISSUES, QUEST_SETUP, FROM_THE_PORT_KIT, COACHING
 decisions/    ADRs
 ```
 

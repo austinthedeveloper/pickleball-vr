@@ -118,3 +118,158 @@ func test_the_coach_runs_the_drill() -> void:
 	main._on_coach({"type": "nonsense"})
 	main.queue_free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
+
+
+# --- design/COACHING.md C-3..C-18 ------------------------------------------------------
+
+func _main() -> Node:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	runner.root.add_child(main)
+	return main
+
+
+func test_a_coach_pins_the_target_and_picks_the_feed() -> void:
+	# Through the sim's commands (deterministic, replayable): C-8, C-9.
+	var s := Settings.new()
+	s.partner_targets = true
+	var sim := Sim.new(s.partner_config())
+	var bot := Bot.new(sim, 0)
+	sim.step([bot.input()], [[K.CMD_PIN_TARGET, -1500000, -1200000, 1]])
+	var d := sim.drill
+	check(d.target_pinned and d.target_x == -1500000 and d.target_z == -1200000, "the coach's target, there")
+	sim.step([bot.input()], [[K.CMD_FEED_TO, 1000000, 1500000]])
+	check(d.feed_set, "a feed chosen")
+	var landed := Vector2i(-1, -1)
+	for i in 3000:
+		sim.step([bot.input()])
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_BOUNCE and e[2] > 0 and landed.x == -1 and not d.feed_set:
+				landed = Vector2i(e[1], e[2])
+	check(not d.feed_set, "used on the partner's next ball")
+	check(absi(landed.x - 1000000) < 250000 and absi(landed.y - 1500000) < 250000,
+		"it landed there: %s" % str(landed))
+	eq([d.target_x, d.target_z], [-1500000, -1200000], "the pinned target stayed put, hits and misses alike")
+	sim.step([bot.input()], [[K.CMD_PIN_TARGET, 0, 0, 0]])
+	check(not d.target_pinned, "let go, it moves again")
+	# A drill without a board gets one.
+	s.partner_targets = false
+	var sim2 := Sim.new(s.partner_config())
+	sim2.step([], [[K.CMD_PIN_TARGET, 0, -1500000, 1]])
+	check(sim2.drill.targets, "a board appears where the coach put it")
+
+
+func test_shots_carry_what_the_coach_reads() -> void:
+	var s := Settings.new()
+	var v := MatchView.new()
+	runner.root.add_child(v)
+	v.setup(s.partner_config(), false)
+	var shots: Array = []
+	v.shot_done.connect(func(info: Dictionary) -> void: shots.append(info))
+	for i in 3600:
+		v._process(MatchView.DT)
+	var hit := shots.filter(func(x: Dictionary) -> bool: return x.get("hit", false))
+	check(hit.size() >= 4, "hits: %d" % hit.size())
+	for k in ["side", "behind", "clear", "path", "in_path", "me"]:
+		check(hit.any(func(x: Dictionary) -> bool: return x.has(k)), "a shot has its %s" % k)
+	for x in hit:
+		if x.has("clear") and x["result"] != "NET":
+			check(float(x["clear"]) > 0.0, "over the net: %.2f m" % float(x["clear"]))
+	v.queue_free()
+
+
+func test_cues_challenges_marks_in_the_headset() -> void:
+	var main := _main()
+	main._coach_on(false)
+	main._start(main.settings.partner_config(), false)
+	var v: MatchView = main.view
+	main._on_coach({"type": "cue", "text": "paddle up<script>"})
+	check(v.cue_label != null and v.cue_label.visible, "the cue shows")
+	eq(v.cue_label.text, "PADDLE UPSCRIPT", "upper case, letters only")
+	main._on_coach({"type": "challenge", "kind": "good", "n": 2})
+	check(v.challenge_label.visible and v.challenge_label.text.contains("0 / 2"), "the challenge shows")
+	main.desk.on_shot({"good": true, "ring": 0})
+	main.desk.on_shot({"good": false, "ring": 0})
+	main.desk.on_shot({"good": true, "ring": 0})
+	check(main.desk.challenge["done"], "two good: done")
+	eq(v.challenge_label.text, "CHALLENGE DONE!", "and said so")
+	main._on_coach({"type": "mark", "shape": "zone", "ax": -2, "az": -2, "bx": 0, "bz": -0.5})
+	main._on_coach({"type": "mark", "shape": "line", "ax": -2, "az": -1.8, "bx": 2, "bz": -1.8})
+	eq(v.marks.get_child_count(), 2, "two marks on the court")
+	main._on_pressed("again")
+	main._start(main.settings.partner_config(), false)
+	eq(main.view.marks.get_child_count(), 2, "and back on a new drill")
+	main._on_coach({"type": "clear_marks"})
+	eq(main.view.marks.get_child_count(), 0, "cleared")
+	main.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
+
+
+func test_sliders_and_workouts() -> void:
+	var main := _main()
+	main.settings.partner_drill = Drill.KIND_SPOTS
+	main.settings.partner_level = 2
+	var ids: Array = main.coach_state()["tunes"].map(func(t: Dictionary) -> String: return t["id"])
+	check(ids.has("dink_hard") and ids.has("spot_hard") and not ids.has("spot_easy"), "the drill's sliders, its level: %s" % str(ids))
+	var was := Tune.value("spot_hard")
+	main._on_coach({"type": "tune", "id": "spot_hard", "value": was + 100000})
+	eq(Tune.value("spot_hard"), was + 100000, "a slider moves it, live")
+	main._on_coach({"type": "tune_reset"})
+	eq(Tune.value("spot_hard"), was, "RESET")
+	var steps := [{"drill": Drill.KIND_DINKS, "level": 0, "time": 1, "targets": true},
+		{"drill": Drill.KIND_RESETS, "level": 1, "time": 0, "targets": false}]
+	main._on_coach({"type": "workout_save", "name": "warm up!", "steps": steps})
+	eq(main.settings.workouts.size(), 1, "saved")
+	eq(main.settings.workouts[0]["name"], "WARM UP!", "its name")
+	eq(main.settings.workouts[0]["steps"][1]["time"], 1, "every step is timed")
+	main._on_coach({"type": "workout_run", "name": "WARM UP!"})
+	eq(main.desk.workout["step"], 0, "running from the first drill")
+	eq(main.settings.partner_drill, Drill.KIND_DINKS, "its drill set")
+	main._start(main.settings.partner_config(), false)   # what the deferred start does
+	main.desk.on_time_up(10, 10, 3)
+	eq(main.desk.workout["step"], 1, "time's up: on to the next")
+	check(main.view.cue_label.text.begins_with("NEXT: RESETS"), "and the headset says what's next")
+	main.desk._run_step()
+	eq(main.settings.partner_drill, Drill.KIND_RESETS, "the next drill set")
+	main.desk.on_time_up(5, 5, 1)
+	check(main.desk.workout.is_empty(), "the last one: done")
+	main._on_coach({"type": "workout_delete", "name": "WARM UP!"})
+	eq(main.settings.workouts.size(), 0, "deleted")
+	main.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
+
+
+func test_sessions_and_players() -> void:
+	var main := _main()
+	for i in 7:
+		main.desk.on_shot({"type": "shot", "good": i % 2 == 0, "result": "GOOD!", "mode": "DINKS MEDIUM",
+			"clear": 0.3, "path": [[0, 1, 0]]})
+	var list := Sessions.list(main.settings.player)
+	eq(list.size(), 1, "a session saved")
+	eq(list[0]["shots"], 5, "written every five shots")
+	main.desk.session.save()
+	var full := Sessions.read(String(list[0]["id"]))
+	eq((full["shots"] as Array).size(), 7, "all of them")
+	check(not (full["shots"][0] as Dictionary).has("path"), "replay paths stay live")
+	main._on_coach({"type": "player", "name": "ann"})
+	eq(main.settings.player, "ANN", "a new player")
+	check(main.settings.players.has("PLAYER 1") and main.settings.players.has("ANN"), "both kept")
+	main.desk.on_shot({"good": true, "result": "GOOD!"})
+	main.desk.session.save()
+	eq(Sessions.list("ANN").size(), 1, "her own session")
+	eq(Sessions.list("PLAYER 1").size(), 1, "his untouched")
+	main.settings.add_run("X 1 MIN", 30, 20, 5, "")
+	main._on_coach({"type": "player", "name": "PLAYER 1"})
+	check(not main.settings.records.has("X 1 MIN"), "records are each player's own")
+	main.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
+
+
+func test_old_records_go_to_the_first_player() -> void:
+	var c := ConfigFile.new()
+	c.set_value("records", "runs", {"DINKS EASY 1 MIN": [[12, "", 12, 4]]})
+	var s := Settings.new()
+	c.save(s.path)
+	s.load_settings()
+	eq(s.player, "PLAYER 1", "the first player")
+	eq(s.recent_scores("DINKS EASY 1 MIN"), [12] as Array[int], "keeps the runs from before profiles")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))

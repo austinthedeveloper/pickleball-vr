@@ -122,6 +122,8 @@ const FAULT_EARLY_VOLLEY := 6
 
 # --- Commands: changes to a running match that aren't a pad's (port ADR-102)
 const CMD_NEW_MATCH := 0
+const CMD_PIN_TARGET := 1            ## a coach's target: x, z (um, their side), 1 pin / 0 let it roam (C-8)
+const CMD_FEED_TO := 2               ## the partner's next ball to: x, z (um, your side) (C-9)
 
 # --- Events: [kind, a, b, c, tick]
 const EVENT_HIT := 0                 ## slot, speed um/tick, volley 0/1
