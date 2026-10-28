@@ -133,3 +133,24 @@ config values for it". Now each drill shows its own controls:
   list the phone gets.
 - **The ball machine:** taps for TARGET, MACHINE and BOUNCE, and the
   machine's speed, spin, height and interval with START.
+
+## Amendment (2026-10-28): a clean court per drill; taps that show
+
+From the headset:
+- "I switched to HANDS. But the court was all marked up from the
+  previous drill." The tablet's court and numbers are now the drill
+  under way's (`CoachDesk.run_shots`), starting fresh with each drill.
+  The session keeps every shot, for the phone's Session view and the
+  saved sessions.
+- "I don't know what the buttons do ... I pressed each one and clicked
+  on parts of the court but nothing changed." Two causes:
+  - **Nothing showed while paused.** A tap is a sim command, and a
+    paused sim takes it only on RESUME. The desk now keeps a paused tap
+    as pending, and the tablet draws it at once: the target's rings, or
+    an X where the next ball goes.
+  - **No feedback.** The tablet now says what each tap did ("TARGET
+    PINNED THERE: RESUME AND AIM FOR IT"), or why it didn't ("THE TARGET
+    GOES ON THEIR SIDE: TAP ABOVE THE NET").
+
+  The buttons sit under "PICK ONE, THEN TAP THE COURT TO PLACE IT" and
+  read TARGET, NEXT BALL, MACHINE and BOUNCE.

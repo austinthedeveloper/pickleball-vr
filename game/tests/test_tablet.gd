@@ -102,3 +102,33 @@ func test_it_shows_the_drills_own_controls() -> void:
 	check(t._machine_box.visible and not t._partner_box.visible, "the ball machine: its controls")
 	check(t._mode_buttons["BOUNCE"].visible and not t._mode_buttons["FEED"].visible, "taps: target, machine, bounce")
 	main.queue_free()
+
+
+## The lead switched drills and "the court was all marked up from the
+## previous drill"; and tapping TARGET and FEED while paused showed nothing.
+func test_a_new_drill_starts_clean_and_taps_show_at_once() -> void:
+	var main := _paused_drill()
+	for i in 6:
+		main.desk.on_shot({"good": true, "result": "GOOD!", "x": 0.5, "z": -1.5, "speed": 4.0})
+	eq(main.desk.run_shots().size(), 6, "this drill's shots")
+	main.settings.partner_drill = Drill.KIND_HANDS
+	main._start(main.settings.partner_config(), false)
+	eq(main.desk.run_shots().size(), 0, "HANDS starts with a clean court")
+	eq(main.desk.live.size(), 6, "the session still has them (the phone's Session view)")
+	main._on_pause()
+	var t: CoachTablet = main.view.tablet
+	t._set_mode("TARGET")
+	t.tap(-1.0, -1.2)
+	eq(main.desk.pending.get("target"), [-1.0, -1.2], "the pinned target shows now, paused")
+	check(String(t._labels["hint"].text).begins_with("TARGET PINNED"), "and it says what it did")
+	t.tap(0.5, 2.0)
+	check(String(t._labels["hint"].text).begins_with("THE TARGET GOES ON THEIR SIDE"), "a tap on the wrong side says so")
+	t._set_mode("FEED")
+	t.tap(0.5, 2.0)
+	check(main.desk.pending.has("feed"), "the next ball's spot shows too")
+	main._on_pressed("resume")
+	check(main.desk.pending.is_empty(), "RESUME: the sim has them")
+	main.view._process(MatchView.DT * 2)
+	check(main.view.sim.drill.target_pinned, "and the target is there")
+	main.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))

@@ -291,6 +291,7 @@ func _on_pressed(id: String) -> void:
 		"resume":
 			view.hide_menu()
 			view.paused = false
+			desk.pending = {}                # the tablet's taps are in the sim now
 		"rematch", "again":
 			view.hide_menu()
 			view.paused = false

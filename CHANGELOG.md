@@ -52,7 +52,9 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 - **Full swings hit full:** a big drive from the baseline now carries
   over the net. Touch and dinks are unchanged.
 - **The coach tablet shows the drill's own controls:** pace and size in
-  a partner drill, the machine's in the ball machine.
+  a partner drill, the machine's in the ball machine. Each new drill
+  starts with a clean court, and a tap shows at once and says what it
+  did.
 - **Checking for paddle drift:** PADDLE > CHECK reads the paddle laid
   flat on the floor, live. The swing log records tracking quality for
   every hit.

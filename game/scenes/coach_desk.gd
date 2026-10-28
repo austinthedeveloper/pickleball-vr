@@ -24,6 +24,10 @@ var challenge := {}                  ## {kind, n, progress, done}
 var workout := {}                    ## {name, steps, step}
 var marks: Array = []                ## [shape, a: Vector2, b: Vector2], put back on every new view
 var live: Array = []                 ## this session's shots, for the tablet (C-22)
+var run_from := 0                    ## where the drill under way starts in `live`
+## A tap made while paused: the sim takes it on RESUME, the tablet shows it
+## now. {"target": [x, z], "feed": [x, z]}, metres.
+var pending := {}
 const LIVE_KEEP := 400
 var machine_on := false              ## the coach started the ball machine: their settings feed it (C-21)
 var _t := 0.0
@@ -69,6 +73,9 @@ func _playing() -> bool:
 
 ## A new view (a drill, the lobby): the coach's marks go back down.
 func on_new_view(v: MatchView) -> void:
+	if not v.spectate:
+		run_from = live.size()           # a new drill: its own court and numbers
+		pending = {}
 	for m in marks:
 		v.add_mark(m[0], m[1], m[2])
 	if machine_on and v.sim.drill and not v.sim.drill.partner and not v.spectate:
@@ -93,6 +100,7 @@ func on_shot(info: Dictionary) -> void:
 	live.append(info)
 	if live.size() > LIVE_KEEP:
 		live.pop_front()
+		run_from = maxi(run_from - 1, 0)
 	_challenge_shot(info)
 	_send(info)
 
@@ -176,6 +184,11 @@ static func insights(shots: Array) -> Array[String]:
 	if out.is_empty():
 		out.append("NOTHING STANDS OUT YET: KEEP GOING.")
 	return out
+
+
+## The drill under way's shots (the tablet's court and numbers).
+func run_shots() -> Array:
+	return live.slice(run_from)
 
 
 ## Forehand against backhand, good %, one line.
@@ -285,6 +298,7 @@ func handle(msg: Dictionary) -> void:
 		"resume":
 			if _playing() and v.paused:
 				main._on_pressed("resume")
+				pending = {}
 		"restart":
 			if _playing():
 				main._on_pressed("again")
@@ -298,12 +312,17 @@ func handle(msg: Dictionary) -> void:
 				v.cue(_clean_name(msg.get("text", ""), "LOOK HERE").left(24))
 		"target":
 			if _playing():
+				if v.paused:
+					pending["target"] = [float(msg.get("x", 0)), float(msg.get("z", -1))]
 				v.command([K.CMD_PIN_TARGET, roundi(float(msg.get("x", 0)) * K.M), roundi(float(msg.get("z", -1)) * K.M), 1])
 		"target_free":
+			pending.erase("target")
 			if _playing():
 				v.command([K.CMD_PIN_TARGET, 0, 0, 0])
 		"feed":
 			if _playing():
+				if v.paused:
+					pending["feed"] = [float(msg.get("x", 0)), float(msg.get("z", 2))]
 				v.command([K.CMD_FEED_TO, roundi(float(msg.get("x", 0)) * K.M), roundi(float(msg.get("z", 2)) * K.M)])
 		"mark":
 			var a := Vector2(float(msg.get("ax", 0)), float(msg.get("az", 0)))

@@ -28,10 +28,20 @@ const COURT := Color(0.184, 0.435, 0.839)
 const MINE := Color(0.114, 0.247, 0.525)
 const KITCHEN := Color(0.141, 0.267, 0.561)
 const MODES := ["TARGET", "FEED", "MACHINE", "BOUNCE"]
+## What each tap button says it does.
+const MODE_TEXT := {"TARGET": "TARGET", "FEED": "NEXT BALL", "MACHINE": "MACHINE", "BOUNCE": "BOUNCE"}
 ## The taps each kind of drill offers.
 const PARTNER_MODES := ["TARGET", "FEED"]
 const MACHINE_MODES := ["TARGET", "MACHINE", "BOUNCE"]
 const MAX_SLIDERS := 5
+const HINTS := {"TARGET": "TAP THEIR SIDE: A TARGET THERE, STAYING PUT",
+	"FEED": "TAP YOUR SIDE: THE PARTNER'S NEXT BALL LANDS THERE",
+	"MACHINE": "TAP THEIR SIDE: THE MACHINE STANDS THERE", "BOUNCE": "TAP YOUR SIDE: ITS BALLS BOUNCE THERE"}
+## What a tap did, said back.
+const DONE := {"TARGET": "TARGET PINNED THERE: RESUME AND AIM FOR IT", "FEED": "THE NEXT BALL GOES THERE: RESUME",
+	"MACHINE": "THE MACHINE MOVES THERE", "BOUNCE": "ITS BALLS BOUNCE THERE NOW"}
+const WRONG := {"TARGET": "THE TARGET GOES ON THEIR SIDE: TAP ABOVE THE NET", "FEED": "THE NEXT BALL LANDS ON YOUR SIDE: TAP BELOW THE NET",
+	"MACHINE": "THE MACHINE STANDS ON THEIR SIDE: TAP ABOVE THE NET", "BOUNCE": "ITS BALLS BOUNCE ON YOUR SIDE: TAP BELOW THE NET"}
 ## The machine's steppers: key, label, step, min, max.
 const MACHINE := [["speed", "SPEED", 0.5, 3.0, 20.0], ["spin", "SPIN", 10.0, -100.0, 100.0],
 	["clear", "OVER THE NET", 0.05, 0.05, 3.0], ["every", "A BALL EVERY", 0.25, 1.25, 8.0]]
@@ -117,12 +127,16 @@ func _build(parent: Node) -> void:
 	# Left: the court and how a tap on it is read.
 	var left := VBoxContainer.new()
 	left.custom_minimum_size = Vector2(400, 0)
+	left.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	body.add_child(left)
+	left.add_child(_label("h_tap", "PICK ONE, THEN TAP THE COURT TO PLACE IT:", 18, DIM))
 	var modes := HBoxContainer.new()
 	modes.add_theme_constant_override("separation", 6)
 	left.add_child(modes)
 	for m in MODES:
-		var b := _button(m, 22, func() -> void: _set_mode(m))
+		var b := _button(MODE_TEXT[m], 18, func() -> void: _set_mode(m))
+		b.clip_text = true
+		b.custom_minimum_size = Vector2(90, 0)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		modes.add_child(b)
 		_mode_buttons[m] = b
@@ -133,7 +147,10 @@ func _build(parent: Node) -> void:
 	_court.draw.connect(_draw_court)
 	_court.gui_input.connect(_court_input)
 	left.add_child(_court)
-	left.add_child(_label("hint", "", 20, GOLD))
+	var hint := _label("hint", "", 20, GOLD)
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # never wider than the court
+	hint.custom_minimum_size = Vector2(400, 52)
+	left.add_child(hint)
 	# Right: what the numbers say, the breakdown, the machine.
 	var right := VBoxContainer.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -227,9 +244,7 @@ func _set_mode(m: String) -> void:
 	mode = m
 	for k in _mode_buttons:
 		(_mode_buttons[k] as Button).add_theme_stylebox_override("normal", _box(LINE if k == m else PANEL, 10))
-	var hints := {"TARGET": "TAP THEIR SIDE: THE TARGET GOES THERE", "FEED": "TAP YOUR SIDE: THEIR NEXT BALL LANDS THERE",
-		"MACHINE": "TAP THEIR SIDE: THE MACHINE STANDS THERE", "BOUNCE": "TAP YOUR SIDE: ITS BALLS BOUNCE THERE"}
-	(_labels["hint"] as Label).text = hints[m]
+	(_labels["hint"] as Label).text = HINTS[m]
 
 
 ## A partner drill's pace or size (C-11's sliders), a step either way.
@@ -302,7 +317,17 @@ func _draw_court() -> void:
 		var p := _px(g, f["x"], f["z"])
 		_court.draw_line(p - Vector2(9, 9), p + Vector2(9, 9), GOLD, 3)
 		_court.draw_line(p + Vector2(9, -9), p - Vector2(9, -9), GOLD, 3)
-	var shots: Array = desk.live if desk else []
+	var shots: Array = desk.run_shots() if desk else []
+	var pend: Dictionary = desk.pending if desk else {}
+	if pend.has("target"):
+		var at := _px(g, pend["target"][0], pend["target"][1])
+		var r := Drill.TARGET_RADIUS / 1e6 * s
+		for k in 3:
+			_court.draw_arc(at, r * (1.0 - 0.33 * k), 0, TAU, 32, GOLD, w * 1.5)
+	if pend.has("feed"):
+		var p := _px(g, pend["feed"][0], pend["feed"][1])
+		_court.draw_line(p - Vector2(12, 12), p + Vector2(12, 12), GOLD, 4)
+		_court.draw_line(p + Vector2(12, -12), p - Vector2(12, -12), GOLD, 4)
 	for i in shots.size():
 		var sh: Dictionary = shots[i]
 		if not sh.has("x"):
@@ -323,6 +348,10 @@ func _court_input(e: InputEvent) -> void:
 func tap(x: float, z: float) -> void:
 	var their := z < -0.3
 	var yours := z > 0.3
+	var ok := their if mode in ["TARGET", "MACHINE"] else yours
+	(_labels["hint"] as Label).text = DONE[mode] if ok else WRONG[mode]
+	if not ok:
+		return
 	match mode:
 		"TARGET":
 			if their:
@@ -362,7 +391,7 @@ func refresh() -> void:
 	(_labels["score_l"] as Label).text = "SCORE" if timed else "STREAK"
 	var left := int(r.get("left", 0))
 	(_labels["time"] as Label).text = ("%d:%02d" % [left / 60, left % 60]) if timed else "-"
-	var shots: Array = desk.live
+	var shots: Array = desk.run_shots()        # this drill's: switching drills starts it clean
 	var good := shots.filter(func(s: Dictionary) -> bool: return s.get("good", false)).size()
 	(_labels["good"] as Label).text = "%d%%" % roundi(100.0 * good / shots.size()) if not shots.is_empty() else "-"
 	var cl := shots.filter(func(s: Dictionary) -> bool: return s.has("clear") and float(s["clear"]) >= 0.0)

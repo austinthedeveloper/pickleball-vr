@@ -99,6 +99,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-59 | Full swings hit full: the swing curve's top (ADR-003) | `feature/cld-vr-drives` | Ready to test |
 | VR-60 | The tablet shows the drill's own controls (ADR-024) | `feature/cld-vr-drives` | Ready to test |
 | VR-61 | Drift: tracking in the swing log, PADDLE > CHECK (ADR-015) | `feature/cld-vr-drives` | Ready to test |
+| VR-62 | Tablet: a clean court per drill; taps show and say what they did (ADR-024) | `feature/cld-vr-tablet-2` | Ready to test |
 
 ## Phase 1: singles
 
