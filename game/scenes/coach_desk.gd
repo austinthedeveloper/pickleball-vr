@@ -23,6 +23,7 @@ var session: Sessions
 var challenge := {}                  ## {kind, n, progress, done}
 var workout := {}                    ## {name, steps, step}
 var marks: Array = []                ## [shape, a: Vector2, b: Vector2], put back on every new view
+var machine_on := false              ## the coach started the ball machine: their settings feed it (C-21)
 var _t := 0.0
 
 
@@ -68,6 +69,17 @@ func _playing() -> bool:
 func on_new_view(v: MatchView) -> void:
 	for m in marks:
 		v.add_mark(m[0], m[1], m[2])
+	if machine_on and v.sim.drill and not v.sim.drill.partner and not v.spectate:
+		v.command(machine_command(main.settings.coach_machine))
+
+
+## The sim's command for the coach's machine settings (page units to um,
+## um per tick, ticks).
+static func machine_command(m: Dictionary) -> Array:
+	return [K.CMD_MACHINE, roundi(float(m["x"]) * K.M), roundi(float(m["z"]) * K.M), roundi(float(m["bx"]) * K.M),
+		roundi(float(m["bz"]) * K.M), roundi(float(m["speed"]) * K.M / K.TICK_HZ),
+		roundi(float(m["spin"]) * Drill.FEED_SPIN_MAX / 100.0), roundi(float(m["clear"]) * K.M),
+		roundi(float(m["every"]) * K.TICK_HZ)]
 
 
 ## Your shot ended: saved, counted toward a challenge, sent to the coach.
@@ -189,6 +201,7 @@ func handle(msg: Dictionary) -> void:
 				main.lobby.call_deferred("partner")   # the headset shows what the coach set
 		"start":
 			workout = {}
+			machine_on = false
 			if _playing():
 				main._keep_best()
 			main._start.call_deferred(s.partner_config(), false)
@@ -203,6 +216,7 @@ func handle(msg: Dictionary) -> void:
 				main._on_pressed("again")
 		"menu":
 			workout = {}
+			machine_on = false
 			if _playing():
 				main._on_pressed("lobby")
 		"cue":
@@ -234,6 +248,19 @@ func handle(msg: Dictionary) -> void:
 			var id := String(msg.get("id", ""))
 			if not Tune.entry(id).is_empty():
 				Tune.set_value(id, int(msg.get("value", Tune.value(id))))   # live, this session (C-11)
+		"machine_start":
+			workout = {}
+			machine_on = true
+			if _playing():
+				main._keep_best()
+			main._start.call_deferred(s.machine_config(), false)
+		"machine_set":
+			for k in s.coach_machine:
+				if msg.has(k):
+					s.coach_machine[k] = float(msg[k])
+			s.save()
+			if machine_on and _playing() and v.sim.drill and not v.sim.drill.partner:
+				v.command(machine_command(s.coach_machine))
 		"tune_reset":
 			Tune.reset()
 		"challenge":
@@ -264,6 +291,7 @@ func handle(msg: Dictionary) -> void:
 					if w["name"] == String(msg.get("name", "")):
 						steps = w["steps"]
 			if not steps.is_empty():
+				machine_on = false
 				workout = {"name": _clean_name(msg.get("name", ""), "WORKOUT"), "steps": steps, "step": 0}
 				if _playing():
 					main._keep_best()
@@ -305,7 +333,8 @@ func state() -> Dictionary:
 		"marks": marks.map(func(m: Array) -> Dictionary: return {"shape": m[0], "ax": m[1].x, "az": m[1].y, "bx": m[2].x, "bz": m[2].y}),
 		"challenge": challenge, "workout": {} if workout.is_empty() else
 			{"name": workout["name"], "step": workout["step"], "of": (workout["steps"] as Array).size()},
-		"tunes": _sliders()}
+		"tunes": _sliders(),
+		"machine": s.coach_machine.merged({"on": machine_on and _playing()})}
 	var d: Drill = v.sim.drill if v and v.sim and _playing() else null
 	if d:
 		st["run"] = {"name": Settings.run_name(d) if d.time_limit > 0 else d.mode_name(), "score": d.score(),

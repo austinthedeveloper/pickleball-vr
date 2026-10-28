@@ -124,6 +124,10 @@ const FAULT_EARLY_VOLLEY := 6
 const CMD_NEW_MATCH := 0
 const CMD_PIN_TARGET := 1            ## a coach's target: x, z (um, their side), 1 pin / 0 let it roam (C-8)
 const CMD_FEED_TO := 2               ## the partner's next ball to: x, z (um, your side) (C-9)
+## The coach's ball machine (C-21): machine x, z (their side), bounce x, z
+## (yours), pace (um/tick over the ground), spin (topspin +, backspin -),
+## height over the net (um), ticks between balls.
+const CMD_MACHINE := 3
 
 # --- Events: [kind, a, b, c, tick]
 const EVENT_HIT := 0                 ## slot, speed um/tick, volley 0/1

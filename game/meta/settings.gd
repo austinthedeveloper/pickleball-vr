@@ -87,6 +87,10 @@ var records: Dictionary:
 ## A coach's saved workouts (C-13): [{name, steps: [{drill, level, time,
 ## targets}]}].
 var workouts: Array = []
+## The coach's ball machine (C-21), in the page's units: machine and bounce
+## spots (m), speed (m/s), spin (-100 backspin .. 100 topspin, %), height
+## over the net (m), seconds between balls.
+var coach_machine := {"x": 0.0, "z": -7.0, "bx": 0.0, "bz": 4.0, "speed": 8.0, "spin": 0, "clear": 0.5, "every": 3.5}
 const RUNS_KEPT := 100
 
 
@@ -136,6 +140,7 @@ func load_settings() -> void:
 	if records_by.is_empty() and c.has_section_key("records", "runs"):
 		records_by[player] = c.get_value("records", "runs")   # before profiles: the first player's
 	workouts = c.get_value("coach", "workouts", workouts)
+	coach_machine.merge(c.get_value("coach", "machine", {}), true)
 
 
 func save() -> void:
@@ -170,6 +175,7 @@ func save() -> void:
 	c.set_value("player", "names", players)
 	c.set_value("records", "by_player", records_by)
 	c.set_value("coach", "workouts", workouts)
+	c.set_value("coach", "machine", coach_machine)
 	c.set_value("partner", "targets", partner_targets)
 	c.set_value("partner", "best", partner_best)
 	c.set_value("partner", "cross", partner_cross)

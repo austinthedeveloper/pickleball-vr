@@ -142,7 +142,7 @@
     </div>
     <div class="bar" style="margin-bottom:6px">
       <div class="seg" id="tapMode">
-        <button data-m="watch" class="on">Watch</button><button data-m="target">Target</button><button data-m="feed">Feed</button><button data-m="zone">Zone</button><button data-m="line">Line</button>
+        <button data-m="watch" class="on">Watch</button><button data-m="target">Target</button><button data-m="feed">Feed</button><button data-m="zone">Zone</button><button data-m="line">Line</button><button data-m="machine">Machine</button><button data-m="bounce">Bounce</button>
       </div>
       <div class="seg" id="colorBy">
         <button data-c="result" class="on">Result</button><button data-c="clear">Net height</button>
@@ -172,6 +172,15 @@
       <button id="bPause">PAUSE</button>
       <button id="bRestart">RESTART</button>
       <button id="bMenu">MENU</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="bar" style="margin-bottom:4px"><h2 style="margin:0">Ball machine</h2><span class="pill" id="machineOn">OFF</span></div>
+    <div class="muted">Tap <b>Machine</b> or <b>Bounce</b> above the court, then put them where you want them on it.</div>
+    <div id="machineSliders"></div>
+    <div class="buttons" style="grid-template-columns:1fr">
+      <button class="go" id="bMachine">START THE MACHINE</button>
     </div>
   </div>
 
@@ -373,6 +382,7 @@ function onState(s) {
   const kinds = { streak: "in a row", board: "in a row on the board", good: "good", score: "score" };
   $("challengeLine").textContent = ch.kind ? (ch.done ? "Challenge done!" : `Challenge: ${ch.progress} / ${ch.n} ${kinds[ch.kind]}`) : "";
   drawCues(s.cues);
+  drawMachine(s.machine);
   drawSliders(s.tunes);
   drawWorkout(s);
   drawRecords(s.records);
@@ -432,6 +442,14 @@ function drawCourt() {
     const x = X(state.feed.x), y = Y(state.feed.z), d = 0.18;
     g += `<path d="M${f(x - d)} ${f(y - d)}L${f(x + d)} ${f(y + d)}M${f(x + d)} ${f(y - d)}L${f(x - d)} ${f(y + d)}" stroke="var(--gold)" stroke-width="0.07"/>`;
   }
+  const mc = state.machine;
+  if (mc && (mc.on || tapMode === "machine" || tapMode === "bounce")) {
+    const mx = X(mc.x), mz = Y(mc.z), bx = X(mc.bx), bz = Y(mc.bz);
+    g += `<line x1="${f(mx)}" y1="${f(mz)}" x2="${f(bx)}" y2="${f(bz)}" stroke="var(--gold)" stroke-width="0.04" stroke-dasharray="0.18 0.12" opacity="0.8"/>`;
+    g += `<rect x="${f(mx - 0.28)}" y="${f(mz - 0.22)}" width="0.56" height="0.44" rx="0.08" fill="#d0d6e6" stroke="#0b1020" stroke-width="0.04"/>`;
+    g += `<text x="${f(mx)}" y="${f(mz + 0.12)}" font-size="0.32" text-anchor="middle" font-weight="700" fill="#0b1020">M</text>`;
+    g += `<circle cx="${f(bx)}" cy="${f(bz)}" r="0.22" fill="none" stroke="var(--gold)" stroke-width="0.07"/><circle cx="${f(bx)}" cy="${f(bz)}" r="0.06" fill="var(--gold)"/>`;
+  }
   if (pending) g += `<circle cx="${f(X(pending.x))}" cy="${f(Y(pending.z))}" r="0.12" fill="var(--mark)"/>`;
   const list = (past ? past.shots : scope === "run" ? runShots() : shots).filter((s) => s.x !== undefined);
   list.forEach((s, i) => {
@@ -445,7 +463,7 @@ function drawCourt() {
     : `<span><i style="background:var(--gold)"></i>On the board</span><span><i style="background:var(--good)"></i>Good</span><span><i style="background:var(--bad)"></i>Miss</span>`;
 }
 
-const HINTS = { watch: "", target: "Tap their side: the target goes there and stays.", feed: "Tap your side: the partner's next ball goes there.",
+const HINTS = { machine: "Tap their side: the machine stands there.", bounce: "Tap your side: its balls bounce there.", watch: "", target: "Tap their side: the target goes there and stays.", feed: "Tap your side: the partner's next ball goes there.",
   zone: "Tap two corners: a zone glows on the court.", line: "Tap two points: a line glows on the court." };
 
 function courtTap(ev) {
@@ -456,7 +474,13 @@ function courtTap(ev) {
   const { c, m } = courtGeom();
   const x = Math.max(-c.hw, Math.min(c.hw, p.x - c.hw - m)), z = Math.max(-c.hl, Math.min(c.hl, p.y - c.hl - m));
   const r2 = (v) => Math.round(v * 100) / 100;
-  if (tapMode === "target") {
+  if (tapMode === "machine") {
+    if (z >= -0.4) { $("tapHint").textContent = "The machine stands on their side: tap above the net."; return; }
+    send({ type: "machine_set", x: r2(x), z: r2(z) });
+  } else if (tapMode === "bounce") {
+    if (z <= 0.2) { $("tapHint").textContent = "Its balls bounce on your side: tap below the net."; return; }
+    send({ type: "machine_set", bx: r2(x), bz: r2(z) });
+  } else if (tapMode === "target") {
     if (z >= 0) { $("tapHint").textContent = "The target goes on their side: tap above the net."; return; }
     send({ type: "target", x: r2(x), z: r2(z) });
   } else if (tapMode === "feed") {
@@ -478,6 +502,36 @@ function drawCues(list) {
   $("cues").dataset.list = want;
   $("cues").innerHTML = (list || []).map((c) => `<button class="cue" data-cue="${esc(c)}">${esc(c)}</button>`).join("");
   $("cues").querySelectorAll("button").forEach((b) => b.onclick = () => send({ type: "cue", text: b.dataset.cue }));
+}
+
+// The coach's machine (C-21): its sliders, in the page's units.
+const MACHINE = [
+  { k: "speed", label: "Speed", min: 3, max: 20, step: 0.5, text: (v) => `${v} m/s` },
+  { k: "spin", label: "Spin", min: -100, max: 100, step: 10, text: (v) => v > 0 ? `Topspin ${v}%` : v < 0 ? `Backspin ${-v}%` : "Flat" },
+  { k: "clear", label: "Height over the net", min: 0.05, max: 3, step: 0.05, text: (v) => `${Math.round(v * 100)} cm` },
+  { k: "every", label: "A ball every", min: 1.25, max: 8, step: 0.25, text: (v) => `${v} s` },
+];
+function drawMachine(mc) {
+  if (!mc) return;
+  const box = $("machineSliders");
+  if (!box.dataset.built) {
+    box.dataset.built = "1";
+    box.innerHTML = MACHINE.map((t) => `<div class="slider"><div class="top"><span>${t.label}</span><b id="mv_${t.k}"></b></div>` +
+      `<input type="range" id="mr_${t.k}" min="${t.min}" max="${t.max}" step="${t.step}"></div>`).join("");
+    MACHINE.forEach((t) => {
+      const inp = $("mr_" + t.k);
+      inp.oninput = () => { $("mv_" + t.k).textContent = t.text(parseFloat(inp.value)); };
+      inp.onchange = () => send({ type: "machine_set", [t.k]: parseFloat(inp.value) });
+    });
+  }
+  MACHINE.forEach((t) => {
+    const inp = $("mr_" + t.k);
+    if (document.activeElement !== inp) inp.value = mc[t.k];
+    $("mv_" + t.k).textContent = t.text(parseFloat(inp.value));
+  });
+  $("machineOn").textContent = mc.on ? "FEEDING" : "OFF";
+  $("machineOn").className = "pill " + (mc.on ? "playing" : "");
+  $("bMachine").textContent = mc.on ? "RESTART THE MACHINE" : "START THE MACHINE";
 }
 
 function drawSliders(list) {
@@ -745,6 +799,7 @@ $("bStart").onclick = () => { runStart = shots.length; send({ type: "start" }); 
 $("bPause").onclick = () => send({ type: state && state.where === "paused" ? "resume" : "pause" });
 $("bRestart").onclick = () => { runStart = shots.length; send({ type: "restart" }); };
 $("bMenu").onclick = () => send({ type: "menu" });
+$("bMachine").onclick = () => { runStart = shots.length; send({ type: "machine_start" }); };
 $("bFreeTarget").onclick = () => send({ type: "target_free" });
 $("bClearMarks").onclick = () => { pending = null; send({ type: "clear_marks" }); };
 $("bCue").onclick = () => { const t = $("cueText").value.trim(); if (t) { send({ type: "cue", text: t }); $("cueText").value = ""; } };

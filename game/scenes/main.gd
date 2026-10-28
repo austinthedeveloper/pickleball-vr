@@ -67,7 +67,6 @@ func _new_view() -> MatchView:
 	view.paddle_turn = pose[3]
 	add_child(view)
 	view.shot_done.connect(desk.on_shot)
-	desk.on_new_view(view)
 	return view
 
 
@@ -86,6 +85,7 @@ func lobby(to := "") -> void:
 	if demo_cfg.drill:
 		demo_cfg.drill.time_limit = 0    # the lobby's demo plays on (ADR-022)
 	_new_view().setup(demo_cfg, use_xr, true, true)
+	desk.on_new_view(view)
 	_inherit()
 	menu = _page(page)
 	menu.changed.connect(_on_changed)
@@ -297,6 +297,7 @@ func _on_pressed(id: String) -> void:
 
 func _start(cfg: SimTypes.MatchConfig, demo: bool) -> void:
 	_new_view().setup(cfg, use_xr, demo)
+	desk.on_new_view(view)              # the coach's marks, the coach's machine
 	_inherit()
 	view.match_over.connect(_on_match_over)
 	view.drill_done.connect(_on_drill_done)

@@ -181,6 +181,7 @@ func show_from(sim: Sim, delta: float) -> void:
 	var d := sim.drill
 	_t += delta
 	position.z = d.machine_z / float(K.M) - MOUTH_Z  # the ball leaves the mouth where the sim releases it
+	position.x = d.machine_x / float(K.M)           # where the coach put it (C-21); 0 otherwise
 	# A new feed: aim the head along the ball's way out, and kick.
 	if d.feeds != _feeds_seen:
 		if _feeds_seen >= 0 and d.stage == Drill.FLY:

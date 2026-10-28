@@ -238,6 +238,20 @@ var read_at := 0                     ## when the partner reads your shot
 var target_x := 0
 var target_z := 0
 var target_hits := 0
+## The coach's ball machine (C-21): where it stands, where its balls
+## bounce, how fast, with what spin, how high over the net, how often.
+var coach_feed := false
+var machine_x := 0
+var bounce_x := 0
+var bounce_z := 4000000
+var feed_pace := 66667
+var feed_spin := 0
+var feed_clear := 500000
+var feed_every := 420
+const FEED_PACE_RANGE := [25000, 170000]   ## 3 to 20 m/s
+const FEED_SPIN_MAX := 600000
+const FEED_CLEAR_RANGE := [50000, 3000000]
+const FEED_EVERY_RANGE := [150, 960]       ## 1.25 to 8 s
 var target_pinned := false           ## a coach put the target there: it stays (C-8)
 var feed_set := false                ## a coach chose where the partner's next ball goes (C-9)
 var feed_x := 0
@@ -287,7 +301,8 @@ func machine_spot() -> int:
 
 
 func reset(sim: Sim) -> void:
-	machine_z = machine_spot()
+	if not coach_feed:
+		machine_z = machine_spot()       # the coach's machine stays where it was put
 	stage = WAIT
 	next_feed = sim.tick + FIRST_FEED
 	feeds = 0
@@ -295,7 +310,7 @@ func reset(sim: Sim) -> void:
 	streak = 0
 	last_result = -1
 	sim.ball.held = true
-	sim.ball.place(0, MACHINE_Y, machine_z)
+	sim.ball.place(machine_x, MACHINE_Y, machine_z)
 	sim.phase = K.PHASE_LIVE
 	sim.serving_team = 1
 	sim.server_slot = 2
@@ -377,6 +392,9 @@ func _feed(sim: Sim) -> void:
 	var t := target
 	if t == TARGET_RANDOM:
 		t = sim.random(5)
+	if coach_feed:
+		_coach_feed(sim)
+		return
 	var mz := machine_z
 	var drive: int = SPEED_PACE[clampi(speed, 0, 3)]
 	var tx := p.x
@@ -624,7 +642,7 @@ func _result(sim: Sim, r: int, rally_on := false) -> void:
 		next_feed = sim.tick + MIN_GAP
 		return
 	stage = WAIT
-	next_feed = maxi(fed_at + RATE_TICKS[clampi(rate, 0, 3)], sim.tick + MIN_GAP)
+	next_feed = maxi(fed_at + (feed_every if coach_feed else RATE_TICKS[clampi(rate, 0, 3)]), sim.tick + MIN_GAP)
 	if partner:
 		next_feed = sim.tick + MIN_GAP * 2   # the partner picks up a fresh ball
 
@@ -997,6 +1015,45 @@ func pin_target(sim: Sim, x: int, z: int, pin: bool) -> void:
 	spot_lit = spot_lit or spots
 
 
+## The coach's machine (C-21): [machine x, z, bounce x, z, pace, spin,
+## clear, every], each kept in reach. The machine stands on their side;
+## the ball bounces on yours.
+func coach_machine(a: Array) -> void:
+	if a.size() < 8:
+		return
+	coach_feed = true
+	machine_x = clampi(int(a[0]), -K.COURT_HALF_WIDTH - 500000, K.COURT_HALF_WIDTH + 500000)
+	machine_z = clampi(int(a[1]), -(K.COURT_HALF_LENGTH + 500000), -500000)
+	bounce_x = clampi(int(a[2]), -K.COURT_HALF_WIDTH, K.COURT_HALF_WIDTH)
+	bounce_z = clampi(int(a[3]), 300000, K.COURT_HALF_LENGTH)
+	feed_pace = clampi(int(a[4]), FEED_PACE_RANGE[0], FEED_PACE_RANGE[1])
+	feed_spin = clampi(int(a[5]), -FEED_SPIN_MAX, FEED_SPIN_MAX)
+	feed_clear = clampi(int(a[6]), FEED_CLEAR_RANGE[0], FEED_CLEAR_RANGE[1])
+	feed_every = clampi(int(a[7]), FEED_EVERY_RANGE[0], FEED_EVERY_RANGE[1])
+
+
+## A ball from the coach's machine: from where it stands to bounce where
+## the coach put it, at its pace, spin and height over the net.
+func _coach_feed(sim: Sim) -> void:
+	fed_shot = SHOT_DRIVE
+	aim_x = bounce_x
+	var w := Aim.topspin(bounce_x - machine_x, bounce_z - machine_z, feed_spin)
+	var v := Aim.shot(machine_x, MACHINE_Y, machine_z, bounce_x, bounce_z, feed_pace, w, feed_clear)
+	var b := sim.ball
+	b.place(machine_x, MACHINE_Y, machine_z)
+	b.launch(v[0], v[1], v[2])
+	b.set_spin(w[0], w[1], w[2])
+	sim.required_bounce = K.REQUIRED_BOUNCE_SERVE if rules & RULE_NO_VOLLEY else K.REQUIRED_BOUNCE_NONE
+	sim.serving_team = 1
+	sim.last_hitter = 2
+	sim.bounce_count = 0
+	bounces = 0
+	feeds += 1
+	fed_at = sim.tick
+	stage = FLY
+	sim.emit(K.EVENT_FEED, bounce_x, 0, fed_shot)
+
+
 ## A coach's spot for the partner's next ball (C-9): your side, in court.
 func feed_to(x: int, z: int) -> void:
 	feed_set = true
@@ -1066,6 +1123,8 @@ func mode_name() -> String:
 		return n + " " + LANE_NAMES[lane] if lanes else n
 	if goal > 0:
 		return "LESSON"
+	if coach_feed:
+		return "COACH MACHINE"
 	return "MACHINE %s %s" % [SHOT_NAMES[shot], SPEED_NAMES[clampi(speed, 0, SPEED_NAMES.size() - 1)]]
 
 
@@ -1111,4 +1170,5 @@ func snapshot() -> Array:
 		hit_at, machine_z, partner_plan, read_at, target_x, target_z, target_hits, rally, best_rally,
 		1 if partner else 0, kind, lane, toss_at, 1 if spot_lit else 0, spot_i, 1 if lane_cross else 0,
 		1 if high_ball else 0, 1 if you_fast else 0, points, last_ring, last_off, target_side, time_limit, ends_at,
-		1 if target_pinned else 0, 1 if feed_set else 0, feed_x, feed_z]
+		1 if target_pinned else 0, 1 if feed_set else 0, feed_x, feed_z,
+		1 if coach_feed else 0, machine_x, bounce_x, bounce_z, feed_pace, feed_spin, feed_clear, feed_every]

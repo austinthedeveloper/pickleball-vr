@@ -7,6 +7,9 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ## [Unreleased]
 
 ### Added
+- **The coach's ball machine:** from the phone, start the machine, place
+  it anywhere on their side, tap where its balls should bounce, and set
+  their speed, spin, height over the net and how often they come.
 - **Coaching, much more** (design/COACHING.md):
   - **Placement:** the coach taps to place the target or choose where the
     partner's next ball goes, and draws zones and lines that glow on

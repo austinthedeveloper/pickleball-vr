@@ -93,6 +93,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-53 | Coach companion: a web page from the headset (ADR-023) | `feature/cld-vr-coach` | Played: "worked so well" |
 | VR-54 | Coach START NEW mid-run; stronger vibration; blocks keep 72% (ADR-003, 023) | `feature/cld-vr-coach` | Ready to test |
 | VR-55 | The coaching suite: C-3..C-18 (ADR-024, design/COACHING.md) | `feature/cld-vr-coaching` | Ready to test |
+| VR-56 | The coach's ball machine: place, bounce, speed, spin, height (C-21, ADR-024) | `feature/cld-vr-coach-machine` | Ready to test |
 
 ## Phase 1: singles
 

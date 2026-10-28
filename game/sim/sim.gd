@@ -714,6 +714,9 @@ func step(human: Array = [], commands: Array = []) -> void:
 			K.CMD_FEED_TO:
 				if drill:
 					drill.feed_to(int(c[1]), int(c[2]))
+			K.CMD_MACHINE:
+				if drill:
+					drill.coach_machine(c.slice(1))
 	tick += 1
 	phase_timer += 1
 	var tossed := false

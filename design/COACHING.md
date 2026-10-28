@@ -34,6 +34,7 @@ deterministic: a rally can be re-run exactly.
 | C-18 | Player profiles | Built | Each player's own records and sessions; records from before go to PLAYER 1 |
 | C-19 | Two coaches or a parent watching | Built | Several phones can connect at once already |
 | C-20 | Remote coaching over the internet | Later | Needs a relay server: cost and hosting |
+| C-21 | The coach's ball machine | Built | START THE MACHINE; tap Machine (their side) and Bounce (yours); speed 3-20 m/s, spin from backspin to topspin, height over the net, a ball every 1.25-8 s. `CMD_MACHINE`; ADR-024 |
 
 ## Built in one go (2026-10-28, ADR-024)
 

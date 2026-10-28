@@ -273,3 +273,67 @@ func test_old_records_go_to_the_first_player() -> void:
 	eq(s.player, "PLAYER 1", "the first player")
 	eq(s.recent_scores("DINKS EASY 1 MIN"), [12] as Array[int], "keeps the runs from before profiles")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))
+
+
+# --- The coach's ball machine (C-21) -----------------------------------------------------
+
+## The first bounce on your side of the machine's next ball, and how high it
+## crossed the net: [x, z, net height].
+func _machine_ball(m: Dictionary) -> Array:
+	var s := Settings.new()
+	var sim := Sim.new(s.machine_config())
+	sim.step([], [CoachDesk.machine_command(m)])
+	var net := -1
+	var z_was := sim.ball.z
+	for i in 900:
+		sim.step([SimTypes.HumanInput.new()])
+		if z_was < 0 and sim.ball.z >= 0 and sim.drill.stage == Drill.FLY:
+			net = sim.ball.y - K.net_height(sim.ball.x)
+		z_was = sim.ball.z
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_BOUNCE and e[2] > 0:
+				return [e[1], e[2], net]
+	return []
+
+
+func test_the_coach_machine_feeds_where_it_was_put() -> void:
+	var base := {"x": -2.0, "z": -6.5, "bx": 1.0, "bz": 3.0, "speed": 10.0, "spin": 40, "clear": 0.4, "every": 3.0}
+	for change in [{}, {"speed": 4.0}, {"speed": 18.0}, {"spin": -100}, {"spin": 100}, {"clear": 1.5},
+			{"x": 2.5, "z": -3.0, "bx": -1.5, "bz": 5.5}]:
+		var m: Dictionary = base.merged(change, true)
+		var r := _machine_ball(m)
+		check(not r.is_empty(), "%s: it bounced on your side" % str(change))
+		if r.is_empty():
+			continue
+		var off := Vector2(r[0] / 1e6 - float(m["bx"]), r[1] / 1e6 - float(m["bz"])).length()
+		check(off < 0.3, "%s: bounced %.2f m from the coach's spot" % [str(change), off])
+		check(r[2] >= roundi(float(m["clear"]) * K.M) - 60000, "%s: over the net by %d um, asked %.2f m" % [str(change), r[2], float(m["clear"])])
+	# Higher over the net is higher: the height control does what it says.
+	var low := _machine_ball(base)
+	var high := _machine_ball(base.merged({"clear": 1.5}, true))
+	check(high[2] > low[2] + 600000, "1.5 m asked crosses higher than 0.4 m: %d vs %d" % [high[2], low[2]])
+
+
+func test_the_coach_machine_stands_where_it_was_put() -> void:
+	var main := _main()
+	main.settings.coach_machine = {"x": 2.0, "z": -4.0, "bx": 0.0, "bz": 3.5, "speed": 9.0, "spin": 0, "clear": 0.5, "every": 2.0}
+	main._on_coach({"type": "machine_start"})
+	main._start(main.settings.machine_config(), false)   # what the deferred start does
+	main.desk.on_new_view(main.view)
+	main.view._process(MatchView.DT)
+	var d: Drill = main.view.sim.drill
+	check(d.coach_feed, "the coach's machine")
+	eq([d.machine_x, d.machine_z, d.feed_every], [2000000, -4000000, 240], "where and how often")
+	eq(d.mode_name(), "COACH MACHINE", "named for the log and the page")
+	main._on_coach({"type": "machine_set", "bx": -1.0})
+	main.view._process(MatchView.DT)
+	eq(d.bounce_x, -1000000, "a change reaches the machine at once")
+	eq(main.settings.coach_machine["bx"], -1.0, "and is kept")
+	check(main.coach_state()["machine"]["on"], "the page sees it on")
+	main.view.command([K.CMD_NEW_MATCH])
+	main.view._process(MatchView.DT)
+	eq([main.view.sim.drill.machine_x, main.view.sim.drill.machine_z], [2000000, -4000000], "RESTART keeps it where it was put")
+	main._on_coach({"type": "menu"})
+	check(not main.desk.machine_on, "MENU: the coach's machine is off")
+	main.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
