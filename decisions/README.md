@@ -20,5 +20,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [012](ADR-012-style.md) | How the practice partners look and move |
 | [013](ADR-013-focus.md) | FOCUS: a long rally dims the world |
 | [014](ADR-014-hands.md) | HANDS, the partner's fast-hands drill |
+| [015](ADR-015-paddle-profiles.md) | Paddle profiles for paddle accessories |
 
-Next: ADR-015.
+Next: ADR-016.

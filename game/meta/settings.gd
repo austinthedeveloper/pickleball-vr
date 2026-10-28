@@ -7,6 +7,14 @@ const VERSION := 1
 const POINTS := [5, 7, 11, 15]
 const ASSISTS := [K.ASSIST_OFF, K.ASSIST_LOW, K.ASSIST_MID, K.ASSIST_FULL]
 const ANGLES := [0, 15, 30, 45]
+## Paddle profiles (ADR-015), for paddle accessories that hold the
+## controller at another angle or further from the face. DEFAULT is the
+## PADDLE ANGLE above; the others override angle, twist and reach.
+const PROFILE_NAMES := ["DEFAULT", "PROFILE 1", "PROFILE 2", "PROFILE 3"]
+const PROFILE_ANGLES := [-30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
+	65, 70, 75, 80, 85, 90]
+const PROFILE_TWISTS := [-45, -40, -35, -30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45]
+const PROFILE_REACHES := [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40]   ## cm
 
 ## Tests point this at their own file (the runner does), never the player's.
 static var default_path := "user://settings.cfg"
@@ -20,6 +28,9 @@ var points := 0                      ## index into POINTS
 var win_by_2 := false
 var left_handed := false
 var paddle_angle := 1                ## index into ANGLES
+var paddle_profile := 0              ## index into PROFILE_NAMES
+## The three custom profiles: {angle, twist, reach} in degrees and cm.
+var profiles: Array = [new_profile(), new_profile(), new_profile()]
 var venue := 0                       ## 0 is HOME (the team's); then Venues.NAMES
 ## BALL MACHINE (ADR-007)
 var machine_shot := Drill.SHOT_DRIVE
@@ -52,6 +63,12 @@ func load_settings() -> void:
 	win_by_2 = c.get_value("match", "win_by_2", win_by_2)
 	left_handed = c.get_value("player", "left_handed", left_handed)
 	paddle_angle = c.get_value("player", "paddle_angle", paddle_angle)
+	paddle_profile = c.get_value("paddle", "profile", paddle_profile)
+	var saved: Array = c.get_value("paddle", "profiles", [])
+	for i in mini(saved.size(), profiles.size()):
+		var d: Dictionary = new_profile()
+		d.merge(saved[i], true)
+		profiles[i] = d
 	venue = c.get_value("match", "venue", venue)
 	machine_shot = c.get_value("machine", "shot", machine_shot)
 	machine_target = c.get_value("machine", "target", machine_target)
@@ -81,6 +98,8 @@ func save() -> void:
 	c.set_value("match", "win_by_2", win_by_2)
 	c.set_value("player", "left_handed", left_handed)
 	c.set_value("player", "paddle_angle", paddle_angle)
+	c.set_value("paddle", "profile", paddle_profile)
+	c.set_value("paddle", "profiles", profiles)
 	c.set_value("match", "venue", venue)
 	c.set_value("machine", "shot", machine_shot)
 	c.set_value("machine", "target", machine_target)
@@ -102,6 +121,25 @@ func save() -> void:
 
 func tilt() -> float:
 	return float(ANGLES[clampi(paddle_angle, 0, ANGLES.size() - 1)])
+
+
+static func new_profile() -> Dictionary:
+	return {"angle": 15, "twist": 0, "reach": 0}
+
+
+## The profile in use, or null for DEFAULT.
+func profile() -> Variant:
+	if paddle_profile <= 0 or paddle_profile > profiles.size():
+		return null
+	return profiles[paddle_profile - 1]
+
+
+## The paddle in the hand: [angle, twist] in degrees and reach in metres.
+func paddle_pose() -> Array[float]:
+	var p: Variant = profile()
+	if p == null:
+		return [tilt(), 0.0, 0.0]
+	return [float(p["angle"]), float(p["twist"]), float(p["reach"]) / 100.0]
 
 
 func match_config() -> SimTypes.MatchConfig:

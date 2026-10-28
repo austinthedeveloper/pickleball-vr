@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands] [venue=NAME] [cam=x,y,z look=x,y,z] [focus=0..0.88]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands] [venue=NAME] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)]
 extends SceneTree
 
 var frames := 240
@@ -18,7 +18,14 @@ func _initialize() -> void:
 		out = args[2]
 	if args.size() > 0 and args[0] == "lobby":
 		Settings.default_path = "user://screenshot_settings.cfg"
-		root.add_child(load("res://scenes/main.tscn").instantiate())
+		var main: Node = load("res://scenes/main.tscn").instantiate()
+		root.add_child(main)
+		for a in args:
+			if a.begins_with("page="):
+				main.page = a.trim_prefix("page=")
+				if a == "page=paddle":
+					main.settings.paddle_profile = 1     # show a profile's rows
+				main.lobby.call_deferred()
 		return
 	var view := MatchView.new()
 	root.add_child(view)
