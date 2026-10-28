@@ -1,11 +1,12 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands] [venue=NAME] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands | resets] [venue=NAME] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N]
 extends SceneTree
 
 var frames := 240
 var out := "shot.png"
 var n := 0
 var _focus := -1.0
+var _tick := -1                      ## tick=N: shoot when the sim reaches it
 var _view: MatchView
 
 
@@ -40,6 +41,8 @@ func _initialize() -> void:
 		st.partner_targets = true
 		st.partner_cross = args.has("cross")
 		st.partner_hands = args.has("hands")
+		if args.has("resets"):
+			st.partner_drill = 2
 		cfg.drill = st.partner_config().drill
 	elif mode == "machine":
 		cfg.drill = Drill.new()
@@ -51,6 +54,8 @@ func _initialize() -> void:
 		var l := Lessons.lesson(int(args[3]) if args.size() > 3 else 0)
 		view.show_lesson(String(l["title"]), l["lines"])
 	for a in args:
+		if a.begins_with("tick="):
+			_tick = int(a.trim_prefix("tick="))
 		if a.begins_with("focus="):
 			_focus = float(a.trim_prefix("focus="))
 	_view = view
@@ -73,6 +78,11 @@ func _process(_delta: float) -> bool:
 	if n == 5 and _focus >= 0.0 and _view:
 		_view.world.set_focus(_focus)       # once the scene is built
 		_view.crowd.set_focus(_focus)
+	if _tick >= 0:
+		if _view == null or _view.sim.tick < _tick:
+			return false
+		frames = n                       # tick=N: the moment the sim reaches it
+		_tick = -1
 	if n == frames:
 		var img := root.get_viewport().get_texture().get_image()
 		img.save_png(out)

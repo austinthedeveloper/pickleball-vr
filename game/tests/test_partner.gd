@@ -290,3 +290,121 @@ func test_hands_menu_and_save() -> void:
 	back.load_settings()
 	check(back.partner_hands, "saved")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))
+
+
+func _resets(level: int) -> Array:
+	var s := Settings.new()
+	s.partner_drill = 2
+	s.partner_level = level
+	var sim := Sim.new(s.partner_config())
+	return [sim, Bot.new(sim, 0)]
+
+
+func test_resets_drive_at_you_in_transition() -> void:
+	var m := _resets(1)
+	var sim: Sim = m[0]
+	var bot: Bot = m[1]
+	check(sim.drill.resets and sim.drill.zone == Drill.ZONE_KITCHEN, "RESETS: back into their kitchen")
+	near(sim.players[0].z, Drill.RESET_SPOT_Z, 0, "you start mid-court")
+	var drives := 0
+	var fastest := 0
+	var partner_returns := 0
+	for i in 12000:
+		var stage := sim.drill.stage
+		sim.step([bot.input()])
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_HIT and e[1] == 2:
+				if stage == Drill.SETUP:
+					drives += 1
+					fastest = maxi(fastest, Fx.length(sim.ball.vx, 0, sim.ball.vz))
+				else:
+					partner_returns += 1
+	check(drives >= 20, "the partner feeds drive after drive: %d" % drives)
+	check(fastest >= Drill.RESET_PACE[1] * 9 / 10, "hard: %d um/tick" % fastest)
+	eq(partner_returns, 0, "it never plays your reset: a fresh drive each time")
+	check(sim.drill.best >= 10, "resets in a row: %d" % sim.drill.best)
+
+
+func test_a_pop_up_is_called() -> void:
+	var m := _resets(1)
+	var sim: Sim = m[0]
+	var d := sim.drill
+	# Your reset crossing the net 20 cm over the line.
+	d.stage = Drill.RETURN
+	d.hit_at = sim.tick
+	sim.last_hitter = 0
+	sim.ball.held = false
+	sim.ball.place(0, d.popup_y() + 200000, 30000)
+	sim.ball.launch(0, 0, -60000)
+	var got := -1
+	for i in 5:
+		sim.step([SimTypes.HumanInput.new()])
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_DRILL:
+				got = e[1]
+	eq(got, Drill.RESULT_POPUP, "POP-UP!")
+	eq(d.streak, 0, "the streak ends")
+
+
+func test_resets_harder_is_a_lower_line() -> void:
+	var pops := []
+	for level in 3:
+		var m := _resets(level)
+		var sim: Sim = m[0]
+		var bot: Bot = m[1]
+		var n := 0
+		for i in 9000:
+			sim.step([bot.input()])
+			for e in sim.drain_events():
+				if e[0] == K.EVENT_DRILL and e[1] == Drill.RESULT_POPUP:
+					n += 1
+		check(sim.drill.good >= 5, "%s: playable, %d resets" % [Drill.PACE_NAMES[level], sim.drill.good])
+		pops.append(n)
+	check(Drill.POPUP_OVER[0] > Drill.POPUP_OVER[1] and Drill.POPUP_OVER[1] > Drill.POPUP_OVER[2], "lower each level")
+	check(pops[2] > pops[0], "HARD's line catches more pop-ups: %s" % str(pops))
+
+
+func test_resets_menu_and_old_saves() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	runner.root.add_child(main)
+	main.lobby("partner")
+	main.menu.select("drill")
+	main.menu.change(2)
+	eq(main.settings.partner_drill, 2, "DRILL RESETS")
+	main._start(main.settings.partner_config(), false)
+	check(main.view.sim.drill.resets and main.view.popup_line != null, "the drill, with its pop-up line")
+	main.queue_free()
+	var c := ConfigFile.new()
+	c.set_value("partner", "hands", true)
+	var s := Settings.new()
+	c.save(s.path)
+	s.load_settings()
+	check(s.partner_hands and s.partner_drill == 1, "an older save's HANDS loads as HANDS")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(s.path))
+
+
+func test_every_feed_has_a_lead_in() -> void:
+	# The ball shows in the partner's hand, drops, and is struck as it
+	# falls: you see where it comes from before it's fired (ADR-016).
+	for drill in 3:
+		var s := Settings.new()
+		s.partner_drill = drill
+		var sim := Sim.new(s.partner_config())
+		var bot := Bot.new(sim, 0)
+		var shown := -1
+		var lead := []
+		for i in 3000:
+			var was := sim.drill.stage
+			sim.step([bot.input()])
+			if was != Drill.SETUP and sim.drill.stage == Drill.SETUP:
+				shown = sim.tick
+				near(sim.ball.z, sim.players[2].z + 350000, 1000, "in the partner's hand")
+				near(sim.ball.y, Drill.HOLD_Y, 0, "held up where you can see it")
+			for e in sim.drain_events():
+				if e[0] == K.EVENT_HIT and e[1] == 2 and was == Drill.SETUP:
+					lead.append(sim.tick - shown)
+		check(lead.size() >= 3, "%s: feeds came" % Settings.PARTNER_DRILLS[drill])
+		for t: int in lead:
+			check(t >= 90 and t <= 130, "%s: shown %.2f s before it's hit" % [Settings.PARTNER_DRILLS[drill], t / 120.0])
+		if asserts > 60:
+			asserts = 60

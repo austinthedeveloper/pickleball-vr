@@ -38,8 +38,16 @@ func test_pointing_picks_the_row() -> void:
 	m.point(Vector3(0, 1.5 - Menu3D.ROW_H * 0.9, 2), Vector3(0, 0, -1), true)
 	eq(m.value("mode"), 0, "a new page ignores the click that opened it")
 	m.lock = 0.0
-	m.point(Vector3(0, 1.5 - Menu3D.ROW_H * 0.9, 2), Vector3(0, 0, -1), true)
-	eq(m.value("mode"), 1, "a click steps a value row")
+	var y0 := 1.5 - Menu3D.ROW_H * 0.9
+	var right := Menu3D.WIDTH / 2 - 0.08
+	m.point(Vector3(right, y0, 2), Vector3(0, 0, -1), true)
+	eq(m.value("mode"), 1, "a click on the > steps a value row on")
+	m.select("points")
+	var mid := m.value_middle(1)
+	m.point(Vector3(mid - 0.03, 1.5 - Menu3D.ROW_H * 1.9, 2), Vector3(0, 0, -1), true)
+	eq(m.value("points"), 2, "a click on the < steps it back (wrapping)")
+	m.point(Vector3(mid + 0.03, 1.5 - Menu3D.ROW_H * 1.9, 2), Vector3(0, 0, -1), true)
+	eq(m.value("points"), 0, "and the > on again")
 	m.queue_free()
 
 

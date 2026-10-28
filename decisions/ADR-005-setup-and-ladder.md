@@ -19,7 +19,9 @@ in SNES units, so they can't drive the 3D sim as they are.
   team or the hand rebuilds the demo to match.
 - **`Menu3D`:** rows by id, driven by move/change/press (sticks, keys) or
   by pointing (the free hand's laser, the mouse) and clicking (a trigger,
-  the mouse button). Tests select rows by id.
+  the mouse button). Tests select rows by id. A click on a value row
+  steps it back left of the value's middle (the <) and on right of it
+  (the >); it used to step on only (2026-10-27).
 - **At the match's end:** REMATCH (a `CMD_NEW_MATCH` command) or MATCH
   SETUP (back to the lobby).
 - **Settings** live in `Settings` (`user://settings.cfg`, version 1), not

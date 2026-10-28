@@ -69,8 +69,9 @@ const RESULT_VOLLEY := 5             ## volleyed under NO_VOLLEY
 const RESULT_BOUNCE := 6             ## let it bounce under VOLLEY
 const RESULT_KITCHEN := 7
 const RESULT_SPIN := 8               ## no topspin under TOPSPIN
+const RESULT_POPUP := 9              ## RESETS: it crossed the net too high
 const RESULT_TEXT := ["GOOD!", "NET", "OUT", "MISSED THE ZONE", "MISSED", "LET IT BOUNCE",
-	"VOLLEY IT", "KITCHEN!", "MORE TOPSPIN"]
+	"VOLLEY IT", "KITCHEN!", "MORE TOPSPIN", "POP-UP!"]
 
 const WAIT := 0
 const FLY := 1                       ## fed, coming to you
@@ -78,6 +79,14 @@ const RETURN := 2                    ## you hit it, going back
 const SERVING := 3                   ## SERVE: the ball in your hand or tossed
 const DONE := 4                      ## the lesson's goal is met
 const PARTNER := 5                   ## DINK PARTNER: your ball's on their side, they're going for it
+const SETUP := 6                     ## the partner shows the next ball, drops it and hits it
+
+## Every fresh partner feed has a lead-in you can read (ADR-016 amended):
+## the ball held up in their hand, then dropped and struck as it falls,
+## so you see where it comes from and when; the shot itself stays fast.
+const HOLD_TICKS := 42               ## 0.35 s held up
+const HOLD_Y := 1200000             ## chest high, in front of the free hand
+const DROP_VY := 12000               ## a little lift as it leaves the hand (1.4 m/s)
 
 ## DINK PARTNER (ADR-010): a CPU at their kitchen line who only wants the
 ## rally to go on: every ball it reaches comes back as a dink about a metre
@@ -97,6 +106,14 @@ const HANDS_RAMP := 3
 const HANDS_REACT := 12              ## 0.1 s
 const HANDS_HEIGHT := 950000         ## where it comes at you, give or take 15 cm
 const HANDS_HIGH := 1800000          ## a chest-high volley is still a volley to plan for
+## RESETS (ADR-016): you in the transition zone, the partner at their
+## kitchen line driving at you, hard and low (a speed-up). Block it soft
+## into their dink zone, under the pop-up line. DIFFICULTY is the drive's
+## pace (9, 11, 13 m/s) and how low the line is over the net (60, 45, 30 cm).
+const RESET_SPOT_Z := K.KITCHEN_DEPTH + 1800000   ## mid-court, about 3.9 m from the net
+const RESET_PACE := [75000, 92000, 108000]
+const RESET_HEIGHT := 550000         ## at you: shins to hips, give or take 20 cm
+const POPUP_OVER := [600000, 450000, 300000]
 ## A dink's difficulty is how low it skims the tape: EASY floats 60 cm
 ## over it (slow, a big bounce), HARD skims 12 cm (fast and low).
 const PARTNER_CLEAR := [600000, 300000, K.NET_CLEAR]
@@ -127,6 +144,7 @@ var partner := false                 ## DINK PARTNER instead of the machine
 var partner_pace := 1
 var cross := false                   ## the partner stands diagonally across, not straight
 var hands := false                   ## HANDS (ADR-014): volleys at each other, not dinks
+var resets := false                  ## RESETS (ADR-016): drives at you; reset them into the kitchen
 var spread := 1
 var targets := false                 ## floor targets on
 var goal := 0                        ## good returns to finish; 0 runs forever
@@ -153,6 +171,7 @@ var read_at := 0                     ## when the partner reads your shot
 var target_x := 0
 var target_z := 0
 var target_hits := 0
+var toss_at := 0                     ## SETUP: when the held ball is dropped
 var rally := 0                       ## DINK PARTNER: your hits back this rally
 var best_rally := 0
 
@@ -165,6 +184,7 @@ func copy_settings_from(o: Drill) -> void:
 	partner_pace = o.partner_pace
 	cross = o.cross
 	hands = o.hands
+	resets = o.resets
 	spread = o.spread
 	targets = o.targets
 	speed = o.speed
@@ -241,9 +261,7 @@ func update(sim: Sim, tossed: bool) -> void:
 				if shot == SHOT_SERVE:
 					_serve_ready(sim)
 				elif partner:
-					var q := sim.players[2]
-					# A fresh rally: dinks from low, a HANDS feed from the waist.
-					_partner_dink(sim, q.x - 300000, HANDS_HEIGHT if hands else 500000, q.z + 300000)
+					_partner_setup(sim)
 				else:
 					_feed(sim)
 			else:
@@ -254,6 +272,8 @@ func update(sim: Sim, tossed: bool) -> void:
 			_return(sim)
 		PARTNER:
 			_partner(sim)
+		SETUP:
+			_setup(sim)
 		SERVING:
 			_serving(sim, p, tossed)
 		DONE:
@@ -353,17 +373,21 @@ func _fly(sim: Sim, p: SimTypes.Player) -> void:
 		_result(sim, RESULT_KITCHEN)
 	else:
 		stage = RETURN
-		if partner:
+		if partner and not resets:
 			_partner_reads(sim)
 
 
 func _return(sim: Sim) -> void:
-	if partner and partner_plan == -1 and sim.tick >= read_at:
+	if partner and not resets and partner_plan == -1 and sim.tick >= read_at:
 		_partner_plan(sim)
+	var z0 := sim.ball.z
 	var ev := sim.ball.step()
 	if ev & Ball.EV_NET:
 		sim.emit(K.EVENT_NET, sim.ball.ev_x, sim.ball.ev_y, 0)
 		_result(sim, RESULT_NET)
+		return
+	if resets and z0 > 0 and sim.ball.z <= 0 and sim.ball.y > popup_y():
+		_result(sim, RESULT_POPUP)       # they'd put that away
 		return
 	if not (ev & Ball.EV_BOUNCE):
 		if hands and _partner_takes_it(sim):
@@ -389,6 +413,9 @@ func _return(sim: Sim) -> void:
 		r = RESULT_ZONE
 	elif rules & RULE_TOPSPIN and not _topspin(sim.ball):
 		r = RESULT_SPIN
+	if resets:
+		_result(sim, r)                  # the partner feeds a fresh drive
+		return
 	if partner:
 		rally += 1
 		best_rally = maxi(best_rally, rally)
@@ -401,6 +428,11 @@ func _return(sim: Sim) -> void:
 func _topspin(b: Ball) -> bool:
 	var t := Aim.topspin(b.vx, b.vz, 1000)
 	return (t[0] * b.wx + t[2] * b.wz) / 1000 > 60000
+
+
+## RESETS: a ball higher than this over the net is a pop-up.
+func popup_y() -> int:
+	return K.NET_HEIGHT_CENTER + POPUP_OVER[clampi(partner_pace, 0, 2)]
 
 
 func in_zone(x: int, z: int) -> bool:
@@ -483,11 +515,61 @@ func _result(sim: Sim, r: int, rally_on := false) -> void:
 
 # --- DINK PARTNER -------------------------------------------------------------
 
+## A fresh rally: the partner holds the ball up, then drops it.
+func _partner_setup(sim: Sim) -> void:
+	var q := sim.players[2]
+	stage = SETUP
+	toss_at = sim.tick + HOLD_TICKS
+	var b := sim.ball
+	b.held = true
+	b.place(_hold_x(q), HOLD_Y, q.z + 350000)
+	b.launch(0, 0, 0)
+	b.set_spin(0, 0, 0)
+	partner_plan = toss_at + _drop_ticks()
+
+
+## The held ball: a hand's width to the free hand's side of centre.
+static func _hold_x(q: SimTypes.Player) -> int:
+	return q.x - K.right_sign(q.team) * 100000
+
+
+## Ticks from the drop to the strike: dinks low, a HANDS feed or a RESETS
+## drive from the waist.
+func _drop_ticks() -> int:
+	var strike := HANDS_HEIGHT - 150000 if hands or resets else 500000
+	var b := Ball.new()
+	b.held = false
+	b.place(0, HOLD_Y, 0)
+	b.launch(0, DROP_VY, 0)
+	for i in 120:
+		b.step()
+		if b.vy < 0 and b.y <= strike:
+			return i + 1
+	return 60
+
+
+func _setup(sim: Sim) -> void:
+	var q := sim.players[2]
+	var b := sim.ball
+	if sim.tick < toss_at:
+		b.place(_hold_x(q), HOLD_Y, q.z + 350000)    # in the hand, following them
+		return
+	if sim.tick == toss_at:
+		b.held = false
+		b.launch(0, DROP_VY, 0)
+	b.step()
+	if sim.tick >= partner_plan:
+		partner_plan = -1
+		_partner_dink(sim, b.x, b.y, b.z)
+
 ## A dink from (x, y, z) to land about a metre in front of you, near your
 ## line: the partner's every shot.
 func _partner_dink(sim: Sim, x: int, y: int, z: int) -> void:
 	if hands:
 		_partner_volley(sim, x, y, z)
+		return
+	if resets:
+		_partner_drive(sim, x, y, z)
 		return
 	var p := sim.players[0]
 	var q := sim.players[2]
@@ -667,6 +749,37 @@ func _partner_step(q: SimTypes.Player, gx: int, gz: int) -> void:
 
 # --- Floor targets -----------------------------------------------------------------
 
+## RESETS: a speed-up at you, low (shins to hips), to your forehand,
+## backhand or body as SPREAD has it.
+func _partner_drive(sim: Sim, x: int, y: int, z: int) -> void:
+	var p := sim.players[0]
+	var q := sim.players[2]
+	var r: Array = SPREADS[clampi(spread, 0, SPREADS.size() - 1)]
+	var off: int = r[0] + sim.random(r[1] - r[0] + 1)
+	if sim.random(100) < 30:
+		off = sim.random(150001)
+	var tx := clampi(p.x + (off if sim.random(2) == 0 else -off), -K.COURT_HALF_WIDTH + 300000,
+		K.COURT_HALF_WIDTH - 300000)
+	var ty := RESET_HEIGHT + sim.scatter(200000)
+	var pace: int = RESET_PACE[clampi(partner_pace, 0, 2)]
+	var w := Aim.topspin(tx - x, p.z - z, 300000)
+	var v := Aim.through(x, maxi(y, 300000), z, tx, ty, p.z, pace, w)
+	var b := sim.ball
+	b.place(x, maxi(y, 300000), z)
+	b.launch(v[0], v[1], v[2])
+	b.set_spin(w[0], w[1], w[2])
+	aim_x = tx
+	sim.required_bounce = K.REQUIRED_BOUNCE_NONE
+	sim.last_hitter = 2
+	sim.bounce_count = 0
+	bounces = 0
+	feeds += 1
+	fed_at = sim.tick
+	q.swing_tick = sim.tick
+	stage = FLY
+	sim.emit(K.EVENT_HIT, 2, b.speed(), 0)
+
+
 ## A new target in the return zone (their kitchen for a partner), not on
 ## top of the last one.
 func _new_target(sim: Sim) -> void:
@@ -702,4 +815,4 @@ func _new_target(sim: Sim) -> void:
 func snapshot() -> Array:
 	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
 		hit_at, machine_z, partner_plan, read_at, target_x, target_z, target_hits, rally, best_rally,
-		1 if partner else 0, 1 if hands else 0]
+		1 if partner else 0, 1 if hands else 0, 1 if resets else 0, toss_at]

@@ -37,7 +37,7 @@ back to you wherever you've reached, and you finish at the kitchen line.
   with a bonus if you reach your line by their next ball.
 - Difficulty: the return's depth and pace.
 
-## 4. RESETS
+## 4. RESETS (built: ADR-016)
 
 You stand in the transition zone, mid-court. The partner drives at you,
 hard and low, like a speed-up. Block it soft into their kitchen.

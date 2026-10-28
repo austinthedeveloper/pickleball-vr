@@ -62,7 +62,7 @@ func show_from(sim: Sim, delta: float) -> void:
 		if d.partner:
 			# Dinks in their kitchen in a row: a ball outside it starts again.
 			score_label.text = "%d" % d.streak
-			info_label.text = "%s IN A ROW   BEST %d%s" % ["HANDS" if d.hands else "DINKS", d.best, tgt]
+			info_label.text = "%s IN A ROW   BEST %d%s" % ["HANDS" if d.hands else ("RESETS" if d.resets else "DINKS"), d.best, tgt]
 		elif d.goal > 0:
 			score_label.text = "%d / %d" % [mini(d.good, d.goal), d.goal]
 			info_label.text = "LESSON" if d.stage != Drill.DONE else "DONE!"
