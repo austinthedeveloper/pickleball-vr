@@ -27,7 +27,10 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
   the scoreboard keeps your POINTS.
 
 ### Changed
-- **Stronger hit vibration**, and a light **ding** when a ball lands on
+- **Blocks keep more pace:** stick the paddle out at a hard-hit ball and
+  it goes back with up to 72% of its speed (was 60%).
+- **Coach: START NEW** starts the drill the coach just set, mid-run.
+- **Stronger hit vibration** (raised twice), and a light **ding** when a ball lands on
   a target, higher toward the bullseye.
 - **Paddle profiles turn any way:** TWIST goes a full turn, ANGLE runs
   from -90 to 90, and a new TURN swings the face left or right. That

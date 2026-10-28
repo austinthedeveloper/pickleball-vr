@@ -202,7 +202,7 @@ function onState(s) {
   $("sTime").textContent = r && r.timed ? (r.done ? "TIME" : `${Math.floor(r.left / 60)}:${String(r.left % 60).padStart(2, "0")}`) : "∞";
   const mine = runShots();
   $("sPct").textContent = mine.length ? Math.round(100 * mine.filter((x) => x.good).length / mine.length) + "%" : "–";
-  $("bStart").disabled = s.where !== "lobby";
+  $("bStart").textContent = s.where === "lobby" ? "START" : "START NEW";   // mid-run: the drill as set now
   $("bPause").disabled = s.where === "lobby";
   $("bPause").textContent = s.where === "paused" ? "RESUME" : "PAUSE";
   $("bRestart").disabled = s.where === "lobby";

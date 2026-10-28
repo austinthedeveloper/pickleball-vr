@@ -60,3 +60,10 @@ bounce on their side. It's display side only, like the swing log.
 - `test_coach` covers the page over HTTP, the code on a real socket, the
   view's shot reports and the commands in main. In a flat-mode run, the
   page drove a full timed run end to end.
+
+## Amendment (2026-10-28): START mid-run
+
+The lead tested it ("it worked so well"). A coach who changed the drill
+mid-run had to go to MENU and then START. Now START is always there:
+mid-run it reads START NEW and starts the drill as set now. The run in
+progress is let go, and its best is kept, as MENU would keep it.

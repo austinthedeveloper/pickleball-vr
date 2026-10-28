@@ -119,6 +119,15 @@ a frame (72-120 Hz), and a fast paddle moves 10+ cm between samples.
   and that a harder swing still always hits harder. CPU matches play the
   same (mean rally 13.8 before and after); the golden traces were
   regenerated.
+- **Blocks keep more** (2026-10-28, "it's still too low"). A fast ball
+  met by a still face keeps up to 72% of its pace, up from 60%. The full
+  bonus is reached at 8.4 m/s, down from 9. It fades over the first
+  6.6 m/s of swing, up from 5. The slower fade is what keeps "swinging
+  harder always hits harder" true at the higher bonus, so a firm block
+  never beats a swing. A still face now sends a 13 m/s ball back at
+  about 9.4 m/s. CPU doubles play the same (mean rally 11.4 before and
+  after); the golden traces were regenerated. BLOCK KEEPS PACE stays on
+  TUNING > PADDLE.
 - **A bigger swing that isn't hard** (2026-10-27, the fourth session).
   "It looked like 3 balls all hit that light outline edge and were called
   long ... I did a bigger swing but didn't swing very hard." Only the

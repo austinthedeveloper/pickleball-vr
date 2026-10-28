@@ -10,8 +10,10 @@ PKG=com.tinychair.pickleball94vr
 CFG=${TMPDIR:-/tmp}/pickleball_tuning.cfg
 pull() {
 	. tools/adb_pick.sh
-	"$ADB" exec-out run-as $PKG cat files/tuning.cfg > "$CFG" 2>/dev/null && [ -s "$CFG" ] \
-		|| { echo "no tuning saved on the headset (or no headset)"; exit 1; }
+	# exec-out passes the headset's own errors through as output: a real
+	# file starts with a [section].
+	"$ADB" exec-out run-as $PKG cat files/tuning.cfg > "$CFG" 2>/dev/null
+	grep -q '^\[' "$CFG" 2>/dev/null || { echo "no tuning saved on the headset (or no headset)"; exit 1; }
 }
 case "$1" in
 	show) pull; python3 tools/tune_sync.py "$CFG" --dry-run ;;

@@ -328,8 +328,8 @@ const FAMILIES := {"0_hit": 4, "0_hit_drive": 4, "0_hit_soft": 4, "0_hit_slice":
 const DING_PITCH := [1.0, 1.26, 1.5]
 ## Hit vibration (tuned: Tune's PADDLE page): strength in %, at rest and
 ## gained per 10 m/s of ball speed; how long a clean hit buzzes, ms.
-static var HAPTIC_BASE := 50
-static var HAPTIC_GAIN := 40
+static var HAPTIC_BASE := 60
+static var HAPTIC_GAIN := 45
 static var HAPTIC_MS := 50
 
 

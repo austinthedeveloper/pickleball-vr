@@ -73,3 +73,5 @@ The lead found the hit vibration "a bit too low". It's stronger now:
 All three are tunables on the PADDLE page (they live in
 `view/match_view.gd`): Tune reaches any script's static vars, not only
 the sim's.
+
+Raised again (2026-10-28, "a bit" more): 60% at rest, plus 45% per 10 m/s.

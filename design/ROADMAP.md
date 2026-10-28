@@ -90,7 +90,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-50 | Timed runs (MODE) and RECORDS (ADR-022) | `feature/cld-vr-timed` | Ready to test |
 | VR-51 | Stronger hit vibration (tunable); a ding on target hits | `feature/cld-vr-timed` | Ready to test |
 | VR-52 | Floor targets move after a miss too (ADR-019) | `feature/cld-vr-timed` | Ready to test |
-| VR-53 | Coach companion: a web page from the headset (ADR-023) | `feature/cld-vr-coach` | Ready to test |
+| VR-53 | Coach companion: a web page from the headset (ADR-023) | `feature/cld-vr-coach` | Played: "worked so well" |
+| VR-54 | Coach START NEW mid-run; stronger vibration; blocks keep 72% (ADR-003, 023) | `feature/cld-vr-coach` | Ready to test |
 
 ## Phase 1: singles
 

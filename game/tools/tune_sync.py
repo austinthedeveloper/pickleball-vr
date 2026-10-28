@@ -24,7 +24,8 @@ def parse(path):
             sec = out.setdefault(m.group(1), {})
             continue
         k, _, v = line.partition("=")
-        sec[k.strip()] = v.strip().strip('"')
+        if sec is not None and v:
+            sec[k.strip()] = v.strip().strip('"')
     return out
 
 

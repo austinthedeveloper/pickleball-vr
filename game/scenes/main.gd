@@ -426,6 +426,7 @@ func coach_state() -> Dictionary:
 
 ## A coach's message: the PRACTICE PARTNER setup, or start / pause /
 ## resume / restart / menu, as the headset's own menus would do them.
+## START mid-run starts the drill as it's set now (the coach changed it).
 func _on_coach(msg: Dictionary) -> void:
 	match String(msg.get("type", "")):
 		"set":
@@ -442,6 +443,8 @@ func _on_coach(msg: Dictionary) -> void:
 			if not _playing():
 				lobby.call_deferred("partner")   # the headset shows what the coach set
 		"start":
+			if _playing():
+				_keep_best()
 			_start.call_deferred(settings.partner_config(), false)
 		"pause":
 			if _playing() and not view.paused:

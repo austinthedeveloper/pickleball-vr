@@ -63,10 +63,10 @@ const PADDLE_HARD_V := 75000         ## 9 m/s
 ## 0.6, not the hard-hit 0.34, when the face barely moves. It ramps in from
 ## 6 m/s of incoming speed (full at 9) and fades out as the swing reaches
 ## 5 m/s, so dinks and swings keep the tuning above.
-static var BLOCK_E_256 := 154
+static var BLOCK_E_256 := 184
 const BLOCK_FROM_V := 50000          ## 6 m/s
-const BLOCK_FULL_V := 75000          ## 9 m/s
-const BLOCK_SWING_V := 41667         ## 5 m/s: a full swing gets no block bonus
+const BLOCK_FULL_V := 70000          ## 8.4 m/s
+const BLOCK_SWING_V := 55000         ## 6.6 m/s: a full swing gets no block bonus (slow to fade: swinging harder never hits softer)
 const PADDLE_EDGE_LOSS_PCT := 20     ## at the face's rim, 20% of that is lost (ADR-006; was 40)
 ## The face grips the ball: half the slide between them is taken out
 ## (a hollow ball rolling without slip would lose 60%). ADR-003 amended.
