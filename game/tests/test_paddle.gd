@@ -129,3 +129,29 @@ func test_the_swing_curve_rises_and_inverts() -> void:
 	check(K.swing_gain(15000) > 300 and K.swing_gain(90000) < 200, "touch boosted, power trimmed")
 	if asserts > 30:
 		asserts = 30
+
+
+func test_a_block_keeps_a_fast_balls_pace() -> void:
+	# A 13 m/s ball into a still face (HANDS, ADR-003 amended): it comes back
+	# with about 0.6 of its pace, not the hard-hit 0.34.
+	var sim := _live()
+	sim.ball.launch(0, 0, 108000)
+	for i in 40:
+		sim.step([_input(2 * K.M)])
+		if sim.ball.vz < 0:
+			break
+	near(-sim.ball.vz, 108000 * K.BLOCK_E_256 / 256, 3000, "blocked back at %d" % -sim.ball.vz)
+	check(-sim.ball.vz > 108000 / 2, "faster than half its pace")
+
+
+func test_swinging_harder_always_hits_harder() -> void:
+	# The block bonus fades as the swing grows; it never folds the curve back.
+	for v: int in [30000, 60000, 80000, 110000, 140000]:
+		var last := -1
+		for u in range(0, 100000, 2000):
+			var e := K.paddle_e(u + v)
+			var out := (256 + e) * u / 256 + K.block_e(e, v, u) * v / 256
+			check(out >= last, "rises at a %d ball, %d swing: %d" % [v, u, out])
+			last = out
+	if asserts > 40:
+		asserts = 40

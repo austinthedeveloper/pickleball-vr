@@ -58,6 +58,15 @@ const PADDLE_E_SOFT_256 := 169
 const PADDLE_E_HARD_256 := 87
 const PADDLE_SOFT_V := 33333         ## 4 m/s, um/tick
 const PADDLE_HARD_V := 75000         ## 9 m/s
+## A fast ball keeps its pace off a soft face (ADR-003 amended, the lead's
+## blocks in HANDS): the incoming ball's own speed comes back with up to
+## 0.6, not the hard-hit 0.34, when the face barely moves. It ramps in from
+## 6 m/s of incoming speed (full at 9) and fades out as the swing reaches
+## 5 m/s, so dinks and swings keep the tuning above.
+const BLOCK_E_256 := 154
+const BLOCK_FROM_V := 50000          ## 6 m/s
+const BLOCK_FULL_V := 75000          ## 9 m/s
+const BLOCK_SWING_V := 41667         ## 5 m/s: a full swing gets no block bonus
 const PADDLE_EDGE_LOSS_PCT := 20     ## at the face's rim, 20% of that is lost (ADR-006; was 40)
 ## The face grips the ball: half the slide between them is taken out
 ## (a hollow ball rolling without slip would lose 60%). ADR-003 amended.
@@ -140,14 +149,15 @@ static func fault_text(f: int) -> String:
 
 
 ## +1 if the team's side is z > 0.
-## The swing curve (ADR-003, tuned on the lead's three logged sessions): a
-## VR controller weighs nothing, so touch comes out underhit and an
-## average swing overhit. The face's effective speed for the hit, as
-## straight segments through these points (m/s): 2.5 -> 3.05 (touch x1.22),
-## 4.2 -> 4.2, 6.5 -> 4.6 (an average swing levels off: a firm, controlled
-## ball), 9 -> 5.8, then +0.62 per m/s (a put-away still drives). It only
-## ever rises. um/tick.
-const SWING_CURVE := [[0, 0], [20833, 25417], [35000, 35000], [54167, 38333], [75000, 48333]]
+## The swing curve (ADR-003, tuned on the lead's logged sessions): a VR
+## controller weighs nothing, so touch comes out underhit and an average
+## swing overhit. The face's effective speed for the hit, as straight
+## segments through these points (m/s): 2.5 -> 3.05 (touch x1.22),
+## 4.2 -> 4.0, 6.5 -> 4.15 (a bigger, unhurried swing levels off: a firm,
+## controlled ball, not a long one), 9 -> 5.8, then +0.62 per m/s (a
+## put-away still drives). Only the face's speed at contact counts, not
+## how far it travelled. It only ever rises. um/tick.
+const SWING_CURVE := [[0, 0], [20833, 25417], [35000, 33333], [54167, 34583], [75000, 48333]]
 const SWING_TAIL_256 := 159          ## the slope past the last point, Q8
 
 
@@ -183,6 +193,17 @@ static func swing_for(eff: int) -> int:
 static func paddle_e(v: int) -> int:
 	var t := clampi(v - PADDLE_SOFT_V, 0, PADDLE_HARD_V - PADDLE_SOFT_V)
 	return PADDLE_E_SOFT_256 - (PADDLE_E_SOFT_256 - PADDLE_E_HARD_256) * t / (PADDLE_HARD_V - PADDLE_SOFT_V)
+
+
+## The restitution (Q8) the incoming ball's own normal speed `v_in` comes
+## back with, when the face moves into it at `u` and the hit's restitution is
+## `e`: `e`, raised toward BLOCK_E for a fast ball met by a still face.
+static func block_e(e: int, v_in: int, u: int) -> int:
+	var fast := clampi(v_in - BLOCK_FROM_V, 0, BLOCK_FULL_V - BLOCK_FROM_V)
+	var lift := (BLOCK_E_256 - e) * fast / (BLOCK_FULL_V - BLOCK_FROM_V)
+	if lift <= 0:
+		return e
+	return e + lift * clampi(BLOCK_SWING_V - u, 0, BLOCK_SWING_V) / BLOCK_SWING_V
 
 
 static func side_sign(team: int) -> int:

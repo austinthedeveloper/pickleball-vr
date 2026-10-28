@@ -389,6 +389,13 @@ func paddle_contact(p: SimTypes.Player, bx0: int, by0: int, bz0: int) -> bool:
 	var e0 := K.paddle_e(-vn)
 	var e := e0 - e0 * K.PADDLE_EDGE_LOSS_PCT * mini(off2, fr * fr) / (100 * fr * fr)
 	var j := -vn * (256 + e) / 256
+	# A fast ball met by a still face keeps more of its pace (a block).
+	var vb := Fx.dot_q14(ball.vx, ball.vy, ball.vz, nn)
+	var un := Fx.dot_q14(ux, uy, uz, nn)
+	if vb < 0:
+		var eb := K.block_e(e0, -vb, maxi(un, 0))
+		eb -= eb * K.PADDLE_EDGE_LOSS_PCT * mini(off2, fr * fr) / (100 * fr * fr)
+		j += -vb * (eb - e) / 256
 	var vx := ball.vx + j * nn[0] / K.Q14
 	var vy := ball.vy + j * nn[1] / K.Q14
 	var vz := ball.vz + j * nn[2] / K.Q14

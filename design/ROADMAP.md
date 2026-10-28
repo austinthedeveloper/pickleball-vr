@@ -67,6 +67,11 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-27 | The dink zone: a foot past the kitchen line (ADR-010) | `feature/cld-vr-focus` | Ready to test |
 | VR-28 | HANDS: the partner volleys hard at you (ADR-014) | `feature/cld-vr-hands` | Done (played: "feel good") |
 | VR-29 | FOCUS deeper and sooner: 5 in a row, nearly black by 13 (ADR-013) | `feature/cld-vr-focus-2` | Done (played: "feel good") |
+| VR-30 | Blocks keep a fast ball's pace (ADR-003) | `feature/cld-vr-blocks` | Ready to test |
+| VR-31 | HANDS: a soft feed, then faster (ADR-014) | `feature/cld-vr-blocks` | Ready to test |
+| VR-32 | The dink zone 2.5 ft past the kitchen line (ADR-010) | `feature/cld-vr-blocks` | Ready to test |
+| VR-33 | A bigger, unhurried swing lands shorter (swing curve, ADR-003) | `feature/cld-vr-blocks` | Ready to test |
+| VR-34 | HANDS: more power after the feed (ADR-014) | `feature/cld-vr-blocks` | Ready to test |
 
 ## Phase 1: singles
 
@@ -129,6 +134,16 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-33 / VR-34, ready to test.** DINKS: a bigger but unhurried swing
+should land in the zone, not on its edge. Do drives from the baseline
+still feel right (average swings are up to 10% softer)? HANDS: the ball
+after the feed is firmer, and full pace is 8% faster.
+
+**VR-30 / VR-31 / VR-32, played: the soft start is good.** HANDS: each rally opens with
+a soft feed at you, then the next three balls build to full pace. Block
+one (paddle out, no swing): it should carry back over the net. DINKS:
+the gold zone now reaches 2.5 ft past their kitchen line.
 
 **VR-29, played and approved.** FOCUS, stronger: at 5 in a row the world
 starts to darken, deeper every 2, nearly black by 13. Too much, or about

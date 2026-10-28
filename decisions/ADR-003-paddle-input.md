@@ -104,6 +104,34 @@ a frame (72-120 Hz), and a fast paddle moves 10+ cm between samples.
   strokes meet the ball at overlapping closing speeds. Steepening it cut
   the gentle dinks from 38 to 17 to 24 of 47. Logging skips the lobby's
   demo bot now. The golden traces were regenerated.
+- **A block keeps a fast ball's pace** (2026-10-27, from the HANDS
+  log). "Player 1 slams it at Player 2 who just sticks their paddle out.
+  That ball should be going in." The logged blocks (face at 0.4-1.4 m/s,
+  ball in at 9.3-9.6 m/s) came off at 3.3-5.1 m/s and fell short or into
+  the net. The hard-hit restitution (0.34), tuned to keep swings from
+  flying, was applied to the incoming ball's pace too. Now the incoming
+  ball's own normal speed comes back with `K.block_e`: the usual
+  restitution, raised toward 0.6 for a ball faster than 6 m/s (fully at
+  9), and only while the face is slow (fading out at 5 m/s of swing).
+  Dinks and the tuned strokes meet slower balls or swing harder, so they
+  don't change; a still face sends a 13 m/s ball back at about 7.8 m/s.
+  The bot plans with the same formula. `test_paddle` checks the block
+  and that a harder swing still always hits harder. CPU matches play the
+  same (mean rally 13.8 before and after); the golden traces were
+  regenerated.
+- **A bigger swing that isn't hard** (2026-10-27, the fourth session).
+  "It looked like 3 balls all hit that light outline edge and were called
+  long ... I did a bigger swing but didn't swing very hard." Only the
+  face's speed at contact counts, never the swing's length; but a bigger
+  arc moves the face faster than it feels. The dinks that landed well
+  were 2.5-3.8 m/s at the face, the long ones 4.8-6.9 m/s, and 10 of 56
+  landed past the dink zone. Replaying all 56 through the sim, the middle
+  of the curve is flattened: 4.2 -> 4.0 (was 4.2) and 6.5 -> 4.15 (was
+  4.6). The long ones come in 0.3-0.5 m and 4 stay past the zone; the
+  dinks that landed well move by 6 cm on average. Swings from 7 to 9 m/s
+  are up to 10% softer, from 9 up unchanged. The CPUs plan through the
+  curve's inverse, so their play is the same; the golden traces were
+  regenerated.
 - **Flat mode and DEMO** drive the same input from `Bot`, which plans a
   swing through the ball on the sim's own prediction. In flat mode you
   move and aim and the bot swings; in DEMO it does all of it.

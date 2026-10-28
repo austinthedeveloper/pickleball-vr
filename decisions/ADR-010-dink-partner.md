@@ -91,6 +91,10 @@ it." RETURN TO KITCHEN and DINK PARTNER's count now take a ball up to
 30 cm past the line (`Drill.DINK_ZONE`). The highlight on the court and
 the partner's targets follow it.
 
+Played again: "bring the dink kitchen line back another foot or 2. it's
+still too close to the kitchen line." The zone now runs 75 cm (2.5 ft)
+past the line.
+
 ## Consequences
 
 - The partner is pure sim like everything else: seeded, deterministic,

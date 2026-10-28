@@ -246,10 +246,14 @@ func _maybe_plan() -> void:
 	# Restitution depends on the closing speed, which depends on the swing:
 	# two passes settle it.
 	var e := K.PADDLE_E_256
+	var eb := e
 	var s := 0
-	for k in 2:
-		s = dl * 256 / (256 + e) + vin_n
+	for k in 3:
+		# dl = (s - vin_n)(1 + e) - (eb - e) vin_n: the block keeps some of
+		# a fast ball's pace (ADR-003), so the swing needs less.
+		s = (dl + (eb - e) * vin_n / 256) * 256 / (256 + e) + vin_n
 		e = K.paddle_e(s - vin_n)
+		eb = K.block_e(e, -vin_n, maxi(s, 0)) if vin_n < 0 else e
 	# The face moves with the ball across itself (so the grip adds only
 	# the brush), and into it along the normal.
 	_ux = s * _n[0] / K.Q14 + (b.vx - vin_n * _n[0] / K.Q14) + bt[0]
