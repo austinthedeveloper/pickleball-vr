@@ -12,7 +12,7 @@ game/tools/test.sh                                   # all tests, headless (must
 godot --path game                                    # play (flat mode without a headset)
 godot --path game -- demo                            # DEMO: bot vs CPU
 godot --headless --path game -s res://tests/golden.gd   # regenerate golden traces (play changes only)
-godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson] [drill=CALL_THE_SPOT...] [venue=NAME] [tick=N]
+godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson] [drill=CALL_THE_SPOT...] [venue=NAME] [tick=N] [cam=x,y,z look=x,y,z] [prank=ball:duck,antic:dance,face...]
 python3 game/tools/version.py [set X.Y.Z]            # the version, everywhere (design/RELEASING.md)
 python3 game/tools/release.py X.Y.Z --dry-run         # cut a release: checks, bump, tests, tag, APK (--push: GitHub release)
 python3 game/tools/test_release.py                    # the release tools' self-test
@@ -24,6 +24,7 @@ game/tools/quest_build.sh [--check]                   # build + install + launch
 game/tools/swings.sh > s.log                          # the headset's swing log (debug builds)
 python3 game/tools/swings_report.py s.log [--since HH:MM]   # that log summed up per mode (ADR-017)
 game/tools/tune.sh show | sync | clear   # the headset's TUNING overrides; sync makes them the defaults (ADR-020)
+python3 game/tools/make_pranks.py                     # the prank sounds, synthesized (ADR-025; make_ding.py: the target ding)
 ```
 
 Releases are semver with tags `vX.Y.Z`, `CHANGELOG.md` and an APK on the
@@ -33,8 +34,10 @@ GitHub release (`design/RELEASING.md`, ADR-011). GitHub Actions runs
 plugin-free). Godot's version and SHA-512s are pinned in
 `.github/actions/setup-godot/action.yml`, the same pin as the port kit's.
 
-`design/COACHING.md` tracks every coaching idea (C-1..C-23) and its status. `design/ROADMAP.md` is the milestone sheet: keep it current with each
-branch. `design/KNOWN_ISSUES.md` lists the defects, and
+`design/COACHING.md` tracks every coaching idea (C-1..C-23) and its
+status. `design/ROADMAP.md` is the milestone sheet (phases, releases,
+every task's status, next, "For you"): keep it current with each branch.
+What to try for each task goes in `design/HISTORY.md`. `design/KNOWN_ISSUES.md` lists the defects, and
 `decisions/README.md` the ADRs (next: ADR-026). `design/QUEST_SETUP.md`
 covers the headset build. `design/TEST_CHANNEL.md` is the plan for
 sharing builds with friends on Meta's ALPHA channel.
