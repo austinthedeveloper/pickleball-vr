@@ -392,16 +392,13 @@ func test_anywhere_through_the_relay() -> void:
 	eq(changes[0], 1, "the COACH page hears of it")
 	var page: Array = relay.text.filter(func(m: Variant) -> bool: return m is Dictionary and m["op"] == "page")
 	check(page.size() == 1 and String(page[0]["html"]).contains("<title>Pickleball '94 Coach</title>"), "and the relay gets the page")
-	# A coach joins through the relay: the code first, as on the Wi-Fi.
+	# A coach joins through the relay: the room was the key, so no code.
 	relay.say({"op": "joined", "guest": 2, "ver": ""})
-	relay.from_guest(2, {"type": "start"})
-	relay.from_guest(2, {"type": "hello", "code": c.code})
 	_pump(c, 30, relay.pump)
-	eq(got.size(), 0, "nothing before the code")
 	eq(c.coaches(), 1, "one coach, anywhere")
 	var first: PackedByteArray = relay.binary[-1]
-	eq(first[0], 2, "the reply goes to that coach")
-	eq(JSON.parse_string(first.slice(1).get_string_from_utf8()), {"type": "welcome"}, "welcome")
+	eq(first[0], 2, "the welcome goes to that coach")
+	eq(JSON.parse_string(first.slice(1).get_string_from_utf8()), {"type": "welcome"}, "welcome, at once")
 	relay.from_guest(2, {"type": "start"})
 	c.broadcast({"type": "state", "where": "lobby"})
 	_pump(c, 30, relay.pump)

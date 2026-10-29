@@ -387,7 +387,11 @@ const marks = () => (state && state.marks) || [];
 // --- Connection -------------------------------------------------------------------
 // Served by the relay at /c/ROOM: the same messages, through the room (ADR-026).
 const ROOM = (location.pathname.match(/^\/c\/([A-Za-z]{4})\/?$/) || [])[1] || "";
-if (ROOM) $("loginHint").textContent = `Room ${ROOM.toUpperCase()}. Enter the code shown on the headset's COACH page.`;
+// The room is the key there: no code to type (the relay limits wrong rooms).
+if (ROOM) {
+  $("loginHint").textContent = `Room ${ROOM.toUpperCase()}: connecting to the headset...`;
+  $("code").classList.add("hidden");
+}
 let relayError = "";
 
 // The relay's guest socket, looking like the headset's: JSON text in and out
@@ -417,10 +421,10 @@ function relaySocket() {
 function connect(code) {
   const port = (parseInt(location.port || "8094", 10) + 1);
   ws = ROOM ? relaySocket() : new WebSocket(`ws://${location.hostname}:${port}`);
-  ws.onopen = () => ws.send(JSON.stringify({ type: "hello", code }));
+  ws.onopen = () => { if (!ROOM) ws.send(JSON.stringify({ type: "hello", code })); };
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
-    if (m.type === "welcome") { store.set("coachCode", code); $("login").classList.add("hidden"); $("app").classList.remove("hidden"); retry = 0; }
+    if (m.type === "welcome") { if (!ROOM) store.set("coachCode", code); $("login").classList.add("hidden"); $("app").classList.remove("hidden"); retry = 0; }
     else if (m.type === "bad_code") { $("loginErr").textContent = "That code didn't match the headset."; ws.close(); }
     else if (m.type === "state") onState(m);
     else if (m.type === "shot") onShot(m);
@@ -432,10 +436,13 @@ function connect(code) {
     if (relayError === "NO SUCH ROOM" || relayError === "HOST LEFT") {
       // The headset closed the room (or opened a new one): back to the start.
       $("app").classList.add("hidden"); $("login").classList.remove("hidden");
+      $("loginHint").textContent = `Room ${ROOM.toUpperCase()}`;
       $("loginErr").textContent = `Room ${ROOM.toUpperCase()} is closed. Check the room on the headset's COACH page.`;
       return;
     }
     if (relayError === "ROOM FULL") { $("loginErr").textContent = "That room is full."; return; }
+    if (relayError === "TOO MANY TRIES") { $("loginErr").textContent = "Too many wrong rooms. Wait a minute and try again."; return; }
+    if (ROOM && $("app").classList.contains("hidden")) { $("loginErr").textContent = "Couldn't reach the headset. Tap CONNECT to try again."; return; }
     if (!$("app").classList.contains("hidden")) setTimeout(() => connect(code), Math.min(1000 * ++retry, 5000));
   };
 }
@@ -1187,10 +1194,11 @@ document.querySelectorAll("#tapMode button").forEach((b) => b.onclick = () => {
   $("tapHint").textContent = HINTS[tapMode];
   drawCourt();
 });
-$("join").onclick = () => { $("loginErr").textContent = ""; connect($("code").value.trim()); };
+$("join").onclick = () => { $("loginErr").textContent = ""; connect(ROOM ? "" : $("code").value.trim()); };
 $("code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("join").click(); });
 const saved = store.get("coachCode");
 if (saved) $("code").value = saved;
+if (ROOM) connect("");
 drawAnalysis();
 </script>
 </body>

@@ -215,7 +215,10 @@ func _relay_control(msg: Variant) -> void:
 			print("coach: anywhere at %s/c/%s" % [relay.replace("wss://", "https://"), room])
 			room_changed.emit()
 		"joined":
-			_guests[int(msg.get("guest", 0))] = false
+			# The room is the key (ADR-026): a coach who found it needs no code.
+			var g := int(msg.get("guest", 0))
+			_guests[g] = true
+			_send_guest(g, {"type": "welcome"})
 		"left":
 			_guests.erase(int(msg.get("guest", 0)))
 

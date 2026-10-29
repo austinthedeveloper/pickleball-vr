@@ -27,15 +27,15 @@ and also:
   serves at `/c/BXKM`. The page always matches the game's version, and
   there's nothing to deploy for it;
 - **treats the relay's guests as coaches,** with the same JSON inside
-  binary frames (one byte of guest number on the headset's side). They
-  must send the four-digit code first, as on the Wi-Fi
-  (`Coach._receive` serves both);
+  binary frames (one byte of guest number on the headset's side).
+  **The room is the key:** a coach who joins it is welcomed at once, with
+  no four-digit code (the lead's call, 2026-10-29: two codes was one too
+  many). The Wi-Fi keeps its code;
 - **keeps the room open** with a word to the relay every minute, and
   dials again after a drop (2, 5, 10, then every 30 s). A new connection
   is a new room.
 
-**The coach's side:** open the relay's address, type the room, then the
-code. The relay's front page asks for the room and opens `/c/ROOM`.
+**The coach's side:** open the relay's address and type the room. The relay's front page asks for the room and opens `/c/ROOM`.
 Served from there, the page sees `/c/` in its address and talks through
 the room instead of to the headset's port. If the room closes, it says
 so and goes back to the start.
@@ -56,12 +56,14 @@ the phone's microphone, iPhones included.
   lead's call.
 - **Privacy:** the relay stores nothing and logs counts, not messages.
   The page, the coach's commands, voice clips and selfies pass through
-  it in memory only. A room's page is public while the room is open
-  (anyone with the room can load it), but it does nothing without the
-  four-digit code.
+  it in memory only. Anyone with the room can coach while it's open, so
+  guessing is what keeps strangers out: 160,000 rooms, and the relay lets
+  an address try only 20 wrong rooms a minute (page or socket), so one
+  address would take days to find a room. Rooms also close on sleep, idle
+  (10 minutes) and after 4 hours.
 - **Tests:** `test_coach` runs the Coach against a stand-in relay (the
-  room, the page, a coach's code and commands, the state out, a drop and
+  room, the page, a coach welcomed on joining, commands, the state out, a drop and
   the redial) and checks the COACH page's rows. The relay has its own
   tests. Checked live on 2026-10-29: the desktop game through the real
-  relay, and the page in a browser (room, code, the lobby's state, HOLD
+  relay, and the page in a browser (room, the lobby's state, HOLD
   TO TALK available, the closed-room message).
