@@ -89,3 +89,17 @@ The net is built from a real one's parts (`World._net`):
   winder.
 
 It costs a handful of draw calls.
+
+## Amendment (2026-10-28): a paddle that looks like one
+
+The paddle's faces are now textured (`PaddleMesh.face_texture`):
+- raw carbon in a 2x2 twill;
+- the paddle's colour sweeping up from the throat on a diagonal, edged in
+  the accent;
+- a small "94" in the corner.
+
+Both faces read the same way round. The rim is the core's dark edge
+under the guard, and the grip is a wound overgrip (a texture, in place
+of the four torus ridges). The face's size and the sim's contact disc
+are unchanged. Every paddle colour gets its own texture once, so the
+CPUs' blue paddles have it too.

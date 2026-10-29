@@ -6,6 +6,17 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+### Added
+- **PARTNER LOOK** on PRACTICE PARTNER: NEW puts a more realistic person
+  across the net (from Microsoft's free Rocketbox library), in a striped
+  polo, cargo shorts and sneakers. CLASSIC is the partner you had.
+
+### Changed
+- **A real net:** square mesh you can see through, the white tape over
+  the top, a centre strap, and metal posts.
+- **A paddle that looks like one:** a carbon face with a colour panel and
+  a "94", a proper edge and a wound grip.
+
 ## [0.4.1] - 2026-10-28
 
 A fix for the pranks: voice messages from an iPhone get through.

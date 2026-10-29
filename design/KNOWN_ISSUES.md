@@ -28,3 +28,8 @@
    recording, tap SEND IT and the page plays the video silently to catch
    its sound. The prank sounds are synthesized and
    unheard in the headset yet.
+9. **The CPUs' paddle can leave their hand** for a moment in some
+   wind-ups (seen in screenshots, 2026-10-28, with the classic body and
+   the new one alike). The hand's target is then out of the arm's reach,
+   so the paddle is drawn where the hand was meant to be. It's display
+   only.

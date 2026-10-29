@@ -84,3 +84,34 @@ their spots and on the floor, for both bodies.
 - The shells are made at load: about 50 ms per model the first time.
   They're rigid with the body (no cloth simulation), so a shirt can't
   swing or flutter.
+
+## Amendment (2026-10-28): other rigs, and a Rocketbox partner on trial
+
+The lead wanted better-looking players, free first. Microsoft Rocketbox
+(115 rigged people for VR research, MIT) was tried: Male_Adult_01, in a
+striped polo, cargo shorts and sneakers. It has 7,440 triangles and
+1024 px textures, downscaled from 2048 for the Quest
+(`assets/people/rocketbox/`, with its licence).
+
+The Body now poses any rig, not only the base body's:
+- **Bone names:** `Body.RIGS` maps our names to the rig's (the 3ds Max
+  "Bip01" names here). The Avatar asks for bones by our names
+  (`bone_name`, `head_mount` for things worn on the head).
+- **Limbs** aim along their own axis to their child (`_along`), not
+  along +Y.
+- **Hands** are turned to the base body's: each rig's hand frame (where
+  the middle, index and pinky knuckles sit) is matched to the base
+  body's (`HAND_L`), so a rig in an A-pose holds the paddle the same way.
+- **Fingers** curl about the knuckles' line, toward the palm (`_hinge`).
+- **The base body is untouched:** all of the above apply only to other
+  rigs.
+
+Such a person wears their own clothes, hair and shoes, so no shirt shells,
+team colours or cap.
+
+PRACTICE PARTNER > PARTNER LOOK (CLASSIC / NEW) picks the partner, saved
+in the settings. The CPU players stay classic until the lead decides.
+`test_avatar.test_another_rig_follows_the_joints` checks:
+- the grip and the feet land where the Avatar wants them;
+- the fingers close;
+- the view with the new partner still never writes to the sim.

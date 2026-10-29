@@ -12,6 +12,12 @@
 ## The clothes are painted by a shader from each vertex's place in the
 ## T-pose (stored in its colour): a shirt between the waist and the collar
 ## out to the sleeves, shorts above the knees, socks and shoes.
+##
+## Other rigs (`model`, e.g. a Microsoft Rocketbox person, MIT) pose the
+## same way: bones go by these canonical names (RIGS maps them), a limb
+## aims along its own axis to its child, and the hands and fingers are
+## worked out from where the fingers sit, so any rig's hand turns and
+## curls as the base model's does. Such a model wears its own clothes.
 class_name Body
 extends Node3D
 
@@ -36,6 +42,7 @@ var shorts := Color(0.15, 0.18, 0.3)
 var hair := Color(0.24, 0.15, 0.09)
 var style := "parted"
 var beard := false
+var model := ""                      ## "" the base body; else a MODELS key (its own clothes, hair, shoes)
 
 var skel: Skeleton3D
 var thigh_len := 0.43
@@ -46,6 +53,38 @@ var ankle_h := 0.086                 ## the foot bone above the floor, standing
 
 static var _meshes := {}             ## file -> the body mesh with T-pose places in COLOR
 
+## Other people: file, the rig's bone names, textures. Their clothes and
+## hair are their own.
+const MODELS := {
+	"rb_male_01": {"file": "rocketbox/male_adult_01.fbx", "rig": "bip", "tex": "rocketbox/male_adult_01_"},
+}
+## Canonical bone name -> the rig's.
+const RIGS := {"bip": {
+	"pelvis": "Bip01 Pelvis", "spine_01": "Bip01 Spine", "spine_02": "Bip01 Spine1", "spine_03": "Bip01 Spine2",
+	"neck_01": "Bip01 Neck", "Head": "Bip01 Head",
+	"thigh_l": "Bip01 L Thigh", "calf_l": "Bip01 L Calf", "foot_l": "Bip01 L Foot",
+	"thigh_r": "Bip01 R Thigh", "calf_r": "Bip01 R Calf", "foot_r": "Bip01 R Foot",
+	"upperarm_l": "Bip01 L UpperArm", "lowerarm_l": "Bip01 L Forearm", "hand_l": "Bip01 L Hand",
+	"upperarm_r": "Bip01 R UpperArm", "lowerarm_r": "Bip01 R Forearm", "hand_r": "Bip01 R Hand",
+	"thumb_01_l": "Bip01 L Finger0", "thumb_02_l": "Bip01 L Finger01", "thumb_03_l": "Bip01 L Finger02",
+	"index_01_l": "Bip01 L Finger1", "index_02_l": "Bip01 L Finger11", "index_03_l": "Bip01 L Finger12",
+	"middle_01_l": "Bip01 L Finger2", "middle_02_l": "Bip01 L Finger21", "middle_03_l": "Bip01 L Finger22",
+	"ring_01_l": "Bip01 L Finger3", "ring_02_l": "Bip01 L Finger31", "ring_03_l": "Bip01 L Finger32",
+	"pinky_01_l": "Bip01 L Finger4", "pinky_02_l": "Bip01 L Finger41", "pinky_03_l": "Bip01 L Finger42",
+	"thumb_01_r": "Bip01 R Finger0", "thumb_02_r": "Bip01 R Finger01", "thumb_03_r": "Bip01 R Finger02",
+	"index_01_r": "Bip01 R Finger1", "index_02_r": "Bip01 R Finger11", "index_03_r": "Bip01 R Finger12",
+	"middle_01_r": "Bip01 R Finger2", "middle_02_r": "Bip01 R Finger21", "middle_03_r": "Bip01 R Finger22",
+	"ring_01_r": "Bip01 R Finger3", "ring_02_r": "Bip01 R Finger31", "ring_03_r": "Bip01 R Finger32",
+	"pinky_01_r": "Bip01 R Finger4", "pinky_02_r": "Bip01 R Finger41", "pinky_03_r": "Bip01 R Finger42",
+}}
+## The base body's left hand at rest (model space): the hand, the middle,
+## index and pinky knuckles. Every rig's hands are turned to match it (the
+## right is its mirror).
+const HAND_L := [Vector3(0.706, 1.455, -0.065), Vector3(0.822, 1.451, -0.05), Vector3(0.824, 1.448, -0.025),
+	Vector3(0.805, 1.449, -0.1)]
+## The limbs that aim, and the child each aims toward.
+const AIMS := {"thigh": "calf", "calf": "foot", "upperarm": "lowerarm", "lowerarm": "hand"}
+
 var _rest_local: Array[Transform3D] = []
 var _rest_global: Array[Transform3D] = []
 var _parent := PackedInt32Array()
@@ -54,15 +93,23 @@ var _want: Array = []                ## per bone: null, [0, Basis, origin or nul
 var _g: Array[Transform3D] = []
 var _done := PackedByteArray()
 var _curl := PackedFloat32Array()    ## per hand (l, r): how far the fingers close
+var _names := {}                     ## canonical -> the rig's bone name
+var _along: Array[Vector3] = []      ## per bone: toward its child, in its own frame (aims)
+var _fix: Array[Basis] = []          ## per bone: turns the rig's hand to the base body's
+var _hinge: Array[Vector3] = []      ## per finger bone: the axis it curls about, its own frame
 
 
 func _ready() -> void:
 	top_level = true                 # posed in world space
 	global_transform = Transform3D.IDENTITY
 	var file := "female" if female else "male"
-	var model: Node3D = (load(DIR + file + ".gltf") as PackedScene).instantiate()
-	add_child(model)
-	skel = model.find_children("*", "Skeleton3D", true, false)[0]
+	var info: Dictionary = MODELS.get(self.model, {})
+	if not info.is_empty():
+		_names = RIGS[info["rig"]]
+	var path: String = DIR + (String(info["file"]) if not info.is_empty() else file + ".gltf")
+	var scene: Node3D = (load(path) as PackedScene).instantiate()
+	add_child(scene)
+	skel = scene.find_children("*", "Skeleton3D", true, false)[0]
 	var n := skel.get_bone_count()
 	_rest_local.resize(n)
 	_rest_global.resize(n)
@@ -85,13 +132,17 @@ func _ready() -> void:
 	depth.sort()
 	for e in depth:
 		_order.append(e[1])
+	_rig_frames()
 	thigh_len = _rest_local[_bone("calf_l")].origin.length()
 	shin_len = _rest_local[_bone("foot_l")].origin.length()
 	upper_len = _rest_local[_bone("lowerarm_r")].origin.length()
 	fore_len = _rest_local[_bone("hand_r")].origin.length()
 	ankle_h = _rest_global[_bone("foot_l")].origin.y
 	_curl.resize(2)
-	_dress(model, file)
+	if not info.is_empty():
+		_dress_own(scene, String(info["tex"]))
+		return
+	_dress(scene, file)
 	_add_hair(HAIR_STYLES[style][0], HAIR_STYLES[style][1])
 	if beard:
 		_add_hair("hair_beard", "hair_1")
@@ -100,12 +151,89 @@ func _ready() -> void:
 
 
 func _bone(name: String) -> int:
-	return skel.find_bone(name)
+	return skel.find_bone(_names.get(name, name))
+
+
+## The rig's bone for a canonical name (for a BoneAttachment3D).
+func bone_name(name: String) -> String:
+	return _names.get(name, name)
+
+
+## Where a thing on the head goes, in the head bone's frame, for a spot
+## `offset` from the head bone in the standing model's frame (+Y up, +Z
+## the way it faces).
+func head_mount(offset: Vector3) -> Transform3D:
+	var h := _rest_global[_bone("Head")]
+	return h.affine_inverse() * Transform3D(Basis(), h.origin + offset)
+
+
+## Each rig's own frames: the limbs' axes to their children, the hands'
+## turn to the base body's, the fingers' hinges.
+func _rig_frames() -> void:
+	var n := skel.get_bone_count()
+	_along.resize(n)
+	_along.fill(Vector3.UP)
+	_fix.resize(n)
+	_fix.fill(Basis())
+	_hinge.resize(n)
+	_hinge.fill(Vector3.RIGHT)
+	if model == "":
+		return                           # the base body: its own axes are these
+	for s in ["_l", "_r"]:
+		for b in AIMS:
+			var i := _bone(b + s)
+			_along[i] = _rest_local[_bone(AIMS[b] + s)].origin.normalized()
+		var side := 1.0 if s == "_l" else -1.0
+		var hand := _bone("hand" + s)
+		var at := _rest_global[hand].origin
+		var rig := _hand_frame(at, _rest_global[_bone("middle_01" + s)].origin,
+			_rest_global[_bone("index_01" + s)].origin, _rest_global[_bone("pinky_01" + s)].origin, side)
+		var m := Vector3(side, 1, 1)
+		var base := _hand_frame(HAND_L[0] * m, HAND_L[1] * m, HAND_L[2] * m, HAND_L[3] * m, side)
+		_fix[hand] = base * rig.inverse()
+		# A finger curls toward the palm, about the knuckles' line.
+		var palm := rig.z
+		var hinge := rig.x.cross(palm).normalized()
+		for f in FINGERS + ["thumb"]:
+			for k in 3:
+				var fi := _bone("%s_0%d%s" % [f, k + 1, s])
+				if fi >= 0:
+					_hinge[fi] = (_rest_global[fi].basis.inverse() * hinge).normalized()
+
+
+## A hand's frame: x the way the fingers point, y toward the thumb's side,
+## z the way the palm faces.
+static func _hand_frame(hand: Vector3, middle: Vector3, index: Vector3, pinky: Vector3, side: float) -> Basis:
+	var d := (middle - hand).normalized()
+	var lat := (index - pinky)
+	lat = (lat - d * lat.dot(d)).normalized()
+	return Basis(d, lat, d.cross(lat) * side).orthonormalized()
+
+
+## A model in its own clothes: its textures on its own surfaces (body,
+## head, and the cut-out hair and lashes).
+func _dress_own(scene: Node, tex: String) -> void:
+	for mi: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		mi.custom_aabb = COURT_BOX
+		for i in mi.mesh.get_surface_count():
+			var src := mi.mesh.surface_get_material(i)
+			var part := String(src.resource_name).get_slice("_", 1) if src else "body"
+			var m := StandardMaterial3D.new()
+			m.albedo_texture = load(DIR + tex + part + "_color.png")
+			m.albedo_color = tint
+			m.roughness = 0.8
+			if part == "opacity":
+				m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+				m.cull_mode = BaseMaterial3D.CULL_DISABLED
+			else:
+				m.normal_enabled = true
+				m.normal_texture = load(DIR + tex + part + "_normal.png")
+			mi.set_surface_override_material(i, m)
 
 
 ## The skin and clothes, the eyes, the brows.
-func _dress(model: Node, file: String) -> void:
-	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+func _dress(scene: Node, file: String) -> void:
+	for mi: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 		mi.custom_aabb = COURT_BOX     # its own box is the T-pose's, at the origin
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		if mi.name == "Eyes":
@@ -276,12 +404,12 @@ func _global(i: int) -> Transform3D:
 	var w = _want[i]
 	if w != null:
 		if w[0] == 0:
-			g.basis = (w[1] as Basis) * _rest_global[i].basis
+			g.basis = (w[1] as Basis) * _fix[i] * _rest_global[i].basis
 			if w[2] != null:
 				g.origin = w[2]
 		else:
 			var to: Vector3 = (w[1] as Vector3) - g.origin
-			var y := g.basis.y.normalized()
+			var y := (g.basis * _along[i]).normalized()
 			if to.length() > 0.001:
 				to = to.normalized()
 				var axis := y.cross(to)
@@ -311,7 +439,7 @@ func apply() -> void:
 			var p := _parent[i]
 			var pg := _global(p)
 			var g := pg * _rest_local[i]
-			g.basis = g.basis * Basis(Vector3.RIGHT, w[1])
+			g.basis = g.basis * Basis(_hinge[i], w[1])
 			_g[i] = g
 			_done[i] = 1
 		var gi := _global(i)

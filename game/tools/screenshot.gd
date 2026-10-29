@@ -56,6 +56,7 @@ func _initialize() -> void:
 		cfg.drill.zone = Drill.ZONE_DEEP
 	elif mode == "lesson":
 		cfg.drill = Lessons.drill(int(args[3]) if args.size() > 3 else 0)
+	view.partner_model = "rb_male_01" if args.has("rocketbox") else ""
 	view.passthrough = args.has("passthrough")      # the court-only world (no headset: black behind)
 	view.setup(cfg, false, demo or mode in ["machine", "lesson", "partner"])
 	if mode == "lesson":

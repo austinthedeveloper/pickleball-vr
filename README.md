@@ -106,7 +106,8 @@ game/view/    world (the venues), match_view, xr_rig, flat_rig, avatar,
 game/scenes/  main (XR or flat), coach_desk (what a coach can ask of the game)
 game/data/    opponents.json (imported), lessons.json
 game/coach/   index.html: the coach page the headset serves (ADR-023)
-game/assets/  audio (prank/: the synthesized prank sounds); people
+game/assets/  audio (prank/: the synthesized prank sounds); people/rocketbox
+              (Microsoft Rocketbox, MIT: the NEW partner); people
               (Quaternius' Universal Base Characters, CC0)
 game/tests/   headless suites, golden traces
 game/tools/   test.sh, screenshot.gd, shots.sh, rally_stats.gd, the release
