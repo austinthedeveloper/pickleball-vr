@@ -52,7 +52,8 @@ const ZONE_RIGHT := 4
 const ZONE_NAMES := ["ANY", "KITCHEN", "DEEP", "LEFT", "RIGHT"]
 ## A dink that lands just past the kitchen line is still a good dink
 ## (ADR-010 amended twice): the zone runs 75 cm (2.5 ft) past it.
-const DINK_ZONE := K.KITCHEN_DEPTH + 750000
+static var DINK_PAST := 750000        ## tuned (Tune); DINK_ZONE follows it
+static var DINK_ZONE := K.KITCHEN_DEPTH + DINK_PAST
 
 ## Lesson rules.
 const RULE_NO_VOLLEY := 1            ## let it bounce first
@@ -89,9 +90,18 @@ const KIND_ATTACK := 6               ## ATTACK OR DINK: speed up the high ones, 
 const KIND_NAMES := ["DINKS", "HANDS", "RESETS", "CALL THE SPOT", "LINE AND CROSS", "VOLLEY DINKS",
 	"ATTACK OR DINK"]
 const KIND_COUNTS := ["DINKS", "HANDS", "RESETS", "SPOTS", "LANES", "VOLLEYS", "GOOD CALLS"]
-## CALL THE SPOT: the spot's radius, and when it lights: EASY as they hit,
-## MEDIUM as the ball crosses the net, HARD as it bounces on your side.
-const SPOT_RADIUS := [600000, 450000, 350000]
+## CALL THE SPOT: the spot is a dartboard (ADR-019) this big, and when it
+## lights: EASY as they hit, MEDIUM as the ball crosses the net, HARD as it
+## bounces on your side.
+static var SPOT_RADIUS := [1000000, 850000, 700000]
+## A dartboard's rings, from the outside in: the outer ring, the inner
+## ring, the bullseye, at these fractions of its radius; each scores its
+## number (1, 2, 3).
+static var RING_EDGES := [100, 66, 33]
+const RING_TEXT := ["", "+1", "+2", "BULLSEYE! +3"]
+## Practice judges the kitchen from your headset, and you lean: you're in
+## only when your head is this far past the line (ADR-019).
+static var KITCHEN_LEAN := 450000
 ## LINE AND CROSS: which lane counts.
 const LANE_LINE := 0
 const LANE_CROSS := 1
@@ -99,13 +109,13 @@ const LANE_ALTERNATE := 2
 const LANE_NAMES := ["LINE", "CROSS", "ALTERNATE"]
 ## VOLLEY DINKS: a floater through your kitchen line at this height, slow.
 const FLOAT_Y := [850000, 750000, 650000]
-const FLOAT_PACE := [36000, 42000, 48000]
+static var FLOAT_PACE := [36000, 42000, 48000]
 ## ATTACK OR DINK: 30% come up high, landing in your kitchen to sit up at
 ## your line.
 ## DIFFICULTY is how little higher they are than the rest (over the net:
 ## 1 m against 30 cm on EASY, 55 against 12 on HARD). A speed-up is a ball
 ## you send back at 7 m/s or more over the ground.
-const ATTACK_HIGH_PCT := 30
+static var ATTACK_HIGH_PCT := 30
 const ATTACK_HIGH_CLEAR := [1000000, 750000, 550000]
 const ATTACK_LOW_CLEAR := [300000, 200000, K.NET_CLEAR]
 const SPEEDUP_V := 58333
@@ -121,7 +131,7 @@ const SETUP := 6                     ## the partner shows the next ball, drops i
 ## Every fresh partner feed has a lead-in you can read (ADR-016 amended):
 ## the ball held up in their hand, then dropped and struck as it falls,
 ## so you see where it comes from and when; the shot itself stays fast.
-const HOLD_TICKS := 42               ## 0.35 s held up
+static var HOLD_TICKS := 42               ## 0.35 s held up
 const HOLD_Y := 1200000             ## chest high, in front of the free hand
 const DROP_VY := 12000               ## a little lift as it leaves the hand (1.4 m/s)
 
@@ -129,16 +139,16 @@ const DROP_VY := 12000               ## a little lift as it leaves the hand (1.4
 ## rally to go on: every ball it reaches comes back as a dink about a metre
 ## in front of you, never away from you, never a winner.
 const PARTNER_Z := -(K.KITCHEN_DEPTH + 350000)
-const PARTNER_SPEED := 30000         ## 3.6 m/s
+static var PARTNER_SPEED := 30000         ## 3.6 m/s
 const PARTNER_REACT := 22            ## ticks after your hit it starts moving (0.18 s)
 ## HANDS (ADR-014): both at the kitchen line, keeping it alive in the air.
 ## The partner volleys at you at DIFFICULTY's pace (7, 10, 13 m/s), waist to
 ## chest high, and reads your volley faster than a dink.
-const HANDS_PACE := [65000, 93000, 120000]   ## 7.8, 11.2, 14.4 m/s
+static var HANDS_PACE := [65000, 93000, 120000]   ## 7.8, 11.2, 14.4 m/s
 ## A rally starts soft and straight at you, then speeds up: the feed at
 ## 5 m/s, then a jump (the reply to your first ball is already half way
 ## to full pace), full by your HANDS_RAMP'th ball back (ADR-014 amended).
-const HANDS_FEED := 42000
+static var HANDS_FEED := 42000
 const HANDS_RAMP := 3
 const HANDS_REACT := 12              ## 0.1 s
 const HANDS_HEIGHT := 950000         ## where it comes at you, give or take 15 cm
@@ -148,19 +158,21 @@ const HANDS_HIGH := 1800000          ## a chest-high volley is still a volley to
 ## into their dink zone, under the pop-up line. DIFFICULTY is the drive's
 ## pace (9, 11, 13 m/s) and how low the line is over the net (60, 45, 30 cm).
 const RESET_SPOT_Z := K.KITCHEN_DEPTH + 1800000   ## mid-court, about 3.9 m from the net
-const RESET_PACE := [75000, 92000, 108000]
+static var RESET_PACE := [75000, 92000, 108000]
 const RESET_HEIGHT := 550000         ## at you: shins to hips, give or take 20 cm
-const POPUP_OVER := [600000, 450000, 300000]
+static var POPUP_OVER := [600000, 450000, 300000]
 ## A dink's difficulty is how low it skims the tape: EASY floats 60 cm
 ## over it (slow, a big bounce), HARD skims 12 cm (fast and low).
 const PARTNER_CLEAR := [600000, 300000, K.NET_CLEAR]
-const PARTNER_PACE := [30000, 38000, 46000]
+static var PARTNER_PACE := [30000, 38000, 46000]
 const PACE_NAMES := ["EASY", "MEDIUM", "HARD"]
 ## SPREAD: how far to your side its dinks come, um: [nearest, furthest].
 const SPREADS := [[100000, 350000], [250000, 750000], [500000, 1200000]]
 const SPREAD_NAMES := ["TIGHT", "NORMAL", "WIDE"]
-## Floor targets: a circle on their side; land in it for a TARGET HIT.
-const TARGET_RADIUS := 450000
+## Floor targets: a dartboard on their side; land on it for points.
+static var TARGET_RADIUS := 800000
+## You've crossed to the other side once you're this far past the middle.
+const SIDE_SWITCH := 400000
 
 ## The machine: centred, the nozzle at 90 cm.
 const MACHINE_Y := 900000
@@ -198,6 +210,11 @@ var attack: bool:
 var spread := 1
 var targets := false                 ## floor targets on
 var goal := 0                        ## good returns to finish; 0 runs forever
+## A timed run (ADR-022): this many ticks from the first feed, then DONE and
+## a score. 0 is free play, forever.
+var time_limit := 0
+const TIMES := [0, 60, 120, 180]     ## seconds: the MODE row
+const TIME_NAMES := ["FREE PLAY", "1 MIN", "2 MIN", "3 MIN"]
 ## The spot you start on (a lesson's), um; x, z.
 var spot_x := 0
 var spot_z := K.COURT_HALF_LENGTH - 500000
@@ -221,6 +238,29 @@ var read_at := 0                     ## when the partner reads your shot
 var target_x := 0
 var target_z := 0
 var target_hits := 0
+## The coach's ball machine (C-21): where it stands, where its balls
+## bounce, how fast, with what spin, how high over the net, how often.
+var coach_feed := false
+var machine_x := 0
+var bounce_x := 0
+var bounce_z := 4000000
+var feed_pace := 66667
+var feed_spin := 0
+var feed_clear := 500000
+var feed_every := 420
+const FEED_PACE_RANGE := [25000, 170000]   ## 3 to 20 m/s
+const FEED_SPIN_MAX := 600000
+const FEED_CLEAR_RANGE := [50000, 3000000]
+const FEED_EVERY_RANGE := [150, 960]       ## 1.25 to 8 s
+var target_pinned := false           ## a coach put the target there: it stays (C-8)
+var feed_set := false                ## a coach chose where the partner's next ball goes (C-9)
+var feed_x := 0
+var feed_z := 0
+var target_side := 0                 ## the half (sign of x) a partner drill's target is in
+var ends_at := -1                    ## a timed run's last tick
+var points := 0                      ## dartboard points (spots and floor targets)
+var last_ring := 0                   ## the ring the last ball landed in (0 off the board)
+var last_off := -1                   ## how far it landed from the board's centre, um (-1: no board)
 var toss_at := 0                     ## SETUP: when the held ball is dropped
 var spot_lit := false                ## CALL THE SPOT: the spot (target_x, target_z) is showing
 var spot_i := -1                     ## which spot
@@ -247,6 +287,7 @@ func copy_settings_from(o: Drill) -> void:
 	zone = o.zone
 	rules = o.rules
 	goal = o.goal
+	time_limit = o.time_limit
 	spot_x = o.spot_x
 	spot_z = o.spot_z
 
@@ -260,7 +301,8 @@ func machine_spot() -> int:
 
 
 func reset(sim: Sim) -> void:
-	machine_z = machine_spot()
+	if not coach_feed:
+		machine_z = machine_spot()       # the coach's machine stays where it was put
 	stage = WAIT
 	next_feed = sim.tick + FIRST_FEED
 	feeds = 0
@@ -268,7 +310,7 @@ func reset(sim: Sim) -> void:
 	streak = 0
 	last_result = -1
 	sim.ball.held = true
-	sim.ball.place(0, MACHINE_Y, machine_z)
+	sim.ball.place(machine_x, MACHINE_Y, machine_z)
 	sim.phase = K.PHASE_LIVE
 	sim.serving_team = 1
 	sim.server_slot = 2
@@ -276,6 +318,10 @@ func reset(sim: Sim) -> void:
 	sim.players[0].x = spot_x
 	sim.players[0].z = spot_z
 	target_hits = 0
+	ends_at = next_feed + time_limit if time_limit > 0 else -1
+	points = 0
+	last_ring = 0
+	last_off = -1
 	rally = 0
 	if partner:
 		var q := sim.players[2]
@@ -305,6 +351,9 @@ func _serve_ready(sim: Sim) -> void:
 
 func update(sim: Sim, tossed: bool) -> void:
 	var p := sim.players[0]
+	if ends_at >= 0 and stage != DONE and sim.tick >= ends_at:
+		stage = DONE                     # time: the ball in the air plays out, nothing more counts
+		sim.emit(K.EVENT_TIME_UP, score(), good, best)
 	if partner and stage != PARTNER:
 		if stage == RETURN and partner_plan >= 0:
 			_partner_step(sim.players[2], sim.players[2].goal_x, sim.players[2].goal_z)
@@ -343,6 +392,9 @@ func _feed(sim: Sim) -> void:
 	var t := target
 	if t == TARGET_RANDOM:
 		t = sim.random(5)
+	if coach_feed:
+		_coach_feed(sim)
+		return
 	var mz := machine_z
 	var drive: int = SPEED_PACE[clampi(speed, 0, 3)]
 	var tx := p.x
@@ -418,6 +470,8 @@ func _fly(sim: Sim, p: SimTypes.Player) -> void:
 		return
 	var volley := bounces == 0
 	hit_at = sim.tick
+	last_ring = 0                        # this ball hasn't found a board yet
+	last_off = -1
 	spot_lit = spot_lit or spots         # too late to call it now: show it
 	you_fast = Fx.length(sim.ball.vx, 0, sim.ball.vz) >= SPEEDUP_V
 	p.cooldown = K.PADDLE_COOLDOWN
@@ -428,7 +482,7 @@ func _fly(sim: Sim, p: SimTypes.Player) -> void:
 		_result(sim, RESULT_VOLLEY)
 	elif not volley and rules & RULE_VOLLEY:
 		_result(sim, RESULT_BOUNCE)
-	elif volley and rules & RULE_KITCHEN and K.in_kitchen(p.x, p.z, 0):
+	elif volley and rules & RULE_KITCHEN and in_kitchen(p):
 		_result(sim, RESULT_KITCHEN)
 	else:
 		stage = RETURN
@@ -463,10 +517,16 @@ func _return(sim: Sim) -> void:
 	if not K.in_court(x, z):
 		_result(sim, RESULT_OUT)
 		return
-	if targets and Fx.length(x - target_x, 0, z - target_z) <= TARGET_RADIUS:
-		target_hits += 1
-		sim.emit(K.EVENT_TARGET, x, z, target_hits)
-		_new_target(sim)
+	last_ring = 0
+	last_off = -1
+	if targets:
+		last_off = Fx.length(x - target_x, 0, z - target_z)
+		last_ring = ring(last_off, TARGET_RADIUS)
+		if last_ring > 0:
+			target_hits += 1
+			points += last_ring
+			sim.emit(K.EVENT_TARGET, x, z, last_ring)
+			_new_target(sim)
 	var r := RESULT_GOOD
 	if partner:
 		r = _placed(x, z)
@@ -492,6 +552,17 @@ func _topspin(b: Ball) -> bool:
 
 
 ## RESETS: a ball higher than this over the net is a pop-up.
+## A run's score (ADR-022): a point for each good ball, and a dartboard's
+## points on top.
+func score() -> int:
+	return good + points
+
+
+## A timed run's ticks left (0 when free play or over).
+func time_left(sim: Sim) -> int:
+	return clampi(ends_at - sim.tick, 0, time_limit) if ends_at >= 0 else 0
+
+
 func popup_y() -> int:
 	return K.NET_HEIGHT_CENTER + POPUP_OVER[clampi(partner_pace, 0, 2)]
 
@@ -551,6 +622,8 @@ func _serving(sim: Sim, p: SimTypes.Player, tossed: bool) -> void:
 
 func _result(sim: Sim, r: int, rally_on := false) -> void:
 	last_result = r
+	if targets and last_ring == 0 and hit_at > fed_at:
+		_new_target(sim)                 # missed it: somewhere new to try (ADR-019)
 	if partner and not rally_on:
 		rally = 0
 	if r == RESULT_GOOD:
@@ -569,7 +642,7 @@ func _result(sim: Sim, r: int, rally_on := false) -> void:
 		next_feed = sim.tick + MIN_GAP
 		return
 	stage = WAIT
-	next_feed = maxi(fed_at + RATE_TICKS[clampi(rate, 0, 3)], sim.tick + MIN_GAP)
+	next_feed = maxi(fed_at + (feed_every if coach_feed else RATE_TICKS[clampi(rate, 0, 3)]), sim.tick + MIN_GAP)
 	if partner:
 		next_feed = sim.tick + MIN_GAP * 2   # the partner picks up a fresh ball
 
@@ -669,6 +742,10 @@ func _partner_shot(sim: Sim, x: int, y: int, z: int, tz: int, clear: int) -> voi
 	var want_x := p.x + (off if sim.random(2) == 0 else -off)
 	var tx := clampi(x + (want_x - x) * (tz - z) / maxi(p.z - z, 1), -K.COURT_HALF_WIDTH + 300000,
 		K.COURT_HALF_WIDTH - 300000)
+	if feed_set:
+		feed_set = false                 # the coach's spot, once
+		tx = feed_x
+		tz = feed_z
 	var level := clampi(partner_pace, 0, 2)
 	var pace: int = PARTNER_PACE[level]
 	var w := Aim.topspin(tx - x, tz - z, -150000)
@@ -805,8 +882,13 @@ func _partner(sim: Sim) -> void:
 
 ## Between shots the partner squares up to you along its kitchen line:
 ## straight across, or diagonally (CROSS COURT: the other half).
+## A floor target sits in front of the partner, so when you cross to the
+## other side (well past the middle), it follows.
 func _partner_home(sim: Sim) -> void:
 	_partner_step(sim.players[2], partner_home_x(sim.players[0].x), PARTNER_Z)
+	var you_x := sim.players[0].x
+	if targets and absi(you_x) > SIDE_SWITCH and signi(partner_home_x(you_x)) != target_side:
+		_new_target(sim)
 
 
 func partner_home_x(you_x: int) -> int:
@@ -899,6 +981,9 @@ func _partner_floater(sim: Sim, x: int, y: int, z: int) -> void:
 ## lights as they hit (EASY), as it crosses the net (MEDIUM) or as it
 ## bounces on your side (HARD); VOLLEY DINKS light it as they hit.
 func _call_spot(sim: Sim) -> void:
+	if target_pinned:
+		spot_lit = partner_pace <= 0 or kind == KIND_VOLLEYS
+		return
 	var q := sim.players[2]
 	var kd := K.KITCHEN_DEPTH
 	var wx := K.COURT_HALF_WIDTH - 700000
@@ -911,6 +996,85 @@ func _call_spot(sim: Sim) -> void:
 	target_x = at[i][0]
 	target_z = at[i][1]
 	spot_lit = partner_pace <= 0 or kind == KIND_VOLLEYS
+
+
+## A coach's target (C-8): there, and staying there (`pin`), or back to
+## moving as the drill moves it. Their side, in court, a board's reach
+## from the net. A drill without a board gets the floor target.
+func pin_target(sim: Sim, x: int, z: int, pin: bool) -> void:
+	target_pinned = pin
+	if not pin:
+		if targets:
+			_new_target(sim)
+		return
+	if not spots and not lanes:
+		targets = true
+	target_x = clampi(x, -K.COURT_HALF_WIDTH + 300000, K.COURT_HALF_WIDTH - 300000)
+	target_z = clampi(z, -(K.COURT_HALF_LENGTH - 300000), -300000)
+	target_side = signi(target_x) if target_x != 0 else 1
+	spot_lit = spot_lit or spots
+
+
+## The coach's machine (C-21): [machine x, z, bounce x, z, pace, spin,
+## clear, every], each kept in reach. The machine stands on their side;
+## the ball bounces on yours.
+func coach_machine(a: Array) -> void:
+	if a.size() < 8:
+		return
+	coach_feed = true
+	machine_x = clampi(int(a[0]), -K.COURT_HALF_WIDTH - 500000, K.COURT_HALF_WIDTH + 500000)
+	machine_z = clampi(int(a[1]), -(K.COURT_HALF_LENGTH + 500000), -500000)
+	bounce_x = clampi(int(a[2]), -K.COURT_HALF_WIDTH, K.COURT_HALF_WIDTH)
+	bounce_z = clampi(int(a[3]), 300000, K.COURT_HALF_LENGTH)
+	feed_pace = clampi(int(a[4]), FEED_PACE_RANGE[0], FEED_PACE_RANGE[1])
+	feed_spin = clampi(int(a[5]), -FEED_SPIN_MAX, FEED_SPIN_MAX)
+	feed_clear = clampi(int(a[6]), FEED_CLEAR_RANGE[0], FEED_CLEAR_RANGE[1])
+	feed_every = clampi(int(a[7]), FEED_EVERY_RANGE[0], FEED_EVERY_RANGE[1])
+
+
+## A ball from the coach's machine: from where it stands to bounce where
+## the coach put it, at its pace, spin and height over the net.
+func _coach_feed(sim: Sim) -> void:
+	fed_shot = SHOT_DRIVE
+	aim_x = bounce_x
+	var w := Aim.topspin(bounce_x - machine_x, bounce_z - machine_z, feed_spin)
+	var v := Aim.shot(machine_x, MACHINE_Y, machine_z, bounce_x, bounce_z, feed_pace, w, feed_clear)
+	var b := sim.ball
+	b.place(machine_x, MACHINE_Y, machine_z)
+	b.launch(v[0], v[1], v[2])
+	b.set_spin(w[0], w[1], w[2])
+	sim.required_bounce = K.REQUIRED_BOUNCE_SERVE if rules & RULE_NO_VOLLEY else K.REQUIRED_BOUNCE_NONE
+	sim.serving_team = 1
+	sim.last_hitter = 2
+	sim.bounce_count = 0
+	bounces = 0
+	feeds += 1
+	fed_at = sim.tick
+	stage = FLY
+	sim.emit(K.EVENT_FEED, bounce_x, 0, fed_shot)
+
+
+## A coach's spot for the partner's next ball (C-9): your side, in court.
+func feed_to(x: int, z: int) -> void:
+	feed_set = true
+	feed_x = clampi(x, -K.COURT_HALF_WIDTH + 300000, K.COURT_HALF_WIDTH - 300000)
+	feed_z = clampi(z, 600000, K.COURT_HALF_LENGTH - 300000)
+
+
+## The dartboard ring at `off` um from the centre of one `radius` across:
+## 3 the bullseye .. 1 the outer ring, 0 off it.
+static func ring(off: int, radius: int) -> int:
+	var r := 0
+	for i in RING_EDGES.size():
+		if off * 100 <= radius * RING_EDGES[i]:
+			r = i + 1
+	return r
+
+
+## You, in your kitchen as practice judges it: the head past the line by
+## more than a lean.
+func in_kitchen(p: SimTypes.Player) -> bool:
+	return K.in_kitchen(p.x, p.z + KITCHEN_LEAN, 0)
 
 
 func spot_radius() -> int:
@@ -941,8 +1105,12 @@ func _placed(x: int, z: int) -> int:
 			return RESULT_ATTACK
 	if not in_zone(x, z):
 		return RESULT_ZONE
-	if spots and Fx.length(x - target_x, 0, z - target_z) > spot_radius():
-		return RESULT_SPOT
+	if spots:
+		last_off = Fx.length(x - target_x, 0, z - target_z)
+		last_ring = ring(last_off, spot_radius())
+		if last_ring == 0:
+			return RESULT_SPOT
+		points += last_ring
 	if lanes and signi(x) != signi(target_x):
 		return RESULT_LANE
 	return RESULT_GOOD
@@ -955,26 +1123,33 @@ func mode_name() -> String:
 		return n + " " + LANE_NAMES[lane] if lanes else n
 	if goal > 0:
 		return "LESSON"
+	if coach_feed:
+		return "COACH MACHINE"
 	return "MACHINE %s %s" % [SHOT_NAMES[shot], SPEED_NAMES[clampi(speed, 0, SPEED_NAMES.size() - 1)]]
 
 
 ## A new target in the return zone (their kitchen for a partner), not on
 ## top of the last one.
 func _new_target(sim: Sim) -> void:
+	if target_pinned:
+		return
 	var hw := K.COURT_HALF_WIDTH - 600000
 	var lo := 1000000
 	var hi := K.COURT_HALF_LENGTH - 600000
 	var xlo := -hw
 	var xhi := hw
 	var z2 := zone if not partner else ZONE_KITCHEN
-	if partner and cross:
-		# Cross court: in the partner's half of their kitchen.
-		var px := partner_home_x(spot_x)
-		xlo = 400000 if px > 0 else -hw
-		xhi = hw if px > 0 else -400000
+	if partner:
+		# The partner's half of their kitchen: across from you, or the
+		# diagonal (CROSS COURT); wherever you are now.
+		var you_x := sim.players[0].x
+		var px := partner_home_x(you_x if you_x != 0 else spot_x)
+		target_side = signi(px) if px != 0 else 1
+		xlo = 400000 if target_side > 0 else -hw
+		xhi = hw if target_side > 0 else -400000
 	match z2:
 		ZONE_KITCHEN:
-			lo = 500000
+			lo = 900000                  # not a hair over the net: a dink you can drop there
 			hi = DINK_ZONE - 450000
 		ZONE_DEEP:
 			lo = K.COURT_HALF_LENGTH * 2 / 3 + 400000
@@ -994,4 +1169,6 @@ func snapshot() -> Array:
 	return [stage, next_feed, fed_at, fed_shot, bounces, feeds, good, streak, best, last_result, aim_x,
 		hit_at, machine_z, partner_plan, read_at, target_x, target_z, target_hits, rally, best_rally,
 		1 if partner else 0, kind, lane, toss_at, 1 if spot_lit else 0, spot_i, 1 if lane_cross else 0,
-		1 if high_ball else 0, 1 if you_fast else 0]
+		1 if high_ball else 0, 1 if you_fast else 0, points, last_ring, last_off, target_side, time_limit, ends_at,
+		1 if target_pinned else 0, 1 if feed_set else 0, feed_x, feed_z,
+		1 if coach_feed else 0, machine_x, bounce_x, bounce_z, feed_pace, feed_spin, feed_clear, feed_every]

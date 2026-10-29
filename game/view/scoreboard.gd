@@ -58,8 +58,14 @@ func _label(parent: Node3D, at: Vector3, size: int, c: Color) -> Label3D:
 func show_from(sim: Sim, delta: float) -> void:
 	if drill:
 		var d := sim.drill
-		var tgt := "   TARGETS %d" % d.target_hits if d.targets else ""
-		if d.partner:
+		var tgt := "   POINTS %d" % d.points if d.targets or d.spots else ""
+		if d.time_limit > 0:
+			# A timed run (ADR-022): the score, and the clock.
+			var left := ceili(d.time_left(sim) / float(K.TICK_HZ))
+			score_label.text = "%d" % d.score()
+			info_label.text = ("SCORE   %d:%02d LEFT" % [left / 60, left % 60]) if d.stage != Drill.DONE else "TIME!"
+			score_label.modulate = Color(1, 0.45, 0.35) if left <= 10 and d.stage != Drill.DONE else Color.WHITE
+		elif d.partner:
 			# Dinks in their kitchen in a row: a ball outside it starts again.
 			score_label.text = "%d" % d.streak
 			info_label.text = "%s IN A ROW   BEST %d%s" % [Drill.KIND_COUNTS[d.kind], d.best, tgt]

@@ -23,6 +23,7 @@ game/tools/fetch_openxr_vendors.sh                    # Meta's OpenXR loader int
 game/tools/quest_build.sh [--check]                   # build + install + launch on the Quest (design/QUEST_SETUP.md)
 game/tools/swings.sh > s.log                          # the headset's swing log (debug builds)
 python3 game/tools/swings_report.py s.log [--since HH:MM]   # that log summed up per mode (ADR-017)
+game/tools/tune.sh show | sync | clear   # the headset's TUNING overrides; sync makes them the defaults (ADR-020)
 ```
 
 Releases are semver with tags `vX.Y.Z`, `CHANGELOG.md` and an APK on the
@@ -32,9 +33,9 @@ GitHub release (`design/RELEASING.md`, ADR-011). GitHub Actions runs
 plugin-free). Godot's version and SHA-512s are pinned in
 `.github/actions/setup-godot/action.yml`, the same pin as the port kit's.
 
-`design/ROADMAP.md` is the milestone sheet: keep it current with each
+`design/COACHING.md` tracks every coaching idea (C-1..C-20) and its status. `design/ROADMAP.md` is the milestone sheet: keep it current with each
 branch. `design/KNOWN_ISSUES.md` lists the defects, and
-`decisions/README.md` the ADRs (next: ADR-018). `design/QUEST_SETUP.md`
+`decisions/README.md` the ADRs (next: ADR-025). `design/QUEST_SETUP.md`
 covers the headset build.
 
 **The canon bible** is `../pickleball/docs/PICKLEBALL_94_BIBLE.md`. The VR

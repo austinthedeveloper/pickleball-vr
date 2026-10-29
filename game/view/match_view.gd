@@ -12,6 +12,8 @@ const SPECTATE := Vector3(-3.0, 0, 9.4)
 
 signal match_over(winner: int)
 signal drill_done
+signal time_up(score: int, good: int, best: int)   ## a timed run's clock ran out (ADR-022)
+signal shot_done(info: Dictionary)   ## a practice shot of yours and how it ended (the coach, ADR-023)
 signal pause_requested
 
 var sim: Sim
@@ -21,6 +23,7 @@ var flat: FlatRig
 var demo := false
 var spectate := false
 var left_handed := false
+var passthrough := false             ## ADR-021: the court in your room
 var menu: Menu3D
 var them := "CPU"
 var crowd: Crowd
@@ -29,6 +32,7 @@ var announcer: Announcer
 var paddle_tilt := 0.0               ## degrees: the paddle's angle in the hand (XR)
 var paddle_twist := 0.0              ## degrees, about the handle (paddle profiles, ADR-015)
 var paddle_reach := 0.0              ## metres along the handle
+var paddle_turn := 0.0               ## degrees, swung left or right
 var popup_line: MeshInstance3D       ## RESETS: how high a reset may cross the net
 var board: Scoreboard
 var avatars: Array[Avatar] = []
@@ -50,7 +54,19 @@ var machine: Machine
 var floor_target: FloorTarget
 var partner_avatar: Avatar
 var lesson_label: Label3D
+var cue_label: Label3D               ## a coach's cue, over the net (C-7)
+var challenge_label: Label3D         ## a coach's challenge and how it's going (C-12)
+var marks: Node3D                    ## a coach's zones and lines on the court (C-14)
+var tablet: CoachTablet              ## the coach tablet beside PAUSED (C-22)
+const MAX_MARKS := 8
+var _path: Array = []                ## the ball since the last hit: [x, y, z] in m, every PATH_EVERY ticks (C-17)
+const PATH_EVERY := 3
+var _cue_left := 0.0
+const CUE_SECONDS := 3.5
 var zone_mesh: MeshInstance3D
+var _shot := {}                      ## your ball in play: its hit, then where it landed
+var _ready_y := -1.0                 ## your paddle's height when the other side last struck (m)
+var _ball_z_was := 0                 ## the ball's z last tick, to catch it crossing the net
 var paused := false                  ## the sim isn't stepped while a pause menu is up
 var focus := 0.0                     ## FOCUS (ADR-013): how dim the world is now
 var _placed := false                 ## XR: turned to the court and moved to the start, once tracked
@@ -67,13 +83,16 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		them = String(Opponents.team(cfg.opponent)["team"])
 	world = World.new()
 	world.venue = cfg.venue
+	world.passthrough = passthrough
 	add_child(world)
+	set_passthrough(passthrough and use_xr)
 	if use_xr:
 		xr = XrRig.new()
 		xr.left_handed = left_handed
 		xr.paddle_tilt = paddle_tilt
 		xr.paddle_twist = paddle_twist
 		xr.paddle_reach = paddle_reach
+		xr.paddle_turn = paddle_turn
 		add_child(xr)
 		var openxr := XRServer.find_interface("OpenXR")
 		if openxr and openxr.has_signal("pose_recentered"):
@@ -97,8 +116,14 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 			a.skin = Avatar.SKINS[(s * 7 + maxi(cfg.opponent, 0)) % Avatar.SKINS.size()]
 			a.hair = Avatar.HAIRS[(s * 5 + maxi(cfg.opponent, 0) * 3) % Avatar.HAIRS.size()]
 			a.cap = s % 2 == 0
+			a.female = s % 2 == 1
 			if cfg.opponent >= 0 and s >= 2:
 				a.shirt = Opponents.shirt(cfg.opponent, s)
+				a.shorts = Opponents.shorts(cfg.opponent, s)
+				a.female = Opponents.female(cfg.opponent, s)
+			var looks: Array = Avatar.WOMEN_HAIR if a.female else Avatar.MEN_HAIR
+			a.style = looks[(s * 3 + maxi(cfg.opponent, 0)) % looks.size()]
+			a.beard = not a.female and (s + maxi(cfg.opponent, 0)) % 3 == 0
 			add_child(a)
 			avatars.append(a)
 	board = Scoreboard.new()
@@ -128,6 +153,9 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	_sounds()
 	crowd = Crowd.new()
 	add_child(crowd)
+	if passthrough:
+		crowd.visible = false            # the stands are off the court
+		crowd.process_mode = Node.PROCESS_MODE_DISABLED
 	announcer = Announcer.new()
 	add_child(announcer)
 	if sim.drill:
@@ -139,6 +167,21 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		flat.recenter(_start_spot())
 	if cfg.opponent >= 0 and not spectate:
 		board.announce(String(Opponents.team(cfg.opponent)["intro"]), Color(1, 0.9, 0.5), 3.5)
+
+
+## Passthrough on the headset (ADR-021): the view's clear background shows
+## the cameras' picture of the room (OpenXR alpha blend, Meta's passthrough).
+## Off, or where the headset can't, it's opaque as ever.
+func set_passthrough(on: bool) -> bool:
+	var openxr := XRServer.find_interface("OpenXR")
+	var can := on and openxr != null and openxr.is_initialized() \
+		and openxr.get_supported_environment_blend_modes().has(XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND)
+	if is_inside_tree():
+		get_viewport().transparent_bg = can
+	if openxr and openxr.is_initialized():
+		openxr.environment_blend_mode = XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND if can \
+			else XRInterface.XR_ENV_BLEND_MODE_OPAQUE
+	return can
 
 
 ## Practice: the machine, the return zone, no crowd.
@@ -201,6 +244,86 @@ func _practice_court() -> void:
 
 
 ## A lesson's title and instructions, standing over the far court.
+## A coach's cue (C-7): big, over the middle of the net, facing you, for a
+## few seconds, with a soft ding to catch your eye.
+func cue(text: String) -> void:
+	if cue_label == null:
+		cue_label = Label3D.new()
+		cue_label.font_size = 96
+		cue_label.pixel_size = 0.004
+		cue_label.outline_size = 18
+		cue_label.modulate = Color(1, 0.86, 0.25)
+		cue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cue_label.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+		cue_label.position = Vector3(0, 1.9, -0.2)
+		add_child(cue_label)
+	cue_label.text = text
+	cue_label.visible = true
+	cue_label.modulate.a = 1.0
+	_cue_left = CUE_SECONDS
+	_play("5_ding", Vector3(0, 1.9, 0), 0.75, -6.0)
+
+
+func _cue_fade(delta: float) -> void:
+	if cue_label == null or not cue_label.visible:
+		return
+	_cue_left -= delta
+	cue_label.modulate.a = clampf(_cue_left / 0.6, 0.0, 1.0)
+	cue_label.visible = _cue_left > 0.0
+
+
+## A coach's challenge (C-12): a line under the cue spot while it's on;
+## "" takes it down.
+func show_challenge(text: String) -> void:
+	if challenge_label == null:
+		challenge_label = Label3D.new()
+		challenge_label.font_size = 48
+		challenge_label.pixel_size = 0.004
+		challenge_label.outline_size = 12
+		challenge_label.modulate = Color(0.55, 1.0, 0.7)
+		challenge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		challenge_label.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+		challenge_label.position = Vector3(0, 2.45, -0.2)   # above the cue, clear of the play
+		add_child(challenge_label)
+	challenge_label.text = text
+	challenge_label.visible = text != ""
+
+
+## A coach's mark on the court (C-14): a zone between two corners, or a
+## line between two points (metres, on the court), glowing on the floor.
+## `clear` takes them all away.
+func add_mark(shape: String, a: Vector2, b: Vector2) -> void:
+	if marks == null:
+		marks = Node3D.new()
+		add_child(marks)
+	if marks.get_child_count() >= MAX_MARKS:
+		marks.get_child(0).free()
+	var m := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	var mat := World.material(Color(0.0, 0.85, 1.0, 0.55 if shape == "zone" else 1.0))   # strong cyan: tone mapping pales it
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.render_priority = 10             # after the net's tinted mesh, not under it
+	m.material_override = mat
+	m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if shape == "zone":
+		bm.size = Vector3(maxf(absf(b.x - a.x), 0.1), 0.004, maxf(absf(b.y - a.y), 0.1))
+		m.position = Vector3((a.x + b.x) / 2, 0.03, (a.y + b.y) / 2)
+	else:
+		var d := b - a
+		bm.size = Vector3(0.1, 0.004, maxf(d.length(), 0.1))
+		m.position = Vector3((a.x + b.x) / 2, 0.032, (a.y + b.y) / 2)
+		m.rotation.y = atan2(d.x, d.y)
+	m.mesh = bm
+	marks.add_child(m)
+
+
+func clear_marks() -> void:
+	if marks:
+		for c in marks.get_children():
+			c.free()
+
+
 func show_lesson(title: String, lines: Array) -> void:
 	if lesson_label == null:
 		lesson_label = Label3D.new()
@@ -285,12 +408,40 @@ func show_menu(m: Menu3D) -> void:
 func hide_menu() -> void:
 	if menu:
 		menu.visible = false
+	if tablet:
+		tablet.visible = false
+
+
+## The coach tablet (C-22): beside the menu, to your left, turned to you.
+func show_tablet(desk: CoachDesk) -> void:
+	if tablet == null:
+		tablet = CoachTablet.new()
+		tablet.desk = desk
+		add_child(tablet)
+	var head := xr.head_position() if xr else flat.head_position()
+	var fwd := xr.forward() if xr else flat.forward()
+	var right := fwd.cross(Vector3.UP).normalized()
+	var at := head + fwd.rotated(Vector3.UP, 0.85) * 1.4
+	at.y = head.y - 0.15
+	tablet.global_position = at
+	tablet.look_at(at + (at - head) * Vector3(1, 0, 1), Vector3.UP)
+	tablet.lock = Menu3D.SWITCH_LOCK
+	tablet.visible = true
+	tablet.refresh()
 
 
 ## Each sound family is its variants (0_hit, 0_hit_2 ..), one 3D player
 ## each, a variant picked per play (display only: the view's own roll).
 const FAMILIES := {"0_hit": 4, "0_hit_drive": 4, "0_hit_soft": 4, "0_hit_slice": 3,
-	"0_hit_smash": 2, "1_bounce": 3, "2_net": 1, "3_whistle": 1, "4_applause": 1}
+	"0_hit_smash": 2, "1_bounce": 3, "2_net": 1, "3_whistle": 1, "4_applause": 1, "5_ding": 1}
+## The target ding's pitch by ring: outer, inner, bullseye (a rising major
+## chord: 1, a third, a fifth).
+const DING_PITCH := [1.0, 1.26, 1.5]
+## Hit vibration (tuned: Tune's PADDLE page): strength in %, at rest and
+## gained per 10 m/s of ball speed; how long a clean hit buzzes, ms.
+static var HAPTIC_BASE := 60
+static var HAPTIC_GAIN := 45
+static var HAPTIC_MS := 50
 
 
 func _sounds() -> void:
@@ -323,6 +474,56 @@ func _play(n: String, at: Vector3, pitch := 1.0, db := 0.0) -> void:
 	p.pitch_scale = pitch
 	p.volume_db = db
 	p.play()
+
+
+## Your hit, as the coach sees it (ADR-023, design/COACHING.md C-3..C-6):
+## speed, contact height, forehand or backhand, how far behind the kitchen
+## line you were, where on the face it struck (mm: along the face toward
+## the tip, and across it), and your paddle's height as they struck.
+func _shot_start(speed: int, volley: bool) -> Dictionary:
+	var p := sim.players[0]
+	var b := sim.ball
+	var right := 1 if not left_handed else -1
+	var info := {"speed": snappedf(speed * K.TICK_HZ / 1e6, 0.1), "height": snappedf(b.y / 1e6, 0.01),
+		"from_x": snappedf(b.x / 1e6, 0.01), "from_z": snappedf(b.z / 1e6, 0.01), "volley": volley,
+		# Facing -z, your right is +x: the ball on your paddle side is a forehand.
+		"side": "FH" if (b.x - p.x) * right >= 0 else "BH",
+		"behind": snappedf((p.z - K.KITCHEN_DEPTH) / 1e6, 0.01)}
+	if _ready_y >= 0.0:
+		info["ready"] = snappedf(_ready_y, 0.01)
+	var pm: PaddleMesh = xr.paddle if xr else (flat.paddle if flat else null)
+	if pm and pm.is_inside_tree():
+		var local := pm.global_transform.affine_inverse() * World.m(b.x, b.y, b.z)
+		info["face_u"] = roundi((PaddleMesh.FACE_CENTER.z - local.z) * 1000)   # toward the tip
+		info["face_v"] = roundi(local.y * 1000)
+	return info
+
+
+## Net clearance (C-3): how high over the tape your ball crossed.
+func _track_net() -> void:
+	var b := sim.ball
+	if not _shot.is_empty() and not _shot.has("clear") and _ball_z_was > 0 and b.z <= 0:
+		_shot["clear"] = snappedf((b.y - K.net_height(b.x)) / 1e6, 0.01)
+	_ball_z_was = b.z
+
+
+## A drill result: your shot, as the coach sees it (ADR-023).
+func _shot_ended(r: int, streak: int) -> void:
+	var d := sim.drill
+	var info := _shot.duplicate()
+	if not _shot.is_empty():
+		info["path"] = _path.duplicate()         # your ball, from the paddle to here (C-17)
+	info.merge({"type": "shot", "result": Drill.RESULT_TEXT[r], "good": r == Drill.RESULT_GOOD,
+		"ring": d.last_ring, "off": snappedf(d.last_off / 1e6, 0.01) if d.last_off >= 0 else -1.0,
+		"streak": streak, "mode": _mode(), "tick": sim.tick, "hit": not _shot.is_empty()})
+	_shot = {}
+	shot_done.emit(info)
+
+
+## A ball on a dartboard: a light ding from the board, higher the closer
+## to the bullseye.
+func _ding(ring: int, at: Vector3) -> void:
+	_play("5_ding", at + Vector3(0, 0.3, 0), DING_PITCH[clampi(ring, 1, 3) - 1], -2.0)
 
 
 ## The hit's sound from the shot it made: a smash, a slice (backspin), a
@@ -399,6 +600,8 @@ func _drive_menu() -> void:
 		return
 	var ray: Array[Vector3] = xr.pointer() if xr else flat.pointer()
 	var click := xr.click if xr else flat.click
+	if tablet and tablet.visible and tablet.point(ray[0], ray[1], click):
+		return                           # on the tablet: not the menu's
 	var nav := xr.nav if xr else flat.nav
 	if nav.y != 0:
 		menu.move(nav.y)
@@ -433,6 +636,11 @@ func _tick(alpha: float, first: bool) -> void:
 	sim.step([h], _commands)
 	Perf.add("sim", Time.get_ticks_usec() - ts)
 	_commands = []
+	_track_net()
+	if sim.tick % PATH_EVERY == 0 and not sim.ball.held:
+		_path.append([snappedf(sim.ball.x / 1e6, 0.01), snappedf(sim.ball.y / 1e6, 0.01), snappedf(sim.ball.z / 1e6, 0.01)])
+		if _path.size() > 400:
+			_path.pop_front()
 	if sim.phase != _last_phase:
 		_on_phase(sim.phase)
 		_last_phase = sim.phase
@@ -465,15 +673,28 @@ func _on_event(e: Array) -> void:
 		K.EVENT_FEED:
 			machine.kick()
 			_play("0_hit_soft", machine.global_position + Vector3(0, 0.9, 0), 0.8, -3.0)
+		K.EVENT_TIME_UP:
+			_play("4_applause", Vector3(0, 2, 0))
+			announcer.say(["winner"], Announcer.TOP)
+			board.announce("TIME!  SCORE %d" % e[1], Color(1, 0.9, 0.2), 4.0)
+			if Perf.on and not demo:
+				_log_line("TIME UP | score %d | good %d | best streak %d" % [e[1], e[2], e[3]])
+			if not demo:
+				time_up.emit(e[1], e[2], e[3])
 		K.EVENT_TARGET:
 			if floor_target:
 				floor_target.flare()
-			board.announce("TARGET!", Color(1, 0.85, 0.2), 1.0)
-			_play("4_applause", World.m(e[1], 0, e[2]), 1.3, -10.0)
+			board.announce(Drill.RING_TEXT[clampi(e[3], 1, 3)], Color(1, 0.85, 0.2), 1.0)
+			_ding(e[3], World.m(e[1], 0, e[2]))
 		K.EVENT_DRILL:
 			var r: int = e[1]
+			if not demo:
+				_shot_ended(r, e[2])
 			if Perf.on and not demo:
-				_log_line("RESULT %s | streak %d" % [Drill.RESULT_TEXT[r], e[2]])
+				var board_at := ""
+				if sim.drill.last_off >= 0:
+					board_at = " | ring %d, %.2f m off" % [sim.drill.last_ring, sim.drill.last_off / float(K.M)]
+				_log_line("RESULT %s | streak %d%s" % [Drill.RESULT_TEXT[r], e[2], board_at])
 			var rallying := sim.drill.partner and r == Drill.RESULT_GOOD
 			if rallying:
 				# The clips that say the number, so the call matches the board.
@@ -482,6 +703,9 @@ func _on_event(e: Array) -> void:
 				var n: int = e[2]                # the streak
 				if COUNT_CALLS.has(n):
 					announcer.say([COUNT_CALLS[n]], Announcer.HIGH)
+				if sim.drill.spots and sim.drill.last_ring > 0:
+					board.announce(Drill.RING_TEXT[sim.drill.last_ring], Color(0.5, 1, 0.5), 1.0)
+					_ding(sim.drill.last_ring, World.m(sim.drill.target_x, 0, sim.drill.target_z))
 			else:
 				board.announce(Drill.RESULT_TEXT[r], Color(0.5, 1, 0.5) if r == Drill.RESULT_GOOD else Color(1, 0.5, 0.35), 1.2)
 			const CALLS := {Drill.RESULT_OUT: "out", Drill.RESULT_NET: "net", Drill.RESULT_KITCHEN: "kitchen",
@@ -497,15 +721,26 @@ func _on_event(e: Array) -> void:
 				announcer.say(["rally_%d_1" % e[2]], Announcer.HIGH)
 		K.EVENT_HIT:
 			var speed: int = e[2]
+			if e[1] == 0:
+				_shot = _shot_start(speed, e[3] == 1)
+				_shot["in_path"] = _path.duplicate()     # how the ball came to you
+				_shot["me"] = [snappedf(sim.players[0].x / 1e6, 0.01), snappedf(sim.players[0].z / 1e6, 0.01)]
+			elif e[1] >= 2:
+				_ready_y = sim.players[0].py / 1e6   # your paddle as they strike: ready or not
+			_path = [[snappedf(sim.ball.x / 1e6, 0.01), snappedf(sim.ball.y / 1e6, 0.01), snappedf(sim.ball.z / 1e6, 0.01)]]
 			if e[1] == 0 and Perf.on and not demo:     # your swings, not the lobby's bot
 				_log_swing()
 			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf())
 			if xr and e[1] == 0:
 				# Crisp from the sweet spot, a duller, longer buzz off the rim.
 				var off := clampf(sim.last_offset / float(K.PADDLE_FACE_RADIUS), 0.0, 1.0)
-				xr.pulse((0.35 + speed / 250000.0) * (1.0 - 0.4 * off), 0.04 + 0.06 * off)
+				var strength := (HAPTIC_BASE + HAPTIC_GAIN * speed / 83333.0) / 100.0
+				xr.pulse(strength * (1.0 - 0.4 * off), HAPTIC_MS / 1000.0 + 0.06 * off)
 		K.EVENT_BOUNCE:
 			_play("1_bounce", World.m(e[1], 0, e[2]), 1.0, -4.0)
+			if not _shot.is_empty() and not _shot.has("x") and e[2] < 0:
+				_shot["x"] = snappedf(e[1] / 1e6, 0.01)       # where your ball landed on their side
+				_shot["z"] = snappedf(e[2] / 1e6, 0.01)
 		K.EVENT_NET:
 			_play("2_net", World.m(e[1], e[2], 0))
 		K.EVENT_FAULT:
@@ -565,8 +800,12 @@ func _draw(delta: float) -> void:
 		a.show_from(sim, delta)
 	if machine:
 		machine.show_from(sim, delta)
+	if floor_target == null and sim.drill and sim.drill.targets:
+		floor_target = FloorTarget.new()     # a coach put a target down (C-8)
+		add_child(floor_target)
 	if floor_target:
 		floor_target.show_from(sim, delta)
+	_cue_fade(delta)
 	if zone_mesh and sim.drill and sim.drill.lanes:
 		zone_mesh.position.x = sim.drill.target_x / float(K.M)
 	board.show_from(sim, delta)
@@ -634,13 +873,18 @@ func _log_swing() -> void:
 		c[14] / 1000, c[15] / 256.0, u.length(), u.z * fwd, u.y, u.x, roundi(rad_to_deg(asin(clampf(n.y, -1, 1)))),
 		roundi(rad_to_deg(atan2(n.x, n.z * fwd))), c[12] / 1e6, absf(c[13]) / 1e6, vin.length(),
 		raw.length(), roundi(rad_to_deg(atan2(raw.y, Vector2(raw.x, raw.z).length()))), _where(lr), _where(la)])
+	if xr:
+		var t: Array = xr.take_tracking()
+		var all := maxi(t[0] + t[1] + t[2], 1)
+		line += " | tracking high %d%% low %d%% lost %d%% | grip a%d u%d t%d r%d" % [100 * t[2] / all, 100 * t[1] / all,
+			100 * t[0] / all, roundi(paddle_tilt), roundi(paddle_turn), roundi(paddle_twist), roundi(paddle_reach * 100)]
 	_log_line(line)
 
 
 ## The mode this is: the drill and its level, or a match.
 func _mode() -> String:
 	if sim.drill:
-		return sim.drill.mode_name()
+		return Settings.run_name(sim.drill) if sim.drill.time_limit > 0 else sim.drill.mode_name()
 	return "DOUBLES" if sim.config.doubles else "SINGLES"
 
 

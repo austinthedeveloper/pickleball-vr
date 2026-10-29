@@ -7,6 +7,72 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ## [Unreleased]
 
 ### Added
+- **The coach tablet in the headset:** pause a practice drill and the
+  coaching panel stands beside you. It shows your run, where your shots
+  landed and what the numbers say. Point at it to place the target, the
+  next feed, the machine and its bounce, or to set and start the
+  machine.
+- **The coach's ball machine:** from the phone, start the machine, place
+  it anywhere on their side, tap where its balls should bounce, and set
+  their speed, spin, height over the net and how often they come.
+- **Coaching, much more** (design/COACHING.md):
+  - **Placement:** the coach taps to place the target or choose where the
+    partner's next ball goes, and draws zones and lines that glow on
+    your court.
+  - **Messages:** cues ("PADDLE UP") and challenges ("8 in a row on the
+    board") appear over the net.
+  - **During the drill:** live pace and target-size sliders, and
+    workouts that run several drills back to back.
+  - **Per shot:** net clearance, forehand/backhand, contact height,
+    ready position, footwork and a sweet-spot map.
+  - **Analysis:** plain-English insights, rally replays from above and
+    the side, and a printable report.
+  - **History:** every session is saved on the headset with history and
+    trends, and each player has their own profile and records.
+- **Coach companion:** turn on MAIN > COACH, and a coach opens the address
+  it shows on a phone on the same Wi-Fi, then enters the code. They see
+  your score, clock and streak live, where every shot landed, a session
+  summary by drill and your records. They can set up the drill and
+  start, pause, restart or end it.
+- **Timed runs:** a MODE row on PRACTICE PARTNER and BALL MACHINE. FREE
+  PLAY is as before; 1, 2 or 3 MIN give you a clock and a score (good
+  balls plus dartboard points). RECORDS shows your best and latest runs
+  for each drill, so you can see yourself improve.
+- **Passthrough:** PASSTHROUGH on MAIN shows your room around the court.
+  Only the court, the net, the players and the scoreboard are drawn.
+- **The partner and the CPU players have real bodies:** a full 3D person
+  instead of shapes, in a real T-shirt and shorts, with shoes and hair,
+  moving just as before. In doubles, the ladder's players are men and
+  women.
+- **Targets are dartboards:** bigger, with an outer ring (1 point), an
+  inner ring (2) and a bullseye (3). Anywhere on the board counts, and
+  the scoreboard keeps your POINTS.
+
+### Changed
+- **Full swings hit full:** a big drive from the baseline now carries
+  over the net. Touch and dinks are unchanged.
+- **The coach tablet shows the drill's own controls:** pace and size in
+  a partner drill, the machine's in the ball machine. Each new drill
+  starts with a clean court, and a tap shows at once and says what it
+  did.
+- **Checking for paddle drift:** PADDLE > CHECK reads the paddle laid
+  flat on the floor, live. The swing log records tracking quality for
+  every hit.
+- **Blocks keep more pace:** stick the paddle out at a hard-hit ball and
+  it goes back with up to 72% of its speed (was 60%).
+- **Coach: START NEW** starts the drill the coach just set, mid-run.
+- **Stronger hit vibration** (raised twice), and a light **ding** when a ball lands on
+  a target, higher toward the bullseye.
+- **Paddle profiles turn any way:** TWIST goes a full turn, ANGLE runs
+  from -90 to 90, and a new TURN swings the face left or right. That
+  covers paddle accessories that only hold the controller one way.
+  REACH goes negative (down to -30 cm, in 1 cm steps) for accessories
+  that hold the controller up the handle.
+- **The DINKS target follows you:** it sits in front of the partner,
+  moves to the other half when you switch sides, and moves after a miss
+  as well as a hit.
+- **Leaning over the kitchen line isn't a fault in practice:** you're
+  only in when your head is 45 cm past the line.
 - **Four new kitchen drills** on PRACTICE PARTNER:
   - **CALL THE SPOT:** a green spot lights on their side for each ball;
     dink onto it. It lights later and gets smaller the harder you set it.

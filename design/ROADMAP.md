@@ -79,6 +79,27 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-39 | Menus: click < to step back, > to step on | `feature/cld-vr-resets` | Ready to test |
 | VR-40 | CALL THE SPOT, LINE AND CROSS, VOLLEY DINKS, ATTACK OR DINK (ADR-017) | `feature/cld-vr-drills` | Ready to test |
 | VR-41 | The swing log by mode, and swings_report.py (ADR-017) | `feature/cld-vr-drills` | Ready to test |
+| VR-42 | Rigged bodies for the partner and CPU players (ADR-018) | `feature/cld-vr-body` | Played: "looks ridiculous, the shirt looks painted on" |
+| VR-43 | Cloth shells: a real shirt and shorts (ADR-018) | `feature/cld-vr-body` | Played: "looks better" |
+| VR-44 | Dartboard targets: rings and points (ADR-019) | `feature/cld-vr-dartboard` | Played: "look good" |
+| VR-45 | Practice: leaning over the kitchen line isn't a fault (ADR-019) | `feature/cld-vr-dartboard` | Ready to test |
+| VR-46 | TUNING pages (debug builds) and tune.sh sync (ADR-020) | `feature/cld-vr-tuning` | Ready to test |
+| VR-47 | Paddle profiles: TURN, a full TWIST, ANGLE +-90 (ADR-015) | `feature/cld-vr-tuning` | Played: "good" |
+| VR-48 | DINKS: the target follows you across (ADR-019) | `feature/cld-vr-tuning` | Ready to test |
+| VR-49 | Passthrough: the court in your room (ADR-021) | `feature/cld-vr-timed` | Played: "worked perfect" |
+| VR-50 | Timed runs (MODE) and RECORDS (ADR-022) | `feature/cld-vr-timed` | Ready to test |
+| VR-51 | Stronger hit vibration (tunable); a ding on target hits | `feature/cld-vr-timed` | Ready to test |
+| VR-52 | Floor targets move after a miss too (ADR-019) | `feature/cld-vr-timed` | Ready to test |
+| VR-53 | Coach companion: a web page from the headset (ADR-023) | `feature/cld-vr-coach` | Played: "worked so well" |
+| VR-54 | Coach START NEW mid-run; stronger vibration; blocks keep 72% (ADR-003, 023) | `feature/cld-vr-coach` | Ready to test |
+| VR-55 | The coaching suite: C-3..C-18 (ADR-024, design/COACHING.md) | `feature/cld-vr-coaching` | Ready to test |
+| VR-56 | The coach's ball machine: place, bounce, speed, spin, height (C-21, ADR-024) | `feature/cld-vr-coach-machine` | Ready to test |
+| VR-57 | The coach tablet beside PAUSED (C-22, ADR-024) | `feature/cld-vr-tablet` | Ready to test |
+| VR-58 | REACH -30..+20 cm, 1 cm steps (ADR-015) | `feature/cld-vr-reach` | Ready to test |
+| VR-59 | Full swings hit full: the swing curve's top (ADR-003) | `feature/cld-vr-drives` | Ready to test |
+| VR-60 | The tablet shows the drill's own controls (ADR-024) | `feature/cld-vr-drives` | Ready to test |
+| VR-61 | Drift: tracking in the swing log, PADDLE > CHECK (ADR-015) | `feature/cld-vr-drives` | Ready to test |
+| VR-62 | Tablet: a clean court per drill; taps show and say what they did (ADR-024) | `feature/cld-vr-tablet-2` | Ready to test |
 
 ## Phase 1: singles
 
@@ -141,6 +162,29 @@ reachable for a beginner in the headset? (The bot passes all seven.)
 
 **VR-15, ready to test.** Esc (or the menu button) pauses anything. Check
 that the click that opens a page never presses a row on it.
+
+**VR-55, ready to test.** The coaching suite (design/COACHING.md tracks
+each idea). On the phone: tap modes on the court (Target, Feed, Zone,
+Line), cues, a challenge, the sliders, a workout, then tap a shot to
+replay it and LOAD the history.
+
+**VR-53, ready to test.** MAIN > COACH > COACH MODE ON, then on a phone
+on the same Wi-Fi open the address it shows and enter the code. Run a
+drill from the phone; watch the shots land on its court.
+
+**VR-49 / VR-50, ready to test.** MAIN > PASSTHROUGH ON: is it only the
+court in your room, and does the floor line up? PRACTICE PARTNER > MODE
+1 MIN: play a few runs, then check RECORDS.
+
+**VR-46, ready to test.** PAUSED > TUNING (debug builds): step the
+drills' numbers while you play. Say "sync the tuning" and
+`game/tools/tune.sh sync` makes them the defaults.
+
+**VR-43 to VR-45, ready to test.** The partner wears a real shirt and
+shorts (ADR-018). Targets are dartboards that score 1, 2 or 3 points,
+and leaning over the kitchen line is fine in practice (ADR-019). Play
+CALL THE SPOT and VOLLEY DINKS again; the log now says how far each
+ball missed by.
 
 **VR-40 / VR-41, ready to test.** PRACTICE PARTNER > DRILL: try CALL
 THE SPOT, LINE AND CROSS, VOLLEY DINKS and ATTACK OR DINK, a few

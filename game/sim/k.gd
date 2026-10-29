@@ -63,10 +63,10 @@ const PADDLE_HARD_V := 75000         ## 9 m/s
 ## 0.6, not the hard-hit 0.34, when the face barely moves. It ramps in from
 ## 6 m/s of incoming speed (full at 9) and fades out as the swing reaches
 ## 5 m/s, so dinks and swings keep the tuning above.
-const BLOCK_E_256 := 154
+static var BLOCK_E_256 := 184
 const BLOCK_FROM_V := 50000          ## 6 m/s
-const BLOCK_FULL_V := 75000          ## 9 m/s
-const BLOCK_SWING_V := 41667         ## 5 m/s: a full swing gets no block bonus
+const BLOCK_FULL_V := 70000          ## 8.4 m/s
+const BLOCK_SWING_V := 55000         ## 6.6 m/s: a full swing gets no block bonus (slow to fade: swinging harder never hits softer)
 const PADDLE_EDGE_LOSS_PCT := 20     ## at the face's rim, 20% of that is lost (ADR-006; was 40)
 ## The face grips the ball: half the slide between them is taken out
 ## (a hollow ball rolling without slip would lose 60%). ADR-003 amended.
@@ -122,6 +122,12 @@ const FAULT_EARLY_VOLLEY := 6
 
 # --- Commands: changes to a running match that aren't a pad's (port ADR-102)
 const CMD_NEW_MATCH := 0
+const CMD_PIN_TARGET := 1            ## a coach's target: x, z (um, their side), 1 pin / 0 let it roam (C-8)
+const CMD_FEED_TO := 2               ## the partner's next ball to: x, z (um, your side) (C-9)
+## The coach's ball machine (C-21): machine x, z (their side), bounce x, z
+## (yours), pace (um/tick over the ground), spin (topspin +, backspin -),
+## height over the net (um), ticks between balls.
+const CMD_MACHINE := 3
 
 # --- Events: [kind, a, b, c, tick]
 const EVENT_HIT := 0                 ## slot, speed um/tick, volley 0/1
@@ -134,7 +140,8 @@ const EVENT_MATCH := 6               ## winning team
 const EVENT_TOSS := 7                ## server slot
 const EVENT_FEED := 8                ## the machine fed: target x, z, shot
 const EVENT_DRILL := 9               ## a drill's result: result, streak, finished 0/1
-const EVENT_TARGET := 10             ## a floor target hit: x, z, hits so far
+const EVENT_TARGET := 10             ## a floor target hit: x, z, ring
+const EVENT_TIME_UP := 11            ## a timed drill's clock ran out: score, good, best streak
 
 
 static func fault_text(f: int) -> String:
@@ -154,11 +161,12 @@ static func fault_text(f: int) -> String:
 ## swing overhit. The face's effective speed for the hit, as straight
 ## segments through these points (m/s): 2.5 -> 3.05 (touch x1.22),
 ## 4.2 -> 4.0, 6.5 -> 4.15 (a bigger, unhurried swing levels off: a firm,
-## controlled ball, not a long one), 9 -> 5.8, then +0.62 per m/s (a
-## put-away still drives). Only the face's speed at contact counts, not
-## how far it travelled. It only ever rises. um/tick.
-const SWING_CURVE := [[0, 0], [20833, 25417], [35000, 33333], [54167, 34583], [75000, 48333]]
-const SWING_TAIL_256 := 159          ## the slope past the last point, Q8
+## controlled ball, not a long one), 9 -> 7.0, 12 -> 11.5, then one for
+## one: a full swing is a full swing (baseline drives from the machine
+## fell short at the old 9 -> 5.8, +0.62 per m/s). Only the face's speed
+## at contact counts, not how far it travelled. It only ever rises. um/tick.
+const SWING_CURVE := [[0, 0], [20833, 25417], [35000, 33333], [54167, 34583], [75000, 58333], [100000, 95833]]
+const SWING_TAIL_256 := 256          ## the slope past the last point, Q8
 
 
 static func swing_eff(s: int) -> int:

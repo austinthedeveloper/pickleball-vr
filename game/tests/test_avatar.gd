@@ -45,3 +45,26 @@ func test_a_fast_shuffle_keeps_the_feet_under_the_body() -> void:
 func test_standing_still_doesnt_shuffle() -> void:
 	var r := _run(0.2, 0.05)
 	check(r[1] <= 1, "no fidgeting: %d steps" % r[1])
+
+
+## The body (ADR-018): the skeleton lands on the joints the avatar works
+## out: the paddle hand at its grip, the feet on their spots.
+func test_the_body_follows_the_joints() -> void:
+	for female in [false, true]:
+		var sim := Sim.new(Settings.new().partner_config())
+		var a := Avatar.new()
+		a.slot = 2
+		a.female = female
+		runner.root.add_child(a)
+		for i in 60:
+			a.show_from(sim, 1.0 / 72.0)
+		var sk := a.figure.skel
+		var hand := sk.global_transform * sk.get_bone_global_pose(sk.find_bone("hand_r"))
+		var grip := hand.origin.distance_to(a._hand)
+		check(grip < Avatar.PALM + 0.03, "the paddle hand is at the grip (%.3f m off)" % grip)
+		for f in 2:
+			var foot := sk.global_transform * sk.get_bone_global_pose(sk.find_bone("foot_l" if f == 0 else "foot_r"))
+			var off := Vector2(foot.origin.x - a._feet[f].x, foot.origin.z - a._feet[f].z).length()
+			check(off < 0.05, "foot %d is on its spot (%.3f m off)" % [f, off])
+			check(absf(foot.origin.y - a.figure.ankle_h) < 0.05, "and on the floor")
+		a.queue_free()

@@ -708,6 +708,15 @@ func step(human: Array = [], commands: Array = []) -> void:
 		match int(c[0]):
 			K.CMD_NEW_MATCH:
 				new_match()
+			K.CMD_PIN_TARGET:
+				if drill:
+					drill.pin_target(self, int(c[1]), int(c[2]), int(c[3]) != 0)
+			K.CMD_FEED_TO:
+				if drill:
+					drill.feed_to(int(c[1]), int(c[2]))
+			K.CMD_MACHINE:
+				if drill:
+					drill.coach_machine(c.slice(1))
 	tick += 1
 	phase_timer += 1
 	var tossed := false

@@ -11,16 +11,28 @@ const ANGLES := [0, 15, 30, 45]
 ## controller at another angle or further from the face. DEFAULT is the
 ## PADDLE ANGLE above; the others override angle, twist and reach.
 const PROFILE_NAMES := ["DEFAULT", "PROFILE 1", "PROFILE 2", "PROFILE 3"]
-const PROFILE_ANGLES := [-30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
-	65, 70, 75, 80, 85, 90]
-const PROFILE_TWISTS := [-45, -40, -35, -30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45]
-const PROFILE_REACHES := [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40]   ## cm
+## Degrees in 5s: ANGLE tips the face back (-90..90), TURN swings it left
+## or right (-90..90), TWIST rolls it about the handle (a full turn): any
+## way an accessory holds the controller.
+static var PROFILE_ANGLES := range(-90, 95, 5)
+static var PROFILE_TURNS := range(-90, 95, 5)
+static var PROFILE_TWISTS := range(-180, 185, 5)
+## REACH slides the paddle along its handle, cm in 1s: out past the
+## controller, or (negative) back toward your hand, for an accessory that
+## holds the controller up its handle, 15-20 cm above the hand.
+static var PROFILE_REACHES := range(-30, 21)
 
 ## Tests point this at their own file (the runner does), never the player's.
 static var default_path := "user://settings.cfg"
 ## Tests pin the seed (the runner does): a match's is the clock's otherwise,
 ## and a test that passes on one second and fails on the next is no test.
 static var seed_override := -1
+## Developer tools (the TUNING pages, ADR-020): debug builds, not tests.
+static var dev := OS.is_debug_build()
+
+
+static func dev_tools() -> bool:
+	return dev
 
 var path := default_path
 var doubles := false
@@ -30,6 +42,8 @@ var assist := 2                      ## index into ASSISTS
 var points := 0                      ## index into POINTS
 var win_by_2 := false
 var left_handed := false
+var coach := false                   ## ADR-023: COACH MODE, the companion page served
+var passthrough := false             ## ADR-021: the court in your room (headset)
 var paddle_angle := 1                ## index into ANGLES
 var paddle_profile := 0              ## index into PROFILE_NAMES
 ## The three custom profiles: {angle, twist, reach} in degrees and cm.
@@ -57,6 +71,30 @@ var partner_hands: bool:
 	get: return partner_drill == 1
 	set(v): partner_drill = 1 if v else 0
 var partner_best := 0
+## Timed runs (ADR-022): MODE, an index into Drill.TIMES (0 free play).
+var partner_time := 0
+var machine_time := 0
+## Every timed run kept, per player (C-18): player -> run name
+## (Settings.run_name) -> [[score, date, good, best streak], ...], oldest
+## first, the last RUNS_KEPT. `records` is the current player's.
+var player := "PLAYER 1"
+var players: Array = ["PLAYER 1"]
+var records_by := {}
+var records: Dictionary:
+	get:
+		if not records_by.has(player):
+			records_by[player] = {}
+		return records_by[player]
+	set(v):
+		records_by[player] = v
+## A coach's saved workouts (C-13): [{name, steps: [{drill, level, time,
+## targets}]}].
+var workouts: Array = []
+## The coach's ball machine (C-21), in the page's units: machine and bounce
+## spots (m), speed (m/s), spin (-100 backspin .. 100 topspin, %), height
+## over the net (m), seconds between balls.
+var coach_machine := {"x": 0.0, "z": -7.0, "bx": 0.0, "bz": 4.0, "speed": 8.0, "spin": 0, "clear": 0.5, "every": 3.5}
+const RUNS_KEPT := 100
 
 
 func load_settings() -> void:
@@ -70,12 +108,15 @@ func load_settings() -> void:
 	points = c.get_value("match", "points", points)
 	win_by_2 = c.get_value("match", "win_by_2", win_by_2)
 	left_handed = c.get_value("player", "left_handed", left_handed)
+	passthrough = c.get_value("player", "passthrough", passthrough)
+	coach = c.get_value("player", "coach", coach)
 	paddle_angle = c.get_value("player", "paddle_angle", paddle_angle)
 	paddle_profile = c.get_value("paddle", "profile", paddle_profile)
 	var saved: Array = c.get_value("paddle", "profiles", [])
 	for i in mini(saved.size(), profiles.size()):
 		var d: Dictionary = new_profile()
 		d.merge(saved[i], true)
+		d["reach"] = clampi(int(d["reach"]), PROFILE_REACHES[0], PROFILE_REACHES[-1])
 		profiles[i] = d
 	venue = c.get_value("match", "venue", venue)
 	machine_shot = c.get_value("machine", "shot", machine_shot)
@@ -95,6 +136,15 @@ func load_settings() -> void:
 	# An older save kept HANDS as a flag.
 	partner_drill = c.get_value("partner", "drill", 1 if c.get_value("partner", "hands", false) else 0)
 	partner_lane = c.get_value("partner", "lane", partner_lane)
+	partner_time = c.get_value("partner", "time", partner_time)
+	machine_time = c.get_value("machine", "time", machine_time)
+	player = c.get_value("player", "name", player)
+	players = c.get_value("player", "names", players)
+	records_by = c.get_value("records", "by_player", {})
+	if records_by.is_empty() and c.has_section_key("records", "runs"):
+		records_by[player] = c.get_value("records", "runs")   # before profiles: the first player's
+	workouts = c.get_value("coach", "workouts", workouts)
+	coach_machine.merge(c.get_value("coach", "machine", {}), true)
 
 
 func save() -> void:
@@ -107,6 +157,8 @@ func save() -> void:
 	c.set_value("match", "points", points)
 	c.set_value("match", "win_by_2", win_by_2)
 	c.set_value("player", "left_handed", left_handed)
+	c.set_value("player", "passthrough", passthrough)
+	c.set_value("player", "coach", coach)
 	c.set_value("player", "paddle_angle", paddle_angle)
 	c.set_value("paddle", "profile", paddle_profile)
 	c.set_value("paddle", "profiles", profiles)
@@ -121,6 +173,13 @@ func save() -> void:
 	c.set_value("lessons", "done", lessons_done)
 	c.set_value("machine", "targets", machine_targets)
 	c.set_value("partner", "level", partner_level)
+	c.set_value("partner", "time", partner_time)
+	c.set_value("machine", "time", machine_time)
+	c.set_value("player", "name", player)
+	c.set_value("player", "names", players)
+	c.set_value("records", "by_player", records_by)
+	c.set_value("coach", "workouts", workouts)
+	c.set_value("coach", "machine", coach_machine)
 	c.set_value("partner", "targets", partner_targets)
 	c.set_value("partner", "best", partner_best)
 	c.set_value("partner", "cross", partner_cross)
@@ -135,7 +194,7 @@ func tilt() -> float:
 
 
 static func new_profile() -> Dictionary:
-	return {"angle": 15, "twist": 0, "reach": 0}
+	return {"angle": 15, "turn": 0, "twist": 0, "reach": 0}
 
 
 ## The profile in use, or null for DEFAULT.
@@ -145,12 +204,13 @@ func profile() -> Variant:
 	return profiles[paddle_profile - 1]
 
 
-## The paddle in the hand: [angle, twist] in degrees and reach in metres.
+## The paddle in the hand: [angle, twist] in degrees, reach in metres, turn
+## in degrees.
 func paddle_pose() -> Array[float]:
 	var p: Variant = profile()
 	if p == null:
-		return [tilt(), 0.0, 0.0]
-	return [float(p["angle"]), float(p["twist"]), float(p["reach"]) / 100.0]
+		return [tilt(), 0.0, 0.0, 0.0]
+	return [float(p["angle"]), float(p["twist"]), float(p["reach"]) / 100.0, float(p["turn"])]
 
 
 func match_config() -> SimTypes.MatchConfig:
@@ -177,6 +237,7 @@ func machine_config() -> SimTypes.MatchConfig:
 	d.machine_at = machine_at
 	d.targets = machine_targets
 	d.zone = machine_zone
+	d.time_limit = Drill.TIMES[clampi(machine_time, 0, Drill.TIMES.size() - 1)] * K.TICK_HZ
 	if d.shot == Drill.SHOT_SERVE:
 		var sp := d.serve_spot()
 		d.spot_x = sp[0]
@@ -199,6 +260,7 @@ func partner_config() -> SimTypes.MatchConfig:
 	d.spread = partner_spread
 	d.kind = clampi(partner_drill, 0, Drill.KIND_NAMES.size() - 1)
 	d.lane = partner_lane
+	d.time_limit = Drill.TIMES[clampi(partner_time, 0, Drill.TIMES.size() - 1)] * K.TICK_HZ
 	if d.hands:
 		d.zone = Drill.ZONE_ANY          # a volley that lands anywhere in counts too
 	if d.kind != Drill.KIND_DINKS and d.kind != Drill.KIND_RESETS:
@@ -220,3 +282,41 @@ func lesson_config(i: int) -> SimTypes.MatchConfig:
 	var cfg := match_config()
 	cfg.drill = Lessons.drill(i)
 	return cfg
+
+
+# --- Records (ADR-022) ----------------------------------------------------------------
+
+## What a timed run is kept under: the drill, its level, the time.
+static func run_name(d: Drill) -> String:
+	var t := Drill.TIMES.find(d.time_limit / K.TICK_HZ)
+	return "%s%s %s" % [d.mode_name(), " TARGETS" if d.targets else "", Drill.TIME_NAMES[maxi(t, 0)]]
+
+
+## Keeps a run; returns where it places: [rank among all (1 best), runs so far].
+func add_run(name: String, score: int, good: int, best_streak: int, date: String) -> Array[int]:
+	var runs: Array = records.get(name, [])
+	runs.append([score, date, good, best_streak])
+	if runs.size() > RUNS_KEPT:
+		runs = runs.slice(runs.size() - RUNS_KEPT)
+	records[name] = runs
+	var rank := 1
+	for r in runs:
+		if int(r[0]) > score:
+			rank += 1
+	return [rank, runs.size()]
+
+
+## A run name's best scores, highest first: [[score, date, good, best streak], ...].
+func best_runs(name: String, n := 5) -> Array:
+	var runs: Array = (records.get(name, []) as Array).duplicate()
+	runs.sort_custom(func(a: Array, b: Array) -> bool: return int(a[0]) > int(b[0]))
+	return runs.slice(0, n)
+
+
+## Its last few scores, oldest first.
+func recent_scores(name: String, n := 5) -> Array[int]:
+	var out: Array[int] = []
+	var runs: Array = records.get(name, [])
+	for r in runs.slice(maxi(runs.size() - n, 0)):
+		out.append(int(r[0]))
+	return out

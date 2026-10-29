@@ -82,12 +82,14 @@ game/sim/     the pure sim: k (constants), fx (int maths), ball, aim,
 game/sim/     ... drill (the ball machine and lessons)
 game/meta/    settings, opponents (the ladder), lessons, venues
 game/view/    world (the venues), match_view, xr_rig, flat_rig, avatar,
-              paddle_mesh, scoreboard, menu_3d, machine, crowd, announcer
+              body (the rigged person), paddle_mesh, scoreboard, menu_3d, machine, crowd, announcer
 game/data/    opponents.json (imported), lessons.json
+game/coach/   index.html: the coach companion page the headset serves (ADR-023)
+game/assets/  audio; people (Quaternius' Universal Base Characters, CC0)
 game/scenes/  main (XR or flat)
 game/tests/   headless suites, golden traces
 game/tools/   test.sh, screenshot.gd, rally_stats.gd
-design/       ROADMAP, KNOWN_ISSUES, QUEST_SETUP, FROM_THE_PORT_KIT
+design/       ROADMAP, KNOWN_ISSUES, QUEST_SETUP, FROM_THE_PORT_KIT, COACHING
 decisions/    ADRs
 ```
 

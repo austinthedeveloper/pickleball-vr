@@ -43,3 +43,48 @@ or 45 degrees, so it couldn't be set from practice at all.
   the face as they say, and the page flow.
 - A profile per accessory needs a name later (typed names need a
   keyboard). The lead can say what their accessories need first.
+
+## Amendment (2026-10-28): any way round
+
+With a real paddle accessory, the lead could put the paddle in the right
+place but not turn its face right. That accessory holds the controller
+only one way, so the sensors still track it, and "45 and -45 weren't
+enough". The profile now covers every orientation:
+- **TWIST** (about the handle) goes a full turn, -180 to 180.
+- **ANGLE** goes from -90 to 90.
+- **TURN** is new: it swings the face left or right about the
+  controller's up axis, -90 to 90.
+
+Every step is 5°. A grip is TURN, then ANGLE, then TWIST. TURN 0 is the
+grip as before, and a profile saved without TURN loads with none.
+
+## Amendment (2026-10-28): reach back toward the hand
+
+The lead's accessory is a fake paddle with a handle. It holds the
+controller 6-8 inches (15-20 cm) up the handle, above the hand. REACH
+now runs from -30 to +20 cm in 1 cm steps; it was 0 to 40 in 2s. A
+negative reach slides the virtual paddle back along its handle toward
+the hand, and 40 cm out was more than any accessory needs. A saved reach
+outside the range loads clamped: an old 40 comes back as 20.
+
+## Amendment (2026-10-28): telling drift apart
+
+"I think it's drifting a bit as I play but I'm not sure how to diagnose
+that." A profile is fixed to the controller in code, so a paddle that
+drifts is one of two things:
+- **Tracking:** the headset loses sight of a controller inside an
+  accessory, and it runs on its own sensors for a while.
+- **The mount:** the controller shifts in the accessory.
+
+The log, bucketed by ten minutes, showed no steady creep in off-centre
+hits within a session, so there are now two measurements:
+- **Tracking, per swing.** Every SWING line in the swing log ends with
+  the paddle hand's OpenXR tracking confidence since the last swing
+  (high, low and lost, %), and the grip in use (angle, turn, twist,
+  reach). Drift together with LOW tracking points at the headset not
+  seeing the controller.
+- **PADDLE > CHECK.** Lay the paddle's face flat on the floor and the
+  row reads, live, how far up its lower side is and how many degrees
+  off level the face is. Pressing it writes a PADDLE CHECK line to the
+  log. Check at the start and again when it feels off: numbers that
+  changed with good tracking mean the controller moved in its mount.

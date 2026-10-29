@@ -68,3 +68,21 @@ func test_crowd_cheers_and_settles() -> void:
 	eq(c.cheer, 0.0, "sits back down")
 	eq(c.bodies.multimesh.instance_count, Crowd.PER_SIDE * 2, "both sides")
 	c.queue_free()
+
+
+## A ball on a dartboard dings, higher toward the bullseye (ADR-019); hit
+## vibration is a tunable (ADR-020).
+func test_the_target_ding() -> void:
+	check(ResourceLoader.exists("res://assets/audio/5_ding.wav"), "the ding is there")
+	check(MatchView.DING_PITCH[2] > MatchView.DING_PITCH[1] and MatchView.DING_PITCH[1] > MatchView.DING_PITCH[0],
+		"the bullseye rings highest")
+	var s := Settings.new()
+	s.partner_targets = true
+	var v := MatchView.new()
+	runner.root.add_child(v)
+	v.setup(s.partner_config(), false)
+	var p: AudioStreamPlayer3D = v.sound["5_ding"]
+	v._ding(3, Vector3.ZERO)
+	near(int(p.pitch_scale * 100), 150, 0, "a bullseye: a fifth up")
+	check(not Tune.entry("buzz").is_empty(), "hit vibration on the TUNING page")
+	v.queue_free()

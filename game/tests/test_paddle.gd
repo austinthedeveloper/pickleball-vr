@@ -126,7 +126,8 @@ func test_the_swing_curve_rises_and_inverts() -> void:
 		check(eff >= last, "rises at %d um/tick" % s)
 		last = eff
 		near(K.swing_eff(K.swing_for(eff)), eff, 2, "inverts at %d" % eff)
-	check(K.swing_gain(15000) > 300 and K.swing_gain(90000) < 200, "touch boosted, power trimmed")
+	check(K.swing_gain(15000) > 300 and K.swing_gain(54167) < 180, "touch boosted, a big unhurried swing trimmed")
+	check(K.swing_gain(120000) >= 230, "a full swing comes out near full: a baseline drive carries")
 	if asserts > 30:
 		asserts = 30
 
@@ -155,3 +156,44 @@ func test_swinging_harder_always_hits_harder() -> void:
 			last = out
 	if asserts > 40:
 		asserts = 40
+
+
+## Baseline drives off the machine fell short (the lead's log, 2026-10-28:
+## paddle 4-10 m/s, out 6-9.5 m/s, all SHORT from 8 m back). A full swing
+## at a machine ball from behind the baseline now clears the net.
+func _drive(swing_ms: float) -> Array:
+	var cfg := Settings.new().machine_config()
+	cfg.assist = K.ASSIST_OFF                # as the lead played it: the raw shot
+	var sim := Sim.new(cfg)
+	var b := sim.ball
+	b.held = false
+	b.place(0, 1000000, 6400000)
+	b.launch(0, 0, 38000)                    # 4.6 m/s toward you, waist high
+	sim.drill.stage = Drill.FLY
+	sim.drill.fed_at = sim.tick
+	var u := roundi(swing_ms * K.M / K.TICK_HZ)
+	var h := SimTypes.HumanInput.new()
+	h.head_x = 0
+	h.head_z = 8300000
+	h.normal = [0, 5604, -15396]              # the face toward the net, open 20 degrees
+	h.paddle_x = 0
+	h.paddle_y = 1000000
+	var pz := 8300000 + 30 * u               # it meets the ball near 7.7 m
+	var meet := (1900000 + 30 * u) / (38000 + u)   # the tick it gets there
+	for i in 400:
+		pz -= u                              # the face swings through toward the net
+		h.paddle_z = pz
+		h.paddle_y = b.y + (i + 1 - meet) * u / 3   # low to high: rising a third as fast, level at the ball
+		sim.step([h])
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_BOUNCE:
+				return [e[1], e[2]]
+	return []
+
+
+func test_a_full_swing_from_the_baseline_carries() -> void:
+	var easy := _drive(6.0)
+	var full := _drive(12.0)
+	check(not full.is_empty() and full[1] < 0, "a 12 m/s swing from 8 m back: over the net (%s)" % str(full))
+	check(not full.is_empty() and full[1] > -K.COURT_HALF_LENGTH - 1500000, "and not far long (%s)" % str(full))
+	check(not easy.is_empty() and (easy[1] > 0 or full[1] < easy[1]), "and further than a 6 m/s one (%s, %s)" % [str(easy), str(full)])

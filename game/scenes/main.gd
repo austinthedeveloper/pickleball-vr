@@ -28,6 +28,11 @@ func _ready() -> void:
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 		use_xr = true
 	settings.load_settings()
+	if Settings.dev_tools():
+		Tune.load_saved()
+	if OS.get_cmdline_user_args().has("coach"):
+		settings.coach = true
+	_coach_on(settings.coach)
 	var args := OS.get_cmdline_user_args()
 	if args.has("demo") or args.has("play") or args.has("doubles"):
 		if args.has("doubles"):
@@ -54,11 +59,14 @@ func _new_view() -> MatchView:
 	menu = null
 	view = MatchView.new()
 	view.left_handed = settings.left_handed
+	view.passthrough = settings.passthrough
 	var pose := settings.paddle_pose()
 	view.paddle_tilt = pose[0]
 	view.paddle_twist = pose[1]
 	view.paddle_reach = pose[2]
+	view.paddle_turn = pose[3]
 	add_child(view)
+	view.shot_done.connect(desk.on_shot)
 	return view
 
 
@@ -74,7 +82,10 @@ func lobby(to := "") -> void:
 		demo_cfg = settings.machine_config()
 	elif page == "partner":
 		demo_cfg = settings.partner_config()
+	if demo_cfg.drill:
+		demo_cfg.drill.time_limit = 0    # the lobby's demo plays on (ADR-022)
 	_new_view().setup(demo_cfg, use_xr, true, true)
+	desk.on_new_view(view)
 	_inherit()
 	menu = _page(page)
 	menu.changed.connect(_on_changed)
@@ -109,7 +120,9 @@ func _page(id: String) -> Menu3D:
 			m.add_row("zone", "RETURN TO", Drill.ZONE_NAMES, settings.machine_zone)
 			m.add_row("targets", "TARGETS", OFF_ON, 1 if settings.machine_targets else 0)
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
+			m.add_row("mtime", "MODE", Drill.TIME_NAMES, settings.machine_time)
 			m.add_row("start", "START")
+			m.add_row("to_records", "RECORDS")
 			m.add_row("back", "BACK")
 		"partner":
 			m.title = "PRACTICE PARTNER   BEST %d" % settings.partner_best
@@ -121,7 +134,9 @@ func _page(id: String) -> Menu3D:
 			m.add_row("spread", "SPREAD", Drill.SPREAD_NAMES, settings.partner_spread)
 			m.add_row("ptargets", "TARGETS", OFF_ON, 1 if settings.partner_targets else 0)
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
+			m.add_row("ptime", "MODE", Drill.TIME_NAMES, settings.partner_time)
 			m.add_row("pstart", "START")
+			m.add_row("to_records", "RECORDS")
 			m.add_row("back", "BACK")
 		"paddle":
 			# Paddle profiles (ADR-015): DEFAULT is the angle you had; the
@@ -135,11 +150,15 @@ func _page(id: String) -> Menu3D:
 			else:
 				m.add_row("angle", "ANGLE", _degrees(Settings.PROFILE_ANGLES),
 					maxi(Settings.PROFILE_ANGLES.find(p["angle"]), 0))
+				m.add_row("turn", "TURN", _degrees(Settings.PROFILE_TURNS),
+					maxi(Settings.PROFILE_TURNS.find(p["turn"]), 0))
 				m.add_row("twist", "TWIST", _degrees(Settings.PROFILE_TWISTS),
 					maxi(Settings.PROFILE_TWISTS.find(p["twist"]), 0))
-				m.add_row("reach", "REACH", Settings.PROFILE_REACHES.map(func(c: int) -> String: return "%d CM" % c),
+				m.add_row("reach", "REACH", Settings.PROFILE_REACHES.map(func(c: int) -> String: return "%+d CM" % c if c != 0 else "0 CM"),
 					maxi(Settings.PROFILE_REACHES.find(p["reach"]), 0))
 				m.add_row("reset", "RESET TO DEFAULT")
+			# Drift (ADR-015): face flat on the floor, read it now and later.
+			m.add_row("check", "CHECK: LAY THE FACE FLAT ON THE FLOOR")
 			m.add_row("back", "BACK")
 		"lessons":
 			m.title = "HOW TO PLAY"
@@ -148,6 +167,24 @@ func _page(id: String) -> Menu3D:
 				var done: bool = settings.lessons_done.has(l["id"])
 				m.add_row("lesson_%d" % i, "%d  %s%s" % [i + 1, l["title"], "   - DONE" if done else ""])
 			m.add_row("back", "BACK")
+		"records":
+			m = _records_menu()
+		"coach":
+			m.title = "COACH"
+			m.add_row("coach", "COACH MODE", OFF_ON, 1 if settings.coach else 0)
+			if coach and coach.listening():
+				var at := Coach.addresses()
+				m.add_row("info_open", "ON A PHONE ON THIS WI-FI, OPEN")
+				m.add_row("info_url", "HTTP://%s:%d" % [at[0] if at.size() > 0 else "THIS-HEADSET", Coach.PORT])
+				m.add_row("info_code", "CODE   %s" % coach.code)
+				m.add_row("info_n", "COACHES CONNECTED   %d" % coach.coaches())
+			elif settings.coach:
+				m.add_row("info_err", "CAN'T START: NO NETWORK?")
+			m.add_row("back", "BACK")
+		"tune":
+			m = _tune_menu("")
+		_ when id.begins_with("tune_"):
+			m = _tune_menu(id.trim_prefix("tune_"))
 		_:
 			m.title = "PICKLEBALL '94 VR"
 			m.add_row("to_match", "PLAY A MATCH")
@@ -155,12 +192,21 @@ func _page(id: String) -> Menu3D:
 			m.add_row("to_machine", "BALL MACHINE")
 			m.add_row("to_lessons", "HOW TO PLAY")
 			m.add_row("to_paddle", "PADDLE")
+			m.add_row("passthrough", "PASSTHROUGH", OFF_ON, 1 if settings.passthrough else 0)
+			m.add_row("to_coach", "COACH")
+			if Settings.dev_tools():
+				m.add_row("to_tune", "TUNING")
 			if not use_xr:
 				m.add_row("quit", "QUIT")
 	return m
 
 
 func _on_changed(id: String, index: int) -> void:
+	if id.begins_with("tune:"):
+		var t := id.trim_prefix("tune:")
+		Tune.set_value(t, _tune_steps[t][index])
+		Tune.save()
+		return
 	match id:
 		"mode": settings.doubles = index == 1
 		"vs": settings.opponent = index
@@ -170,6 +216,13 @@ func _on_changed(id: String, index: int) -> void:
 		"points": settings.points = index
 		"win_by_2": settings.win_by_2 = index == 1
 		"hand": settings.left_handed = index == 1
+		"passthrough": settings.passthrough = index == 1
+		"coach":
+			settings.coach = index == 1
+			_coach_on(settings.coach)
+			settings.save()
+			lobby.call_deferred("coach")     # the address and code
+			return
 		"angle":
 			if settings.profile() == null:
 				settings.paddle_angle = index
@@ -177,6 +230,7 @@ func _on_changed(id: String, index: int) -> void:
 				settings.profile()["angle"] = Settings.PROFILE_ANGLES[index]
 		"profile": settings.paddle_profile = index
 		"twist": settings.profile()["twist"] = Settings.PROFILE_TWISTS[index]
+		"turn": settings.profile()["turn"] = Settings.PROFILE_TURNS[index]
 		"reach": settings.profile()["reach"] = Settings.PROFILE_REACHES[index]
 		"shot": settings.machine_shot = index
 		"target": settings.machine_target = index
@@ -191,13 +245,18 @@ func _on_changed(id: String, index: int) -> void:
 		"spread": settings.partner_spread = index
 		"drill": settings.partner_drill = index
 		"lane": settings.partner_lane = index
+		"ptime": settings.partner_time = index
+		"mtime": settings.machine_time = index
 	settings.save()
-	if id in ["mode", "vs", "venue", "hand", "angle", "profile", "twist", "reach", "shot", "target", "zone", "machine_at", "speed",
+	if id in ["mode", "vs", "venue", "hand", "passthrough", "angle", "profile", "twist", "turn", "reach", "shot", "target", "zone", "machine_at", "speed",
 			"targets", "level", "ptargets", "side", "spread", "drill", "lane"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
 
 func _on_pressed(id: String) -> void:
+	if id == "to_tune" or id.begins_with("tune"):
+		_tune_pressed(id)
+		return
 	if id.begins_with("lesson_"):
 		_start_lesson.call_deferred(int(id.trim_prefix("lesson_")))
 		return
@@ -208,10 +267,20 @@ func _on_pressed(id: String) -> void:
 		"pstart": _start.call_deferred(settings.partner_config(), false)
 		"to_lessons": lobby.call_deferred("lessons")
 		"to_paddle": lobby.call_deferred("paddle")
+		"to_coach": lobby.call_deferred("coach")
+		"check":
+			var c := _paddle_check_text()
+			if Perf.on and view.xr:
+				view._log_line("PADDLE CHECK | " + c)   # to compare, early and late in a session
+		"to_records":
+			_records_from = page
+			lobby.call_deferred("records")
+		"records_back": lobby.call_deferred(_records_from)
 		"reset":
 			# The profile back to the DEFAULT paddle: its angle, no twist or reach.
 			settings.profile()["angle"] = int(settings.tilt())
 			settings.profile()["twist"] = 0
+			settings.profile()["turn"] = 0
 			settings.profile()["reach"] = 0
 			settings.save()
 			lobby.call_deferred()
@@ -222,6 +291,7 @@ func _on_pressed(id: String) -> void:
 		"resume":
 			view.hide_menu()
 			view.paused = false
+			desk.pending = {}                # the tablet's taps are in the sim now
 		"rematch", "again":
 			view.hide_menu()
 			view.paused = false
@@ -234,9 +304,12 @@ func _on_pressed(id: String) -> void:
 
 func _start(cfg: SimTypes.MatchConfig, demo: bool) -> void:
 	_new_view().setup(cfg, use_xr, demo)
+	desk.on_new_view(view)              # the coach's marks, the coach's machine
 	_inherit()
 	view.match_over.connect(_on_match_over)
 	view.drill_done.connect(_on_drill_done)
+	view.time_up.connect(_on_time_up)
+	view.time_up.connect(desk.on_time_up)
 	view.pause_requested.connect(_on_pause)
 
 
@@ -299,15 +372,171 @@ func _on_drill_done() -> void:
 	view.show_menu(m)
 
 
+# --- The paddle check (drift, ADR-015) ------------------------------------------------
+
+func _paddle_check_text() -> String:
+	if view == null or view.xr == null:
+		return "IN THE HEADSET ONLY"
+	var c: Array[float] = view.xr.paddle_check()
+	return "%.1f CM UP, %.1f DEGREES OFF" % [c[0], c[1]]
+
+
+func _process(_delta: float) -> void:
+	# The PADDLE page's check, read live while it's open.
+	if page == "paddle" and menu and not menu.row("check").is_empty():
+		var r: Dictionary = menu.row("check")
+		r["label"] = "CHECK: " + _paddle_check_text()
+		menu.refresh()
+
+
+# --- The coach companion (ADR-023, design/COACHING.md) ---------------------------------
+
+var desk: CoachDesk                  ## the coach's side: CoachDesk does the work
+var coach: Coach:
+	get: return desk.coach if desk else null
+
+
+func _coach_on(on: bool) -> void:
+	if desk == null:
+		desk = CoachDesk.new(self)
+		add_child(desk)
+	desk.set_on(on)
+
+
+func coach_state() -> Dictionary:
+	return desk.state()
+
+
+func _on_coach(msg: Dictionary) -> void:
+	desk.handle(msg)
+
+
+# --- Timed runs and records (ADR-022) ----------------------------------------------------
+
+var _records_from := "partner"       ## the page RECORDS goes back to
+
+
+## The clock ran out: the score kept, where it places, and the last few.
+func _on_time_up(score: int, good: int, best_streak: int) -> void:
+	var name := Settings.run_name(view.sim.drill)
+	var place := settings.add_run(name, score, good, best_streak, Time.get_datetime_string_from_system().replace("T", " ").left(16))
+	settings.save()
+	var m := Menu3D.new()
+	m.title = "TIME!   SCORE %d" % score
+	if place[0] == 1 and place[1] > 1:
+		m.add_row("info_best", "NEW BEST!")
+	else:
+		m.add_row("info_best", "BEST %d" % int(settings.best_runs(name, 1)[0][0]) + ("" if place[1] == 1 else "   YOU PLACED %d OF %d" % place))
+	m.add_row("info_good", "%d GOOD   LONGEST STREAK %d" % [good, best_streak])
+	m.add_row("info_recent", "LAST RUNS   " + "  ".join(settings.recent_scores(name).map(func(v: int) -> String: return str(v))))
+	m.add_row("again", "AGAIN")
+	m.add_row("lobby", "MENU")
+	m.pressed.connect(_on_pressed)
+	view.show_menu(m)
+
+
+## RECORDS: the drill and level set on the page you came from, each timed
+## MODE's best runs and its last few scores.
+func _records_menu() -> Menu3D:
+	var m := Menu3D.new()
+	var cfg := settings.machine_config() if _records_from == "machine" else settings.partner_config()
+	var d: Drill = cfg.drill
+	m.title = "RECORDS: " + d.mode_name() + (" TARGETS" if d.targets else "")
+	var any := false
+	for t in range(1, Drill.TIMES.size()):
+		d.time_limit = Drill.TIMES[t] * K.TICK_HZ
+		var name := Settings.run_name(d)
+		var best := settings.best_runs(name, 3)
+		if best.is_empty():
+			continue
+		any = true
+		var tops := "  ".join(best.map(func(r: Array) -> String: return str(int(r[0]))))
+		m.add_row("info_%d" % t, "%s   BEST %s" % [Drill.TIME_NAMES[t], tops])
+		var recent := settings.recent_scores(name)
+		m.add_row("info_r%d" % t, "      LAST %s   (%d RUNS)" % ["  ".join(recent.map(func(v: int) -> String: return str(v))),
+			(settings.records[name] as Array).size()])
+	if not any:
+		m.add_row("info_none", "NO TIMED RUNS YET: SET MODE TO 1, 2 OR 3 MIN")
+	m.add_row("records_back", "BACK")
+	return m
+
+
 func _on_pause() -> void:
 	view.paused = true
 	var m := Menu3D.new()
 	m.title = "PAUSED"
 	m.add_row("resume", "RESUME")
 	m.add_row("again", "RESTART")
+	if Settings.dev_tools():
+		m.add_row("to_tune", "TUNING")
 	m.add_row("lobby", "MENU")
 	m.pressed.connect(_on_pressed)
 	view.show_menu(m)
+	if view.sim.drill and view.sim.drill.goal == 0:
+		view.show_tablet(desk)           # the coach tablet, beside it (C-22)
+
+
+# --- Developer tuning (ADR-020) --------------------------------------------------------
+
+var _tune_steps := {}                ## tunable id -> the raw values its row steps through
+
+
+## The TUNING pages: the groups (`group` ""), or one group's numbers. A
+## value with a * differs from the source's.
+func _tune_menu(group: String) -> Menu3D:
+	var m := Menu3D.new()
+	if group == "":
+		m.title = "TUNING"
+		for g in Tune.GROUPS:
+			var n := Tune.in_group(g).filter(func(e: Array) -> bool: return Tune.changed(e[0])).size()
+			m.add_row("tune_" + g, g + ("   *%d" % n if n > 0 else ""))
+		m.add_row("tune_reset:", "RESET ALL")
+	else:
+		m.title = "TUNING: " + group
+		for e in Tune.in_group(group):
+			var steps := Tune.steps(e[0])
+			_tune_steps[e[0]] = steps
+			var dflt := Tune.default_of(e[0])
+			var names := steps.map(func(v: int) -> String: return Tune.text(e[0], v) + ("" if v == dflt else " *"))
+			m.add_row("tune:" + e[0], e[2], names, steps.find(Tune.value(e[0])))
+		m.add_row("tune_reset:" + group, "RESET " + group)
+	if _playing():
+		m.add_row("resume", "RESUME")
+	m.add_row("tune_back:" + group, "BACK")
+	return m
+
+
+## A match or drill is on (paused), not the lobby.
+func _playing() -> bool:
+	return view != null and not view.spectate
+
+
+func _tune_pressed(id: String) -> void:
+	var to := ""                     # the TUNING page to show next
+	if id.begins_with("tune_reset:"):
+		var g := id.trim_prefix("tune_reset:")
+		Tune.reset(g)
+		Tune.save()
+		to = "tune_" + g if g != "" else "tune"
+	elif id.begins_with("tune_back:"):
+		if id == "tune_back:":
+			if _playing():
+				_on_pause()
+			else:
+				lobby.call_deferred("main")
+			return
+		to = "tune"
+	else:
+		to = id                      # "to_tune" or "tune_GROUP"
+		if to == "to_tune":
+			to = "tune"
+	if _playing():
+		var m := _page(to)
+		m.changed.connect(_on_changed)
+		m.pressed.connect(_on_pressed)
+		view.show_menu(m)
+	else:
+		lobby.call_deferred(to)
 
 
 static func _degrees(values: Array) -> Array:

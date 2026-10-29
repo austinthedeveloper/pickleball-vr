@@ -20,6 +20,7 @@ var left_handed := false
 var paddle_tilt := 0.0               ## degrees, the face tipped forward in the hand
 var paddle_twist := 0.0              ## degrees, the face turned about the handle (profiles, ADR-015)
 var paddle_reach := 0.0              ## metres, the paddle slid out along its handle
+var paddle_turn := 0.0               ## degrees, the face swung left or right (profiles)
 
 var _prev_head := Vector3.ZERO
 var _head := Vector3.ZERO
@@ -42,6 +43,11 @@ var nav := Vector2i.ZERO
 var _click_was := false
 var _nav_was := Vector2i.ZERO
 var laser: MeshInstance3D
+## How well the headset sees the paddle's controller (drift, ADR-015):
+## frames at OpenXR's NONE, LOW and HIGH tracking since last taken. A
+## controller hidden in an accessory falls back on its own sensors, LOW,
+## and that's when a paddle drifts.
+var track_counts := [0, 0, 0]
 
 
 func _ready() -> void:
@@ -58,7 +64,7 @@ func _ready() -> void:
 	paddle_hand = left if left_handed else right
 	free_hand = right if left_handed else left
 	paddle = PaddleMesh.new()
-	paddle.transform = grip(paddle_tilt, paddle_twist, paddle_reach)
+	paddle.transform = grip(paddle_tilt, paddle_twist, paddle_reach, paddle_turn)
 	paddle_hand.add_child(paddle)
 	held_ball = MeshInstance3D.new()
 	var sm := SphereMesh.new()
@@ -90,13 +96,16 @@ func _ready() -> void:
 ## The paddle's place in the hand: tipped forward by `tilt` about the
 ## normal's axis (the face stays square), turned by `twist` about the
 ## handle, and slid `reach` out along it (an accessory's longer grip).
-static func grip(tilt: float, twist: float, reach: float) -> Transform3D:
-	var b := Basis(Vector3.RIGHT, -deg_to_rad(tilt)) * Basis(Vector3.BACK, deg_to_rad(twist))
+static func grip(tilt: float, twist: float, reach: float, turn := 0.0) -> Transform3D:
+	var b := Basis(Vector3.UP, deg_to_rad(turn)) * Basis(Vector3.RIGHT, -deg_to_rad(tilt)) \
+		* Basis(Vector3.BACK, deg_to_rad(twist))
 	return Transform3D(b, b * Vector3(0, 0, -reach))
 
 
 ## Locomotion and turning from the sticks, then this frame's poses.
 func begin_frame(delta: float) -> void:
+	var pose := paddle_hand.get_pose()
+	track_counts[clampi(pose.tracking_confidence, 0, 2) if pose else 0] += 1
 	var move := free_hand.get_vector2("primary")
 	if move.length() > DEADZONE:
 		var yaw := camera.global_transform.basis.get_euler().y
@@ -194,6 +203,25 @@ func head_position() -> Vector3:
 ## True once the headset reports a real pose (the head above the floor).
 func tracking() -> bool:
 	return camera.position.y > 0.3
+
+
+## The tracking counts since the last call, and a fresh count.
+func take_tracking() -> Array:
+	var t: Array = track_counts
+	track_counts = [0, 0, 0]
+	return t
+
+
+## Lay the paddle's face flat on the floor: how far up its lower side is
+## and how far off level the face is. Rigid to the controller, so a change
+## between checks is the controller moving in its mount, or the tracking.
+## [cm up, degrees off].
+func paddle_check() -> Array[float]:
+	var t := paddle.global_transform
+	var n := t.basis.x.normalized()
+	var tilt := rad_to_deg(minf(n.angle_to(Vector3.UP), n.angle_to(Vector3.DOWN)))
+	var up := (t * PaddleMesh.FACE_CENTER).y - PaddleMesh.FACE_T / 2
+	return [snappedf(up * 100.0, 0.1), snappedf(tilt, 0.1)]
 
 
 ## The menu laser, from the free hand.
