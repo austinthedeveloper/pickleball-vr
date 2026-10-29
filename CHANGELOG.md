@@ -6,6 +6,12 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-28
+
+The pranks update. Hand the coach's phone to a kid and let them loose:
+sounds, silly balls and paddles, weather, a dancing partner, their voice
+in your ears and their face on the partner.
+
 ### Added
 - **PRANKS:** hand the coach's phone to a kid. A soundboard (airhorn,
   boo, sad trombone, whoopee...), the announcer calling OUT! on a good

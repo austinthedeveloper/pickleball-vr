@@ -28,6 +28,9 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 
 ## Releases
 
+- **v0.4.0** (2026-10-28): the pranks update. The coach page's PRANKS
+  tab: a soundboard, silly balls and paddles, weather, the partner's
+  antics, a voice in your headset, a selfie on the partner; MERCY.
 - **v0.3.0** (2026-10-28): the coaching update. The coach companion and
   its tablet in the headset, the coach's ball machine, rigged bodies,
   dartboard targets, passthrough, timed runs, TUNING, paddle profiles.
