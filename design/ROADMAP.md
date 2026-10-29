@@ -127,6 +127,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-70 | Any rig in the Body; a Rocketbox partner on trial: PARTNER LOOK NEW (ADR-018) | `feature/cld-vr-court-assets` | Ready to test: compare CLASSIC and NEW |
 | VR-71 | The CPUs' paddle stays in the hand (known issue 9) | `feature/cld-vr-court-assets` | Done (test) |
 | VR-72 | Court grain, grass, chain-link fence and windscreens, clumped trees in two draws (ADR-012) | `feature/cld-vr-court-assets` | Ready to test |
+| VR-73 | The crowd as people: seated, dressed, arms up to cheer, two draws (ADR-012) | `feature/cld-vr-court-assets` | Ready to test |
 
 ## Next
 

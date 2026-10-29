@@ -21,6 +21,8 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 - **The court's surroundings:** the court has a sand-grain finish, the
   grass has texture, the fence is chain link with dark windscreens behind
   the baselines, and the trees are fuller.
+- **The crowd are people:** seated in their own shirts, with arms, legs
+  and hair, and they throw their arms up for a great rally.
 - **A paddle that looks like one:** a carbon face with a colour panel and
   a "94", a proper edge and a wound grip.
 

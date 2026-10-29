@@ -124,3 +124,11 @@ CPUs' blue paddles have it too.
   darker; palms get seven fronds. All the trunks are one MultiMesh and all
   the clumps another, so a ring of trees is two draw calls (it was two
   per tree).
+- **The crowd:** people, not capsules. Everyone is one low-poly
+  spectator mesh: a seated person with legs and shoes, a torso, arms on
+  their knees, a neck, a head with hair. Each wears their own shirt, skin,
+  trousers and hair (`crowd.gdshader` reads the part from UV.x and the
+  person from the MultiMesh's custom data). Those cheering hardest swap
+  to a second mesh with their arms up. Everyone is still two draw calls,
+  and about 350 triangles a person; the old default capsule and sphere
+  meshes were thousands each.
