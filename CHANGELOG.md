@@ -6,6 +6,12 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-29
+
+The coach-from-anywhere update. Your coach can watch and talk to you from
+anywhere with the internet, a more realistic practice partner, and a
+better-looking court.
+
 ### Fixed
 - The other players' paddle no longer floats away from their hand in some
   wind-ups.

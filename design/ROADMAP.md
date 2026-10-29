@@ -38,6 +38,9 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 
 ## Releases
 
+- **v0.5.0** (2026-10-29): COACH FROM ANYWHERE through the relay (the
+  room is the key), PARTNER LOOK (Rocketbox), a real net, the court's
+  surroundings, a seated crowd, a proper paddle.
 - **v0.4.1** (2026-10-28): PRANKS voice messages from an iPhone (SEND IT).
 - **v0.4.0** (2026-10-28): the pranks update. The coach page's PRANKS
   tab: a soundboard, silly balls and paddles, weather, the partner's
