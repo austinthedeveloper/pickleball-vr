@@ -180,6 +180,7 @@ func _page(id: String) -> Menu3D:
 				m.add_row("info_n", "COACHES CONNECTED   %d" % coach.coaches())
 			elif settings.coach:
 				m.add_row("info_err", "CAN'T START: NO NETWORK?")
+			m.add_row("pranks", "PRANKS FROM THE PHONE", OFF_ON, 1 if settings.pranks else 0)
 			m.add_row("back", "BACK")
 		"tune":
 			m = _tune_menu("")
@@ -217,6 +218,10 @@ func _on_changed(id: String, index: int) -> void:
 		"win_by_2": settings.win_by_2 = index == 1
 		"hand": settings.left_handed = index == 1
 		"passthrough": settings.passthrough = index == 1
+		"pranks":
+			settings.pranks = index == 1
+			if not settings.pranks:
+				desk._clear_pranks()
 		"coach":
 			settings.coach = index == 1
 			_coach_on(settings.coach)
@@ -292,6 +297,10 @@ func _on_pressed(id: String) -> void:
 			view.hide_menu()
 			view.paused = false
 			desk.pending = {}                # the tablet's taps are in the sim now
+		"mercy":
+			desk.mercy()
+			view.hide_menu()
+			view.paused = false
 		"rematch", "again":
 			view.hide_menu()
 			view.paused = false
@@ -470,6 +479,8 @@ func _on_pause() -> void:
 	if Settings.dev_tools():
 		m.add_row("to_tune", "TUNING")
 	m.add_row("lobby", "MENU")
+	if coach and settings.pranks:
+		m.add_row("mercy", "MERCY: NO PRANKS FOR A MINUTE")
 	m.pressed.connect(_on_pressed)
 	view.show_menu(m)
 	if view.sim.drill and view.sim.drill.goal == 0:

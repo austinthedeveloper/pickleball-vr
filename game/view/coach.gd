@@ -17,6 +17,7 @@ const PORT := 8094
 const PAGE := "res://coach/index.html"
 const MAX_REQUEST := 8192
 const HTTP_TIMEOUT := 3.0            ## a request that doesn't arrive whole, dropped
+const INBOUND := 1 << 20             ## a coach's biggest message, bytes: 8 s of voice, base64
 
 signal command(msg: Dictionary)      ## an authorised coach's message
 
@@ -109,6 +110,7 @@ func _respond(line: String) -> PackedByteArray:
 func _serve_sockets() -> void:
 	while _ws.is_connection_available():
 		var p := WebSocketPeer.new()
+		p.inbound_buffer_size = INBOUND     # a voice clip or a photo in one message (ADR-025)
 		if p.accept_stream(_ws.take_connection()) == OK:
 			_peers.append([p, false])
 	for e in _peers.duplicate():
@@ -141,4 +143,4 @@ func broadcast(msg: Dictionary) -> void:
 
 func _send(p: WebSocketPeer, msg: Dictionary) -> void:
 	if p.get_ready_state() == WebSocketPeer.STATE_OPEN:
-		p.send_text(JSON.stringify(msg))
+		p.send_text(JSON.stringify(msg, "", false))   # in order: the PRANKS buttons keep theirs

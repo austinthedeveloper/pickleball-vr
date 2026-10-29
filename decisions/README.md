@@ -30,5 +30,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [022](ADR-022-timed-runs.md) | Timed runs and records |
 | [023](ADR-023-coach-companion.md) | The coach companion: a web page served by the headset |
 | [024](ADR-024-coaching-suite.md) | The coaching suite |
+| [025](ADR-025-pranks.md) | Pranks from the coach's phone |
 
-Next: ADR-025.
+Next: ADR-026.

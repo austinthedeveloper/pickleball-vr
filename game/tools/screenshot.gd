@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti]
 extends SceneTree
 
 var frames := 240
@@ -8,6 +8,7 @@ var n := 0
 var _focus := -1.0
 var _tick := -1                      ## tick=N: shoot when the sim reaches it
 var _view: MatchView
+var _prank_items := PackedStringArray()   ## put on once the scene is built
 
 
 func _initialize() -> void:
@@ -66,9 +67,39 @@ func _initialize() -> void:
 		if a.begins_with("focus="):
 			_focus = float(a.trim_prefix("focus="))
 	_view = view
+	for a in args:
+		if a.begins_with("prank="):
+			_prank_items = a.trim_prefix("prank=").split(",")
 	var cam = _vec(args, "cam")
 	if cam != null and view.flat:
 		view.flat.pin(cam, _vec(args, "look") if _vec(args, "look") != null else Vector3.ZERO)
+
+
+## Pranks (ADR-025) on for the shot. The face is a drawn smiley, not a
+## photo of anyone.
+static func _pranks(view: MatchView, items: PackedStringArray) -> void:
+	for it in items:
+		var kv := it.split(":")
+		match kv[0]:
+			"ball": view.pranks.set_ball(kv[1])
+			"paddle": view.pranks.set_paddle(kv[1])
+			"weather": view.pranks.set_weather(kv[1])
+			"confetti": view.pranks.confetti()
+			"antic":
+				for av in view.avatars:
+					av.antic(kv[1], 999.0)
+			"face":
+				var img := Image.create(128, 128, false, Image.FORMAT_RGB8)
+				img.fill(Color(0.3, 0.6, 0.95))
+				for y in 128:
+					for x in 128:
+						var d := Vector2(x - 64, y - 64)
+						if d.length() < 58:
+							img.set_pixel(x, y, Color(1.0, 0.82, 0.2))
+						if (Vector2(x - 44, y - 50).length() < 8 or Vector2(x - 84, y - 50).length() < 8) \
+								or (d.length() > 30 and d.length() < 38 and y > 72):
+							img.set_pixel(x, y, Color(0.15, 0.1, 0.05))
+				view.pranks.set_face(img.save_jpg_to_buffer())
 
 
 ## cam=x,y,z and look=x,y,z (metres) pin the camera for a close-up.
@@ -82,6 +113,8 @@ static func _vec(args: PackedStringArray, key: String) -> Variant:
 
 func _process(_delta: float) -> bool:
 	n += 1
+	if n == 3 and _view and not _prank_items.is_empty():
+		_pranks(_view, _prank_items)
 	if n == 5 and _focus >= 0.0 and _view:
 		_view.world.set_focus(_focus)       # once the scene is built
 		_view.crowd.set_focus(_focus)

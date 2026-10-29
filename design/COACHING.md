@@ -36,6 +36,7 @@ deterministic: a rally can be re-run exactly.
 | C-20 | Remote coaching over the internet | Later | Needs a relay server: cost and hosting |
 | C-21 | The coach's ball machine | Built (played: "placed exactly where I wanted") | START THE MACHINE; tap Machine (their side) and Bounce (yours); speed 3-20 m/s, spin from backspin to topspin, height over the net, a ball every 1.25-8 s. `CMD_MACHINE`; ADR-024 |
 | C-22 | The coach tablet in the headset | Built | Beside PAUSED in practice drills: the run, the court (tap: target, feed, machine, bounce), insights, forehand/backhand, each drill's own controls: a partner drill's pace and size with TARGET and FEED, or the machine's steppers and START with MACHINE and BOUNCE. `view/coach_tablet.gd`, through CoachDesk; works with COACH MODE off |
+| C-23 | Pranks: hand the phone to a kid | Built | A PRANKS tab: a soundboard and the announcer's calls; silly balls (duck, watermelon, pea, beach ball, their face) and paddles (frying pan, baguette, fly swatter, foam hand); snow, bubbles, confetti; the partner dances, flexes, waves, jumps; HOLD TO TALK in four voices; a selfie on the partner and the bullseye. Cooldowns, MERCY on the pause menu, an off switch on COACH. `view/pranks.gd`; ADR-025 |
 
 ## Built in one go (2026-10-28, ADR-024)
 

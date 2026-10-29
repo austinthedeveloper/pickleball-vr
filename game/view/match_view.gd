@@ -58,6 +58,7 @@ var cue_label: Label3D               ## a coach's cue, over the net (C-7)
 var challenge_label: Label3D         ## a coach's challenge and how it's going (C-12)
 var marks: Node3D                    ## a coach's zones and lines on the court (C-14)
 var tablet: CoachTablet              ## the coach tablet beside PAUSED (C-22)
+var pranks: Pranks                   ## what a kid on the coach's phone does to you (ADR-025)
 const MAX_MARKS := 8
 var _path: Array = []                ## the ball since the last hit: [x, y, z] in m, every PATH_EVERY ticks (C-17)
 const PATH_EVERY := 3
@@ -160,6 +161,9 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	add_child(announcer)
 	if sim.drill:
 		_practice_court()
+	pranks = Pranks.new()
+	pranks.view = self
+	add_child(pranks)
 	if spectate:
 		if flat:
 			flat.recenter(SPECTATE)
@@ -731,6 +735,7 @@ func _on_event(e: Array) -> void:
 			if e[1] == 0 and Perf.on and not demo:     # your swings, not the lobby's bot
 				_log_swing()
 			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf())
+			pranks.on_hit(at, e[1] == 0)
 			if xr and e[1] == 0:
 				# Crisp from the sweet spot, a duller, longer buzz off the rim.
 				var off := clampf(sim.last_offset / float(K.PADDLE_FACE_RADIUS), 0.0, 1.0)
@@ -738,6 +743,7 @@ func _on_event(e: Array) -> void:
 				xr.pulse(strength * (1.0 - 0.4 * off), HAPTIC_MS / 1000.0 + 0.06 * off)
 		K.EVENT_BOUNCE:
 			_play("1_bounce", World.m(e[1], 0, e[2]), 1.0, -4.0)
+			pranks.on_bounce(World.m(e[1], 0, e[2]))
 			if not _shot.is_empty() and not _shot.has("x") and e[2] < 0:
 				_shot["x"] = snappedf(e[1] / 1e6, 0.01)       # where your ball landed on their side
 				_shot["z"] = snappedf(e[2] / 1e6, 0.01)
@@ -803,6 +809,7 @@ func _draw(delta: float) -> void:
 	if floor_target == null and sim.drill and sim.drill.targets:
 		floor_target = FloorTarget.new()     # a coach put a target down (C-8)
 		add_child(floor_target)
+		floor_target.set_face(pranks.face)
 	if floor_target:
 		floor_target.show_from(sim, delta)
 	_cue_fade(delta)

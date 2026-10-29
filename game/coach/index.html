@@ -87,6 +87,25 @@
   #rSide { max-height: 22vh; }
   #replay .inner { max-width: 640px; margin: 0 auto; }
   #report { display: none; }
+  /* PRANKS (ADR-025): big buttons for small hands. */
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; background: var(--panel); padding: 4px; border-radius: 12px; border: 1px solid var(--line); }
+  .tabs button { border: 0; background: transparent; color: var(--dim); padding: 10px; font-size: 15px; }
+  .tabs button.on { background: var(--panel2); color: var(--text); }
+  .tabs button.on[data-t="pranks"] { background: #5b2a86; color: #fff; }
+  .board { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .board button { padding: 16px 6px; font-size: 16px; border-radius: 14px; border: 0; color: #fff; }
+  .board button .e { display: block; font-size: 30px; line-height: 1.1; margin-bottom: 4px; }
+  .board button.cool { opacity: .4; }
+  .board.calls button { background: #2a355a; padding: 12px 6px; }
+  .board.calls { grid-template-columns: repeat(3, 1fr); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips button { padding: 10px 12px; font-size: 14px; border-radius: 999px; }
+  .chips button.on { background: #5b2a86; border-color: #a66bff; color: #fff; }
+  .chips button.cool { opacity: .4; }
+  #bTalk { width: 100%; padding: 22px 6px; font-size: 18px; border-radius: 16px; background: #5b2a86; border-color: #a66bff; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
+  #bTalk.rec { background: var(--bad); border-color: var(--bad); }
+  #selfie { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; display: block; margin: 0 auto 10px; }
+  .offnote { background: #3a1616; color: var(--bad); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-bottom: 12px; text-align: center; font-weight: 700; }
   @media (max-width: 420px) { .stat b { font-size: 22px; } .buttons { grid-template-columns: repeat(2, 1fr); } .cues { grid-template-columns: repeat(2, 1fr); } }
   @media print {
     body { background: #fff; color: #111; max-width: none; }
@@ -112,6 +131,9 @@
     <h1>PICKLEBALL '94 COACH</h1>
     <span class="pill" id="where">—</span>
   </div>
+  <div class="tabs" id="tabs"><button data-t="coach" class="on">Coach</button><button data-t="pranks">Pranks</button></div>
+
+  <div id="coachView">
 
   <div class="card">
     <div class="row" style="margin-top:0">
@@ -287,6 +309,50 @@
     </div>
     <div class="hint" id="copyNote"></div>
   </div>
+  </div>
+
+  <div id="pranksView" class="hidden">
+    <div class="offnote hidden" id="prankOff"></div>
+    <div class="card">
+      <h2>Sounds</h2>
+      <div class="board" id="sounds"></div>
+      <h2 style="margin-top:14px">The announcer says</h2>
+      <div class="board calls" id="calls"></div>
+    </div>
+    <div class="card">
+      <h2>Talk to them</h2>
+      <div class="seg" id="voiceKind" style="margin-bottom:10px">
+        <button data-v="normal" class="on">Normal</button><button data-v="robot">Robot</button><button data-v="chipmunk">Chipmunk</button><button data-v="monster">Monster</button>
+      </div>
+      <button id="bTalk">HOLD TO TALK</button>
+      <input type="file" id="voiceFile" accept="audio/*,video/*" capture class="hidden">
+      <div class="hint" id="talkNote"></div>
+    </div>
+    <div class="card">
+      <h2>The partner</h2>
+      <div class="chips" id="antics"></div>
+      <div class="muted" id="anticNote"></div>
+    </div>
+    <div class="card">
+      <h2>Silly ball</h2>
+      <div class="chips" id="balls"></div>
+      <h2 style="margin-top:14px">Silly paddle</h2>
+      <div class="chips" id="paddles"></div>
+      <h2 style="margin-top:14px">Weather</h2>
+      <div class="chips" id="weathers"></div>
+      <div class="row"><button class="go" id="bConfetti">🎊 CONFETTI!</button></div>
+    </div>
+    <div class="card">
+      <h2>Your face on the partner</h2>
+      <img id="selfie" class="hidden" alt="Your photo">
+      <div class="row" style="margin-top:0">
+        <button class="go" id="bSelfie">📸 TAKE A SELFIE</button>
+        <button class="small shrink" id="bFaceOff">TAKE IT OFF</button>
+      </div>
+      <input type="file" id="selfieFile" accept="image/*" capture="user" class="hidden">
+      <div class="muted">It goes on the partner's face and the bullseye. Pick THEIR FACE as the ball, too.</div>
+    </div>
+  </div>
 </div>
 
 <div id="replay" class="hidden">
@@ -386,6 +452,7 @@ function onState(s) {
   drawSliders(s.tunes);
   drawWorkout(s);
   drawRecords(s.records);
+  drawPranks(s.pranks);
   drawCourt();
 }
 
@@ -790,7 +857,175 @@ function printReport() {
   window.print();
 }
 
+// --- Pranks (ADR-025) -------------------------------------------------------------
+// The headset keeps the lists and the rules (what's allowed, how often); this
+// draws them as big buttons and turns a voice clip into what the headset plays.
+const EMOJI = { airhorn: "📯", boo: "👎", cheer: "🎉", rimshot: "🥁", trombone: "🎺", boing: "🦘", whoopee: "💨", slide: "🎶",
+  dance: "🕺", flex: "💪", wave: "👋", jump: "🙌", duck: "🦆", melon: "🍉", pea: "🫛", beach: "🏖️", face: "😜",
+  pan: "🍳", baguette: "🥖", swatter: "🪰", hand: "☝️", snow: "❄️", bubbles: "🫧" };
+const SOUND_COLORS = ["#d64545", "#2f6fd6", "#2e9e5b", "#c47a10", "#8a3fd1", "#d13f8e", "#5d6b8a", "#138a8a"];
+const COOL = { sound: 1200, call: 1500, antic: 2500, confetti: 3000 };
+const VOICE_RATE = 16000;
+let voiceKind = "normal", recorder = null, recChunks = [], recStream = null;
+
+function prank(what, id, kind) {
+  send({ type: "prank", what, id });
+  if (!kind) return;
+  // Grey the group for as long as the headset won't take another.
+  document.querySelectorAll(`[data-cool="${kind}"]`).forEach((b) => b.classList.add("cool"));
+  setTimeout(() => document.querySelectorAll(`[data-cool="${kind}"]`).forEach((b) => b.classList.remove("cool")), COOL[kind]);
+}
+
+function drawPranks(p) {
+  if (!p) return;
+  const off = !p.on ? "Pranks are turned off on the headset (COACH page)." :
+    p.mercy > 0 ? `MERCY! No pranks for ${p.mercy} s.` : "";
+  $("prankOff").textContent = off;
+  $("prankOff").classList.toggle("hidden", !off);
+  const board = (el, items, what, kind, colors) => {
+    const want = Object.keys(items).join("|");
+    if (el.dataset.k === want) return;
+    el.dataset.k = want;
+    el.innerHTML = Object.entries(items).map(([id, text], i) =>
+      `<button data-id="${esc(id)}" data-cool="${kind}" ${colors ? `style="background:${colors[i % colors.length]}"` : ""}>` +
+      `${EMOJI[id] ? `<span class="e">${EMOJI[id]}</span>` : ""}${esc(title(text))}</button>`).join("");
+    el.querySelectorAll("button").forEach((b) => b.onclick = () => prank(what, b.dataset.id, kind));
+  };
+  board($("sounds"), p.sounds, "sound", "sound", SOUND_COLORS);
+  board($("calls"), p.calls, "call", "call");
+  const chips = (el, items, what, on, kind) => {
+    const want = Object.keys(items).join("|") + (kind || "");
+    if (el.dataset.k !== want) {
+      el.dataset.k = want;
+      el.innerHTML = Object.entries(items).map(([id, text]) =>
+        `<button data-id="${esc(id)}" ${kind ? `data-cool="${kind}"` : ""}>${EMOJI[id] ? EMOJI[id] + " " : ""}${esc(title(text))}</button>`).join("");
+      el.querySelectorAll("button").forEach((b) => b.onclick = () => prank(what, b.dataset.id, kind));
+    }
+    if (on !== undefined) el.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.id === on));
+  };
+  chips($("antics"), p.antics, "antic", undefined, "antic");
+  $("anticNote").textContent = p.partner ? "" : "Works when there's a partner: start a PRACTICE PARTNER drill.";
+  chips($("balls"), p.balls, "ball", p.ball);
+  $("balls").querySelector('[data-id="face"]').disabled = !p.face;
+  chips($("paddles"), p.paddles, "paddle", p.paddle);
+  chips($("weathers"), p.weathers, "weather", p.weather);
+  $("bFaceOff").disabled = !p.face;
+  if (!p.face) $("selfie").classList.add("hidden");
+}
+
+// A clip: decoded, mixed to mono, given its voice, trimmed, at VOICE_RATE,
+// as 16-bit PCM in base64 (the headset can't decode a phone's formats).
+async function sendVoice(blob) {
+  $("talkNote").textContent = "Sending…";
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    const buf = await blob.arrayBuffer();
+    const audio = await new Promise((ok, no) => ctx.decodeAudioData(buf, ok, no));
+    const sr = audio.sampleRate, n = audio.length;
+    let x = new Float32Array(n);
+    for (let c = 0; c < audio.numberOfChannels; c++) {
+      const d = audio.getChannelData(c);
+      for (let i = 0; i < n; i++) x[i] += d[i] / audio.numberOfChannels;
+    }
+    if (ctx.close) ctx.close();
+    // Trim the quiet ends.
+    let a = 0, b = n - 1;
+    while (a < b && Math.abs(x[a]) < 0.02) a++;
+    while (b > a && Math.abs(x[b]) < 0.02) b--;
+    x = x.subarray(Math.max(0, a - sr * 0.05), Math.min(n, b + sr * 0.1));
+    const speed = { chipmunk: 1.55, monster: 0.7 }[voiceKind] || 1.0;
+    const step = sr * speed / VOICE_RATE;
+    const len = Math.min(Math.floor(x.length / step), VOICE_RATE * state.pranks.voice_seconds);
+    const out = new Float32Array(len);
+    for (let i = 0; i < len; i++) {
+      const f = i * step, j = Math.floor(f), k = f - j;
+      out[i] = (x[j] || 0) * (1 - k) + (x[j + 1] || 0) * k;
+    }
+    if (voiceKind === "robot") for (let i = 0; i < len; i++) out[i] *= Math.sin(2 * Math.PI * 55 * i / VOICE_RATE) * 1.6;
+    if (voiceKind === "monster") for (let i = 0; i < len; i++) out[i] = Math.tanh(out[i] * 2.5);
+    let peak = 0.0001;
+    for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(out[i]));
+    const pcm = new Int16Array(len);
+    for (let i = 0; i < len; i++) pcm[i] = Math.max(-32767, Math.min(32767, out[i] / peak * 0.9 * 32767));
+    const bytes = new Uint8Array(pcm.buffer);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    send({ type: "prank", what: "voice", rate: VOICE_RATE, pcm: btoa(bin) });
+    $("talkNote").textContent = `Sent: ${(len / VOICE_RATE).toFixed(1)} s.`;
+  } catch (e) {
+    $("talkNote").textContent = "Couldn't read that recording. Try again?";
+  }
+}
+
+const canMic = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+async function talkStart(ev) {
+  ev.preventDefault();
+  if (!canMic()) return;
+  try {
+    recStream = recStream || await navigator.mediaDevices.getUserMedia({ audio: true });
+    recChunks = [];
+    recorder = new MediaRecorder(recStream);
+    recorder.ondataavailable = (e) => recChunks.push(e.data);
+    recorder.onstop = () => sendVoice(new Blob(recChunks, { type: recorder.mimeType }));
+    recorder.start();
+    $("bTalk").classList.add("rec");
+    $("bTalk").textContent = "RECORDING… LET GO TO SEND";
+    setTimeout(() => talkStop(), state.pranks.voice_seconds * 1000);
+  } catch (e) {
+    $("talkNote").textContent = "The microphone isn't allowed. Tap to record instead.";
+  }
+}
+function talkStop() {
+  if (recorder && recorder.state === "recording") recorder.stop();
+  $("bTalk").classList.remove("rec");
+  $("bTalk").textContent = canMic() ? "HOLD TO TALK" : "🎤 RECORD A MESSAGE";
+}
+
+// A selfie, square and small, as JPEG.
+function sendSelfie(file) {
+  const img = new Image();
+  img.onload = () => {
+    const side = Math.min(img.width, img.height), c = document.createElement("canvas");
+    c.width = c.height = 256;
+    c.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 256, 256);
+    const url = c.toDataURL("image/jpeg", 0.85);
+    $("selfie").src = url;
+    $("selfie").classList.remove("hidden");
+    send({ type: "prank", what: "face", jpg: url.split(",")[1] });
+    URL.revokeObjectURL(img.src);
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+function showTab(t) {
+  document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.t === t));
+  $("coachView").classList.toggle("hidden", t !== "coach");
+  $("pranksView").classList.toggle("hidden", t !== "pranks");
+  store.set("coachTab", t);
+}
+
 // --- Wiring -----------------------------------------------------------------------
+document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => showTab(b.dataset.t));
+showTab(store.get("coachTab") === "pranks" ? "pranks" : "coach");
+document.querySelectorAll("#voiceKind button").forEach((b) => b.onclick = () => {
+  voiceKind = b.dataset.v;
+  document.querySelectorAll("#voiceKind button").forEach((o) => o.classList.toggle("on", o === b));
+});
+talkStop();
+if (canMic()) {
+  $("bTalk").addEventListener("pointerdown", talkStart);
+  ["pointerup", "pointercancel", "pointerleave"].forEach((e) => $("bTalk").addEventListener(e, talkStop));
+} else {
+  // Without HTTPS a page can't open the microphone: the phone's own recorder can.
+  $("bTalk").onclick = () => $("voiceFile").click();
+  $("voiceFile").onchange = () => { if ($("voiceFile").files[0]) sendVoice($("voiceFile").files[0]); $("voiceFile").value = ""; };
+}
+$("bConfetti").dataset.cool = "confetti";
+$("bConfetti").onclick = () => prank("confetti", "", "confetti");
+$("bSelfie").onclick = () => $("selfieFile").click();
+$("selfieFile").onchange = () => { if ($("selfieFile").files[0]) sendSelfie($("selfieFile").files[0]); $("selfieFile").value = ""; };
+$("bFaceOff").onclick = () => send({ type: "prank", what: "face_clear" });
 document.querySelectorAll("select[data-key]").forEach((sel) =>
   sel.addEventListener("change", () => { send({ type: "set", key: sel.dataset.key, value: parseInt(sel.value, 10) }); sel.blur(); }));
 $("player").addEventListener("change", () => { send({ type: "player", name: $("player").value }); shots = []; runStart = 0; past = null; $("pastBanner").classList.add("hidden"); drawAnalysis(); drawShots(); });
