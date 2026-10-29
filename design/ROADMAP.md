@@ -110,6 +110,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-63 | PRANKS: soundboard, silly balls and paddles, weather, antics, voice, selfie; MERCY (ADR-025, C-23) | `feature/cld-vr-pranks` | Played: "no notes" |
 | VR-64 | PRANKS voice from an iPhone: a video's sound, caught by playing it (ADR-025) | `feature/cld-vr-iphone-voice` | Played: works, normal and monster |
 | VR-65 | Friends on Meta's ALPHA channel: release key, release builds, upload (design/TEST_CHANNEL.md) | — | Planned: waiting on the lead's Meta account |
+| VR-66 | Remote coaching through the shared relay (C-20; plan in the port kit's design/RELAY.md) | — | Planned: waiting on the lead's Azure sign-in |
 
 ## Phase 1: singles
 
