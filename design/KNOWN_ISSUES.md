@@ -1,12 +1,9 @@
 # Known issues
 
-1. **The XR rig, first session on a Quest 3 (2026-10-27).** The paddle in
-   the hand felt right. Three bugs were found and fixed. The lobby's demo
-   took your controllers, so you played it from the spectator corner and
-   were reset there each point. Its panel was placed before tracking
-   started, so you never saw MATCH SETUP. The held ball sat above the
-   fist and jumped when let go. The sticks, the serve and the menus still
-   need a check.
+1. **Matches in the headset are less played than practice.** Since the
+   first session (2026-10-27) nearly all play has been practice and
+   coaching. The serve, the sticks and doubles in the headset want a
+   session of their own.
 2. **Spin is simple** (ADR-006). The paddle makes spin from its brush,
    but friction never bends the shot's line (no sidespin "hook" off a
    slanted face). The spin axis comes straight from the brush, with no
