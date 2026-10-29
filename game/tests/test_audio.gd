@@ -63,9 +63,12 @@ func test_crowd_cheers_and_settles() -> void:
 	runner.root.add_child(c)
 	c.react(1.0)
 	eq(c.cheer, 1.0, "on its feet")
+	c._process(0.02)
+	check(c.arms_up > Crowd.PER_SIDE, "most throw their arms up: %d" % c.arms_up)
 	for i in 300:
 		c._process(0.02)
 	eq(c.cheer, 0.0, "sits back down")
+	eq(c.arms_up, 0, "arms down again")
 	eq(c.bodies.multimesh.instance_count, Crowd.PER_SIDE * 2, "both sides")
 	c.queue_free()
 

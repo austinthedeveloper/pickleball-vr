@@ -28,3 +28,6 @@
    recording, tap SEND IT and the page plays the video silently to catch
    its sound. The prank sounds are synthesized and
    unheard in the headset yet.
+9. ~~The CPUs' paddle could leave their hand~~ in some wind-ups. Fixed
+   (VR-71): the hand stops at the arm's reach, and
+   `test_the_paddle_never_leaves_the_hand` watches a whole rally.

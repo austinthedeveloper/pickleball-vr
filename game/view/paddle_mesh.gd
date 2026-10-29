@@ -19,18 +19,18 @@ var _skin: Node3D
 
 
 func _ready() -> void:
+	# The faces: raw carbon with the paddle's graphic (face_texture); the
+	# core's edge under the guard.
 	var face := MeshInstance3D.new()
 	face.mesh = _rounded_slab(FACE_W, FACE_H, FACE_T, CORNER)
-	face.material_override = _mat(color, 0.55)
+	var fm := StandardMaterial3D.new()
+	fm.albedo_texture = face_texture(color, accent)
+	fm.roughness = 0.38
+	fm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	face.set_surface_override_material(0, fm)
+	face.set_surface_override_material(1, _mat(Color(0.1, 0.1, 0.11), 0.6))
 	face.position = FACE_CENTER
 	add_child(face)
-	# A stripe across each face, the paddle's "graphic".
-	for s in [-1, 1]:
-		var stripe := MeshInstance3D.new()
-		stripe.mesh = _rounded_slab(FACE_W * 0.82, 0.03, 0.001, 0.012)
-		stripe.material_override = _mat(accent, 0.6)
-		stripe.position = FACE_CENTER + Vector3(s * (FACE_T / 2 + 0.0006), 0, 0.03)
-		add_child(stripe)
 	var guard := MeshInstance3D.new()
 	guard.mesh = _rounded_ring(FACE_W + 0.006, FACE_H + 0.006, FACE_T + 0.006, CORNER + 0.003, 0.007)
 	guard.material_override = _mat(Color(0.1, 0.1, 0.11), 0.4)
@@ -42,23 +42,15 @@ func _ready() -> void:
 	cm.top_radius = 0.0155
 	cm.bottom_radius = 0.017
 	cm.height = HANDLE
-	cm.radial_segments = 10
+	cm.radial_segments = 12
 	grip.mesh = cm
-	grip.material_override = _mat(Color(0.12, 0.12, 0.13), 0.9)
+	var gm := StandardMaterial3D.new()
+	gm.albedo_texture = _grip_texture()
+	gm.roughness = 0.95
+	grip.material_override = gm
 	grip.rotation.x = PI / 2
 	grip.position = Vector3(0, 0, FACE_CENTER.z + FACE_H / 2 + HANDLE / 2 - 0.01)
 	add_child(grip)
-	for k in 4:                          # the wrap's ridges
-		var ring := MeshInstance3D.new()
-		var tm := TorusMesh.new()
-		tm.inner_radius = 0.0155
-		tm.outer_radius = 0.0185
-		tm.rings = 10
-		ring.mesh = tm
-		ring.material_override = _mat(Color(0.2, 0.2, 0.22), 0.9)
-		ring.rotation.x = PI / 2
-		ring.position = grip.position + Vector3(0, 0, -HANDLE / 2 + 0.02 + k * 0.03)
-		add_child(ring)
 	var cap := MeshInstance3D.new()
 	var sm := SphereMesh.new()
 	sm.radius = 0.019
@@ -102,7 +94,9 @@ static func _outline(w: float, h: float, r: float, seg := 6) -> PackedVector2Arr
 	return pts
 
 
-## A slab of thickness t (along x) with that outline.
+## A slab of thickness t (along x) with that outline: surface 0 the two
+## faces (UV across the face, v down toward the handle, the back face
+## mirrored so its graphic reads the same way round), surface 1 the rim.
 static func _rounded_slab(w: float, h: float, t: float, r: float) -> ArrayMesh:
 	var o := _outline(w, h, r)
 	var st := SurfaceTool.new()
@@ -117,7 +111,11 @@ static func _rounded_slab(w: float, h: float, t: float, r: float) -> ArrayMesh:
 			if side < 0:
 				verts = [verts[0], verts[2], verts[1]]
 			for v in verts:
+				st.set_uv(Vector2(0.5 + side * v.y / w, 0.5 + v.z / h))
 				st.add_vertex(v)
+	var mesh := st.commit()
+	st = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i in n:                          # the rim
 		var a := o[i]
 		var b := o[(i + 1) % n]
@@ -126,7 +124,68 @@ static func _rounded_slab(w: float, h: float, t: float, r: float) -> ArrayMesh:
 		for v in [Vector3(-t / 2, a.x, a.y), Vector3(t / 2, a.x, a.y), Vector3(t / 2, b.x, b.y),
 				Vector3(-t / 2, a.x, a.y), Vector3(t / 2, b.x, b.y), Vector3(-t / 2, b.x, b.y)]:
 			st.add_vertex(v)
-	return st.commit()
+	return st.commit(mesh)
+
+
+static var _faces := {}              ## color+accent -> its face texture, made once
+static var _grip: ImageTexture
+
+
+## The face: raw carbon (a 2x2 twill), and the paddle's own colour
+## sweeping up from the throat on a diagonal, edged with the accent, with
+## a small "94" in the corner.
+static func face_texture(c: Color, acc: Color) -> ImageTexture:
+	var key := c.to_html() + acc.to_html()
+	if _faces.has(key):
+		return _faces[key]
+	const W := 128
+	const H := 168
+	var img := Image.create(W, H, false, Image.FORMAT_RGB8)
+	var dark := Color(0.07, 0.075, 0.08)
+	var light := Color(0.15, 0.155, 0.165)
+	for y in H:
+		for x in W:
+			# Twill: tows over two, under two, stepping one each row.
+			var over := ((x / 3 + y / 3) % 4) < 2
+			var px := dark if over else light
+			# The colour panel: below a line rising from left to right.
+			var edge := H * 0.62 - x * 0.42
+			if y > edge + 3:
+				px = c.lerp(c.darkened(0.35), float(y - edge) / H)
+			elif y > edge:
+				px = acc
+			img.set_pixel(x, y, px)
+	_digits(img, "94", Vector2i(W - 34, 14), acc)
+	img.generate_mipmaps()
+	var tex := ImageTexture.create_from_image(img)
+	_faces[key] = tex
+	return tex
+
+
+## Two digits in a chunky 3x5 pixel face, each pixel 4 px square.
+static func _digits(img: Image, text: String, at: Vector2i, c: Color) -> void:
+	const GLYPHS := {"9": ["111", "101", "111", "001", "111"], "4": ["101", "101", "111", "001", "001"]}
+	for k in text.length():
+		var g: Array = GLYPHS[text[k]]
+		for row in 5:
+			for col in 3:
+				if String(g[row])[col] == "1":
+					img.fill_rect(Rect2i(at.x + k * 16 + col * 4, at.y + row * 4, 4, 4), c)
+
+
+## The grip: black overgrip wound in a spiral, its seams lighter.
+static func _grip_texture() -> ImageTexture:
+	if _grip:
+		return _grip
+	var img := Image.create(64, 64, false, Image.FORMAT_RGB8)
+	for y in 64:
+		for x in 64:
+			var seam := posmod(x + y, 16) < 2
+			var dot := posmod(x, 4) == 0 and posmod(y, 4) == 0
+			img.set_pixel(x, y, Color(0.2, 0.2, 0.21) if seam else (Color(0.08, 0.08, 0.085) if dot else Color(0.12, 0.12, 0.125)))
+	img.generate_mipmaps()
+	_grip = ImageTexture.create_from_image(img)
+	return _grip
 
 
 ## The edge guard: a band `band` wide around the outline.

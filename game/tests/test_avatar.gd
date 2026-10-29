@@ -68,3 +68,72 @@ func test_the_body_follows_the_joints() -> void:
 			check(off < 0.05, "foot %d is on its spot (%.3f m off)" % [f, off])
 			check(absf(foot.origin.y - a.figure.ankle_h) < 0.05, "and on the floor")
 		a.queue_free()
+
+
+## Another rig (a Rocketbox person, Body.MODELS): the same joints land in
+## the same places, its fingers close toward the palm, and the view with it
+## still never writes to the sim.
+func test_another_rig_follows_the_joints() -> void:
+	for model in Settings.PARTNER_MODELS:
+		if model != "":
+			_another_rig(model)
+
+
+func _another_rig(model: String) -> void:
+	var sim := Sim.new(Settings.new().partner_config())
+	var a := Avatar.new()
+	a.slot = 2
+	a.model = model
+	runner.root.add_child(a)
+	for i in 60:
+		a.show_from(sim, 1.0 / 72.0)
+	var f := a.figure
+	for name in Body.RIGS["bip"]:
+		check(f._bone(name) >= 0, "%s is in the rig" % name)
+	var sk := f.skel
+	var hand := sk.global_transform * sk.get_bone_global_pose(f._bone("hand_r"))
+	var grip := hand.origin.distance_to(a._hand)
+	check(grip < Avatar.PALM + 0.04, "the paddle hand is at the grip (%.3f m off)" % grip)
+	for k in 2:
+		var foot := sk.global_transform * sk.get_bone_global_pose(f._bone("foot_l" if k == 0 else "foot_r"))
+		var off := Vector2(foot.origin.x - a._feet[k].x, foot.origin.z - a._feet[k].z).length()
+		check(off < 0.06, "foot %d is on its spot (%.3f m off)" % [k, off])
+	# The paddle hand's fingers curl: their tips come toward the palm.
+	var h := sk.get_bone_global_pose(f._bone("hand_r"))
+	var tip := sk.get_bone_global_pose(f._bone("middle_03_r")).origin
+	var knuckle := sk.get_bone_global_pose(f._bone("middle_01_r")).origin
+	check(tip.distance_to(h.origin) < knuckle.distance_to(h.origin) + 0.04, "the fingers close round the grip")
+	a.queue_free()
+	var s := Settings.new()
+	var v := MatchView.new()
+	v.partner_model = model
+	runner.root.add_child(v)
+	v.setup(s.partner_config(), false)
+	for i in 900:
+		v._process(MatchView.DT)
+	var bare := Sim.new(s.partner_config())
+	for i in v.input_log:
+		bare.step([SimTypes.HumanInput.from_array(i)])
+	eq(bare.snapshot(), v.sim.snapshot(), "the view with it and a bare sim agree")
+	v.queue_free()
+
+
+## Known issue 9: through a whole rally, both bodies keep the paddle in the
+## hand (it used to float off when a wind-up aimed past the arm's reach).
+func test_the_paddle_never_leaves_the_hand() -> void:
+	for model in Settings.PARTNER_MODELS:
+		var s := Settings.new()
+		var v := MatchView.new()
+		v.partner_model = model
+		runner.root.add_child(v)
+		v.setup(s.partner_config(), false)
+		var a := v.partner_avatar
+		var worst := 0.0
+		for i in 2400:
+			v._process(MatchView.DT)
+			if i > 60:
+				var sk := a.figure.skel
+				var hand := sk.global_transform * sk.get_bone_global_pose(a.figure._bone("hand_r"))
+				worst = maxf(worst, hand.origin.distance_to(a._hand))
+		check(worst < Avatar.PALM + 0.04, "%s: the grip stays in the hand (worst %.3f m)" % [model if model != "" else "classic", worst])
+		v.queue_free()

@@ -45,6 +45,7 @@ var cap := true
 var female := false
 var style := "parted"                ## Body.HAIR_STYLES
 var beard := false
+var model := ""                      ## Body.MODELS: another person in their own clothes (no cap)
 var paddle: PaddleMesh
 var figure: Body
 
@@ -91,8 +92,9 @@ func _ready() -> void:
 	figure.hair = hair
 	figure.style = style if not cap else ("buzzed_f" if female else "buzzed")
 	figure.beard = beard
+	figure.model = model
 	add_child(figure)
-	if cap:
+	if cap and model == "":
 		_add_cap()
 	paddle = PaddleMesh.new()
 	paddle.color = Color(0.85, 0.15, 0.2) if slot < 2 else Color(0.2, 0.3, 0.85)   # your side's red
@@ -103,7 +105,7 @@ func _ready() -> void:
 ## A cap with a visor, on the head bone (the partner's look).
 func _add_cap() -> void:
 	var on := BoneAttachment3D.new()
-	on.bone_name = "Head"
+	on.bone_name = figure.bone_name("Head")
 	figure.skel.add_child(on)
 	var cap_m := _mat(shirt.darkened(0.25), 0.7)
 	var crown := SphereMesh.new()
@@ -154,7 +156,7 @@ func set_mask(tex: Texture2D) -> void:
 	if tex == null or figure == null:
 		return
 	var on := BoneAttachment3D.new()
-	on.bone_name = "Head"
+	on.bone_name = figure.bone_name("Head")
 	figure.skel.add_child(on)
 	_mask = MeshInstance3D.new()
 	var q := QuadMesh.new()
@@ -167,7 +169,7 @@ func set_mask(tex: Texture2D) -> void:
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_mask.material_override = m
 	_mask.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_mask.position = MASK_AT
+	_mask.transform = figure.head_mount(MASK_AT) if model != "" else Transform3D(Basis(), MASK_AT)
 	on.add_child(_mask)
 
 
@@ -368,6 +370,11 @@ func show_from(sim: Sim, delta: float) -> void:
 		var sh := figure.at("upperarm" + s)
 		# The paddle hand reaches its grip, a palm past the wrist.
 		var fore := figure.fore_len + (PALM if i == 1 else 0.0)
+		if i == 1:
+			# Never past the arm's reach: a swing aimed further leaves the
+			# hand short and the paddle with it, not the paddle in the air.
+			_hand = sh + (_hand - sh).limit_length(figure.upper_len + fore - 0.01)
+			hands[1] = _hand
 		var arm := two_bone(sh, hands[i], figure.upper_len, fore, elbow_pole + t_right * (out_w if i == 1 else -out_w))
 		figure.aim("upperarm" + s, arm[0])
 		figure.aim("lowerarm" + s, arm[1])

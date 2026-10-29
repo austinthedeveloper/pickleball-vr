@@ -59,6 +59,8 @@ var challenge_label: Label3D         ## a coach's challenge and how it's going (
 var marks: Node3D                    ## a coach's zones and lines on the court (C-14)
 var tablet: CoachTablet              ## the coach tablet beside PAUSED (C-22)
 var pranks: Pranks                   ## what a kid on the coach's phone does to you (ADR-025)
+## The partner's body: "" the base body, or a Body.MODELS person (on trial).
+var partner_model := ""
 const MAX_MARKS := 8
 var _path: Array = []                ## the ball since the last hit: [x, y, z] in m, every PATH_EVERY ticks (C-17)
 const PATH_EVERY := 3
@@ -193,6 +195,7 @@ func _practice_court() -> void:
 	if sim.drill.partner:
 		partner_avatar = Avatar.new()
 		partner_avatar.slot = 2
+		partner_avatar.model = partner_model
 		partner_avatar.shirt = Color(0.2, 0.62, 0.55)
 		add_child(partner_avatar)
 		avatars.append(partner_avatar)

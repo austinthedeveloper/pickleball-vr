@@ -75,3 +75,60 @@ are untouched.
 - Later: real textures (court, grass, the shirts' patterns), baked
   lighting, and a proper skinned character if the shapes stop being
   enough.
+
+## Amendment (2026-10-28): a real net
+
+The net is built from a real one's parts (`World._net`):
+- **The mesh:** square cord (1.75 in squares) painted into a small
+  mipmapped texture. Up close you see the squares; far off they blend
+  into a dark veil.
+- **The top:** the white tape follows the sim's net line exactly (36 in
+  at the posts, 34 at the centre).
+- **The rest:** a centre strap to an anchor in the court, white bindings
+  at the ends, a bottom cord, and metal posts with caps, collars and a
+  winder.
+
+It costs a handful of draw calls.
+
+## Amendment (2026-10-28): a paddle that looks like one
+
+The paddle's faces are now textured (`PaddleMesh.face_texture`):
+- raw carbon in a 2x2 twill;
+- the paddle's colour sweeping up from the throat on a diagonal, edged in
+  the accent;
+- a small "94" in the corner.
+
+Both faces read the same way round. The rim is the core's dark edge
+under the guard, and the grip is a wound overgrip (a texture, in place
+of the four torus ridges). The face's size and the sim's contact disc
+are unchanged. Every paddle colour gets its own texture once, so the
+CPUs' blue paddles have it too.
+
+## Amendment (2026-10-28): the court's surroundings
+
+- **Surfaces:** the court, the kitchens and the lines carry an acrylic
+  grain: fine sand speckle over a faint mottle, multiplied into their
+  colours. The surround gets the same grain, and the ground beyond it
+  grass (streaks and patches). They're seamless noise textures made at
+  load, laid in world space and filtered for glancing angles.
+- **The fence:**
+  - galvanised chain link (a mipmapped diamond texture, the net's trick)
+    on metal posts with a top rail;
+  - a dark green windscreen on the lower 1.8 m of the end fences only, so
+    the stands along the sides stay in view and LAKESIDE keeps its lake
+    beyond the far end;
+  - SPACE keeps its glass panels.
+
+  It costs about what the old see-through panels did.
+- **Trees:** a tapered trunk with a crown of six clumps, the lower ones
+  darker; palms get seven fronds. All the trunks are one MultiMesh and all
+  the clumps another, so a ring of trees is two draw calls (it was two
+  per tree).
+- **The crowd:** people, not capsules. Everyone is one low-poly
+  spectator mesh: a seated person with legs and shoes, a torso, arms on
+  their knees, a neck, a head with hair. Each wears their own shirt, skin,
+  trousers and hair (`crowd.gdshader` reads the part from UV.x and the
+  person from the MultiMesh's custom data). Those cheering hardest swap
+  to a second mesh with their arms up. Everyone is still two draw calls,
+  and about 350 triangles a person; the old default capsule and sphere
+  meshes were thousands each.

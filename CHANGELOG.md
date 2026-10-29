@@ -6,6 +6,28 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+### Fixed
+- The other players' paddle no longer floats away from their hand in some
+  wind-ups.
+
+### Added
+- **PARTNER LOOK** on PRACTICE PARTNER puts a more realistic person
+  across the net, from Microsoft's free Rocketbox library:
+  - NEW MAN, in a striped polo and cargo shorts;
+  - NEW WOMAN, in a hoodie, shorts and sneakers;
+  - CLASSIC, the partner you had.
+
+### Changed
+- **A real net:** square mesh you can see through, the white tape over
+  the top, a centre strap, and metal posts.
+- **The court's surroundings:** the court has a sand-grain finish, the
+  grass has texture, the fence is chain link with dark windscreens behind
+  the baselines, and the trees are fuller.
+- **The crowd are people:** seated in their own shirts, with arms, legs
+  and hair, and they throw their arms up for a great rally.
+- **A paddle that looks like one:** a carbon face with a colour panel and
+  a "94", a proper edge and a wound grip.
+
 ## [0.4.1] - 2026-10-28
 
 A fix for the pranks: voice messages from an iPhone get through.

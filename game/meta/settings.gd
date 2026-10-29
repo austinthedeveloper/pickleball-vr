@@ -44,6 +44,9 @@ var win_by_2 := false
 var left_handed := false
 var coach := false                   ## ADR-023: COACH MODE, the companion page served
 var pranks := true                   ## ADR-025: the phone's PRANKS tab works
+var partner_look := 0                ## PRACTICE PARTNER's body: PARTNER_LOOKS (ADR-018)
+const PARTNER_LOOKS := ["CLASSIC", "NEW MAN", "NEW WOMAN"]
+const PARTNER_MODELS := ["", "rb_male_01", "rb_female_12"]
 var passthrough := false             ## ADR-021: the court in your room (headset)
 var paddle_angle := 1                ## index into ANGLES
 var paddle_profile := 0              ## index into PROFILE_NAMES
@@ -112,6 +115,7 @@ func load_settings() -> void:
 	passthrough = c.get_value("player", "passthrough", passthrough)
 	coach = c.get_value("player", "coach", coach)
 	pranks = c.get_value("coach", "pranks", pranks)
+	partner_look = c.get_value("partner", "look", partner_look)
 	paddle_angle = c.get_value("player", "paddle_angle", paddle_angle)
 	paddle_profile = c.get_value("paddle", "profile", paddle_profile)
 	var saved: Array = c.get_value("paddle", "profiles", [])
@@ -162,6 +166,7 @@ func save() -> void:
 	c.set_value("player", "passthrough", passthrough)
 	c.set_value("player", "coach", coach)
 	c.set_value("coach", "pranks", pranks)
+	c.set_value("partner", "look", partner_look)
 	c.set_value("player", "paddle_angle", paddle_angle)
 	c.set_value("paddle", "profile", paddle_profile)
 	c.set_value("paddle", "profiles", profiles)
