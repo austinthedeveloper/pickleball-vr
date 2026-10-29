@@ -70,20 +70,23 @@ func _ready() -> void:
 	var kd := K.KITCHEN_DEPTH / float(K.M)
 	var lw := K.LINE_WIDTH / float(K.M)
 	line_color = c8(LINES[d["lines"]])
+	var indoor := venue == Venues.GYM or venue == Venues.SPACE
 	if not passthrough:
-		_box(Vector3(0, -0.05, 0), Vector3(80, 0.1, 80), c8(d["ground"]))
-		_box(Vector3(0, 0.0, 0), Vector3(hw * 2 + 6, 0.02, hl * 2 + 8), c8(SURROUNDS[d["surround"]]))
+		_grain(_box(Vector3(0, -0.05, 0), Vector3(80, 0.1, 80), c8(d["ground"])), grass_texture() if not indoor else grain_texture(), 0.25)
+		_grain(_box(Vector3(0, 0.0, 0), Vector3(hw * 2 + 6, 0.02, hl * 2 + 8), c8(SURROUNDS[d["surround"]])), grain_texture(), 0.6)
 	_scenery = false                     # the court stays bright under FOCUS
-	_box(Vector3(0, 0.012, 0), Vector3(hw * 2, 0.004, hl * 2), c8(SURFACES[d["surface"]]))
+	# The court: acrylic over the slab, its sand grain in the paint.
+	_grain(_box(Vector3(0, 0.012, 0), Vector3(hw * 2, 0.004, hl * 2), c8(SURFACES[d["surface"]])), grain_texture(), 0.6)
 	for s in [-1, 1]:
-		_box(Vector3(0, 0.014, s * kd / 2), Vector3(hw * 2, 0.004, kd), c8(SURFACES[d["kitchen"]]))
+		_grain(_box(Vector3(0, 0.014, s * kd / 2), Vector3(hw * 2, 0.004, kd), c8(SURFACES[d["kitchen"]])), grain_texture(), 0.6)
 	# Lines (measured to their outside edges, so inset half a width).
 	var y := 0.017
 	for s in [-1, 1]:
-		_box(Vector3(s * (hw - lw / 2), y, 0), Vector3(lw, 0.003, hl * 2), line_color)
-		_box(Vector3(0, y, s * (hl - lw / 2)), Vector3(hw * 2, 0.003, lw), line_color)
-		_box(Vector3(0, y, s * (kd - lw / 2)), Vector3(hw * 2, 0.003, lw), line_color)
-		_box(Vector3(0, y, s * (kd + hl) / 2), Vector3(lw, 0.003, hl - kd), line_color)
+		for b in [[Vector3(s * (hw - lw / 2), y, 0), Vector3(lw, 0.003, hl * 2)],
+				[Vector3(0, y, s * (hl - lw / 2)), Vector3(hw * 2, 0.003, lw)],
+				[Vector3(0, y, s * (kd - lw / 2)), Vector3(hw * 2, 0.003, lw)],
+				[Vector3(0, y, s * (kd + hl) / 2), Vector3(lw, 0.003, hl - kd)]]:
+			_grain(_box(b[0], b[1], line_color), grain_texture(), 0.6)
 	_net()
 	_scenery = true
 	if passthrough:
@@ -192,6 +195,86 @@ static func material(c: Color) -> StandardMaterial3D:
 	if c.a < 1.0:
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	return mat
+
+
+## A box's material given a grain: the colour times a tiling texture laid
+## in world space (`per_m` repeats a metre), sharp at a glancing angle.
+func _grain(mi: MeshInstance3D, tex: Texture2D, per_m: float) -> MeshInstance3D:
+	var m := mi.material_override as StandardMaterial3D
+	m.albedo_texture = tex
+	m.uv1_triplanar = true
+	m.uv1_world_triplanar = true
+	m.uv1_scale = Vector3.ONE * per_m
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	m.roughness = 0.82
+	return mi
+
+
+static var _grain_tex: ImageTexture
+static var _grass_tex: ImageTexture
+static var _link_tex: ImageTexture
+
+
+## A court's acrylic: fine sand speckle over a faint, broad mottle, around
+## white (it multiplies the paint's colour).
+static func grain_texture() -> ImageTexture:
+	if _grain_tex:
+		return _grain_tex
+	var fine := FastNoiseLite.new()
+	fine.seed = 94
+	fine.frequency = 0.35
+	var broad := FastNoiseLite.new()
+	broad.seed = 1994
+	broad.frequency = 0.012
+	var a := fine.get_seamless_image(256, 256)
+	var b := broad.get_seamless_image(256, 256)
+	var img := Image.create(256, 256, false, Image.FORMAT_RGB8)
+	for y in 256:
+		for x in 256:
+			var v := 0.9 + 0.07 * a.get_pixel(x, y).r + 0.05 * b.get_pixel(x, y).r
+			img.set_pixel(x, y, Color(v, v, v))
+	img.generate_mipmaps()
+	_grain_tex = ImageTexture.create_from_image(img)
+	return _grain_tex
+
+
+## Grass: blades' streaks and patches of lighter and darker green.
+static func grass_texture() -> ImageTexture:
+	if _grass_tex:
+		return _grass_tex
+	var blades := FastNoiseLite.new()
+	blades.seed = 7
+	blades.frequency = 0.25
+	var patches := FastNoiseLite.new()
+	patches.seed = 8
+	patches.frequency = 0.008
+	var a := blades.get_seamless_image(256, 256)
+	var b := patches.get_seamless_image(256, 256)
+	var img := Image.create(256, 256, false, Image.FORMAT_RGB8)
+	for y in 256:
+		for x in 256:
+			var v := 0.78 + 0.22 * a.get_pixel(x, y).r * 0.8 + 0.25 * (b.get_pixel(x, y).r - 0.5)
+			img.set_pixel(x, y, Color(v * 0.97, v, v * 0.9))
+	img.generate_mipmaps()
+	_grass_tex = ImageTexture.create_from_image(img)
+	return _grass_tex
+
+
+## Chain link: wire diamonds on clear, mipmapped so it greys with distance
+## (as the net does).
+static func link_texture() -> ImageTexture:
+	if _link_tex:
+		return _link_tex
+	const N := 32
+	var img := Image.create(N, N, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0.6, 0.62, 0.64, 0.05))
+	for i in N:
+		for w in 2:
+			img.set_pixel((i + w) % N, i, Color(0.72, 0.74, 0.76, 1.0))
+			img.set_pixel((N - 1 - i + w) % N, i, Color(0.72, 0.74, 0.76, 1.0))
+	img.generate_mipmaps()
+	_link_tex = ImageTexture.create_from_image(img)
+	return _link_tex
 
 
 func _box(at: Vector3, size: Vector3, c: Color) -> MeshInstance3D:
@@ -355,6 +438,59 @@ static func net_material() -> StandardMaterial3D:
 
 
 func _fences(hx: float, hz: float, c: Color) -> void:
+	if venue == Venues.SPACE:
+		_glass_fences(hx, hz, c)
+		return
+	# A court's fence: galvanised chain link on posts and a top rail, a dark
+	# windscreen over its lower part.
+	var h := 3.0
+	var wind_h := 1.8
+	var metal := material(Color(0.55, 0.57, 0.6))
+	metal.metallic = 0.7
+	metal.roughness = 0.45
+	var link := StandardMaterial3D.new()
+	link.albedo_texture = link_texture()
+	link.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	link.cull_mode = BaseMaterial3D.CULL_DISABLED
+	link.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	link.uv1_triplanar = true
+	link.uv1_world_triplanar = true
+	link.uv1_scale = Vector3.ONE / 0.06          # 6 cm diamonds
+	_track(link)
+	# Windscreen fabric: the venue's fence tint, as a dark, woven green.
+	var screen := _track(material(Color(c.r, c.g, c.b).lerp(Color(0.1, 0.26, 0.17), 0.7)))
+	screen.albedo_texture = grain_texture()
+	screen.uv1_triplanar = true
+	screen.uv1_world_triplanar = true
+	screen.uv1_scale = Vector3.ONE * 2.0
+	screen.roughness = 1.0
+	for s in [-1, 1]:
+		for side in [true, false]:
+			# Windscreens on the ends only: the stands along the sides stay
+			# in view, and LAKESIDE's far end keeps its lake.
+			var screened: bool = not side and not (venue == Venues.LAKESIDE and s < 0)
+			var low := wind_h if screened else 0.0
+			var size := Vector3(0.02, h - low, hz * 2) if side else Vector3(hx * 2, h - low, 0.02)
+			var at := Vector3(s * hx, low + (h - low) / 2, 0) if side else Vector3(0, low + (h - low) / 2, s * hz)
+			var mesh := _box(at, size, Color.WHITE)
+			mesh.material_override = link
+			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			if screened:
+				var ws := _box(Vector3(0, wind_h / 2, s * hz), Vector3(hx * 2, wind_h, 0.03), Color.WHITE)
+				ws.material_override = screen
+			# The top rail.
+			var rail := _box(Vector3(s * hx, h, 0) if side else Vector3(0, h, s * hz),
+				Vector3(0.05, 0.05, hz * 2) if side else Vector3(hx * 2, 0.05, 0.05), Color.WHITE)
+			rail.material_override = metal
+			rail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for i in range(-4, 5):
+			for p in [Vector3(s * hx, 0, i * hz / 4.0), Vector3(i * hx / 4.0, 0, s * hz)]:
+				var post := _cylinder(p, 0.035, h + 0.03, Color.WHITE)
+				post.material_override = metal
+
+
+## SPACE's fence: glowing glass panels, as before.
+func _glass_fences(hx: float, hz: float, c: Color) -> void:
 	var h := 3.0
 	var post_c := Color(c.r, c.g, c.b).darkened(0.2)
 	for s in [-1, 1]:
@@ -367,10 +503,17 @@ func _fences(hx: float, hz: float, c: Color) -> void:
 			_cylinder(Vector3(i * hx / 4.0, 0, s * hz), 0.035, h, post_c)
 
 
-## Round trees, or palms (SUNSET), in a ring around the court.
+## Trees, or palms (SUNSET), in a ring around the court. A tree is a
+## tapered trunk with a crown of several clumps, darker below; all the
+## trunks are one draw, all the clumps another (MultiMesh), so a ring of
+## them costs the Quest two draw calls.
 func _trees(count: int, near: float, far: float, palms: bool) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1994 + venue              # the same venue every time
+	var trunks: Array[Transform3D] = []
+	var trunk_c: Array[Color] = []
+	var clumps: Array[Transform3D] = []
+	var clump_c: Array[Color] = []
 	for i in count:
 		var a := TAU * i / count + rng.randf() * 0.15
 		var r := rng.randf_range(near, far)
@@ -379,16 +522,62 @@ func _trees(count: int, near: float, far: float, palms: bool) -> void:
 			continue                     # the lake's there
 		if palms:
 			var h := rng.randf_range(4.0, 6.5)
-			_cylinder(at, 0.14, h, Color(0.45, 0.33, 0.2))
-			for k in 5:
-				var leaf := _sphere(at + Vector3(0, h, 0), 1.3, 0.18, Color(0.2, 0.42, 0.18))
-				leaf.rotation = Vector3(0.35, TAU * k / 5.0, 0)
-				leaf.position += Vector3(cos(TAU * k / 5.0), -0.2, sin(TAU * k / 5.0)) * 0.7
+			var lean := rng.randf_range(-0.12, 0.12)
+			trunks.append(Transform3D(Basis(Vector3.FORWARD, lean).scaled(Vector3(0.75, h, 0.75)), at + Vector3(sin(-lean) * h / 2, h / 2, 0)))
+			trunk_c.append(Color(0.48, 0.36, 0.22))
+			var top := at + Vector3(sin(-lean) * h, h, 0)
+			for k in 7:
+				var yaw := TAU * k / 7.0 + rng.randf() * 0.3
+				var frond := Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, 0.45)
+				clumps.append(Transform3D(frond.scaled(Vector3(0.35, 0.08, 1.6)), top + Vector3(cos(yaw), -0.25, sin(yaw)) * 0.9 * Vector3(1, 1, 1)))
+				clump_c.append(Color(0.2, 0.42, 0.18).lightened(rng.randf() * 0.1))
 			continue
-		var h2 := rng.randf_range(2.0, 3.5)
-		_cylinder(at, 0.18, h2, Color(0.36, 0.25, 0.15))
-		var cr := rng.randf_range(1.4, 2.4)
-		_sphere(at + Vector3(0, h2 + cr * 0.8, 0), cr, 1.1, Color(0.16, 0.38, 0.15).lightened(rng.randf() * 0.15))
+		var h2 := rng.randf_range(2.2, 3.6)
+		trunks.append(Transform3D(Basis().scaled(Vector3(1, h2, 1)), at + Vector3(0, h2 / 2, 0)))
+		trunk_c.append(Color(0.36, 0.25, 0.15).darkened(rng.randf() * 0.15))
+		var cr := rng.randf_range(1.4, 2.3)
+		var green := Color(0.17, 0.4, 0.16).lightened(rng.randf() * 0.12)
+		var crown := at + Vector3(0, h2 + cr * 0.7, 0)
+		for k in 6:
+			# Clumps round the crown, the lower ones darker (in their own shade).
+			var off := Vector3(rng.randf_range(-1, 1), rng.randf_range(-0.5, 0.7), rng.randf_range(-1, 1)) * cr * 0.55
+			var size := cr * rng.randf_range(0.55, 0.8)
+			clumps.append(Transform3D(Basis().scaled(Vector3(size, size * 0.85, size)), crown + off))
+			clump_c.append(green.darkened(0.25 * clampf(0.5 - off.y / cr, 0.0, 1.0)))
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.1
+	trunk_mesh.bottom_radius = 0.2
+	trunk_mesh.height = 1.0
+	trunk_mesh.radial_segments = 8
+	trunk_mesh.rings = 1
+	var clump_mesh := SphereMesh.new()
+	clump_mesh.radius = 1.0
+	clump_mesh.height = 2.0
+	clump_mesh.radial_segments = 10
+	clump_mesh.rings = 6
+	_multi(trunk_mesh, trunks, trunk_c, 0.95)
+	_multi(clump_mesh, clumps, clump_c, 0.9)
+
+
+## One draw for many copies of `mesh`, each its own transform and colour.
+func _multi(mesh: Mesh, at: Array[Transform3D], colors: Array[Color], rough: float) -> void:
+	if at.is_empty():
+		return
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = mesh
+	mm.instance_count = at.size()
+	for i in at.size():
+		mm.set_instance_transform(i, at[i])
+		mm.set_instance_color(i, colors[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	var m := _track(material(Color.WHITE))
+	m.vertex_color_use_as_albedo = true
+	m.roughness = rough
+	mmi.material_override = m
+	add_child(mmi)
 
 
 ## LAKESIDE: the water beyond the far fence, a dock, hills across it.

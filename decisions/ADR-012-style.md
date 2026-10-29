@@ -103,3 +103,24 @@ under the guard, and the grip is a wound overgrip (a texture, in place
 of the four torus ridges). The face's size and the sim's contact disc
 are unchanged. Every paddle colour gets its own texture once, so the
 CPUs' blue paddles have it too.
+
+## Amendment (2026-10-28): the court's surroundings
+
+- **Surfaces:** the court, the kitchens and the lines carry an acrylic
+  grain: fine sand speckle over a faint mottle, multiplied into their
+  colours. The surround gets the same grain, and the ground beyond it
+  grass (streaks and patches). They're seamless noise textures made at
+  load, laid in world space and filtered for glancing angles.
+- **The fence:**
+  - galvanised chain link (a mipmapped diamond texture, the net's trick)
+    on metal posts with a top rail;
+  - a dark green windscreen on the lower 1.8 m of the end fences only, so
+    the stands along the sides stay in view and LAKESIDE keeps its lake
+    beyond the far end;
+  - SPACE keeps its glass panels.
+
+  It costs about what the old see-through panels did.
+- **Trees:** a tapered trunk with a crown of six clumps, the lower ones
+  darker; palms get seven fronds. All the trunks are one MultiMesh and all
+  the clumps another, so a ring of trees is two draw calls (it was two
+  per tree).

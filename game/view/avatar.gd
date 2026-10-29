@@ -370,6 +370,11 @@ func show_from(sim: Sim, delta: float) -> void:
 		var sh := figure.at("upperarm" + s)
 		# The paddle hand reaches its grip, a palm past the wrist.
 		var fore := figure.fore_len + (PALM if i == 1 else 0.0)
+		if i == 1:
+			# Never past the arm's reach: a swing aimed further leaves the
+			# hand short and the paddle with it, not the paddle in the air.
+			_hand = sh + (_hand - sh).limit_length(figure.upper_len + fore - 0.01)
+			hands[1] = _hand
 		var arm := two_bone(sh, hands[i], figure.upper_len, fore, elbow_pole + t_right * (out_w if i == 1 else -out_w))
 		figure.aim("upperarm" + s, arm[0])
 		figure.aim("lowerarm" + s, arm[1])

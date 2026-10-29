@@ -6,6 +6,10 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+### Fixed
+- The other players' paddle no longer floats away from their hand in some
+  wind-ups.
+
 ### Added
 - **PARTNER LOOK** on PRACTICE PARTNER: NEW puts a more realistic person
   across the net (from Microsoft's free Rocketbox library), in a striped
@@ -14,6 +18,9 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 ### Changed
 - **A real net:** square mesh you can see through, the white tape over
   the top, a centre strap, and metal posts.
+- **The court's surroundings:** the court has a sand-grain finish, the
+  grass has texture, the fence is chain link with dark windscreens behind
+  the baselines, and the trees are fuller.
 - **A paddle that looks like one:** a carbon face with a colour panel and
   a "94", a proper edge and a wound grip.
 

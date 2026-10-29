@@ -110,3 +110,24 @@ func test_another_rig_follows_the_joints() -> void:
 		bare.step([SimTypes.HumanInput.from_array(i)])
 	eq(bare.snapshot(), v.sim.snapshot(), "the view with it and a bare sim agree")
 	v.queue_free()
+
+
+## Known issue 9: through a whole rally, both bodies keep the paddle in the
+## hand (it used to float off when a wind-up aimed past the arm's reach).
+func test_the_paddle_never_leaves_the_hand() -> void:
+	for model in ["", "rb_male_01"]:
+		var s := Settings.new()
+		var v := MatchView.new()
+		v.partner_model = model
+		runner.root.add_child(v)
+		v.setup(s.partner_config(), false)
+		var a := v.partner_avatar
+		var worst := 0.0
+		for i in 2400:
+			v._process(MatchView.DT)
+			if i > 60:
+				var sk := a.figure.skel
+				var hand := sk.global_transform * sk.get_bone_global_pose(a.figure._bone("hand_r"))
+				worst = maxf(worst, hand.origin.distance_to(a._hand))
+		check(worst < Avatar.PALM + 0.04, "%s: the grip stays in the hand (worst %.3f m)" % [model if model != "" else "classic", worst])
+		v.queue_free()
