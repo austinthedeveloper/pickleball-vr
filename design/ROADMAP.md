@@ -28,6 +28,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 
 ## Releases
 
+- **v0.4.1** (2026-10-28): PRANKS voice messages from an iPhone (SEND IT).
 - **v0.4.0** (2026-10-28): the pranks update. The coach page's PRANKS
   tab: a soundboard, silly balls and paddles, weather, the partner's
   antics, a voice in your headset, a selfie on the partner; MERCY.

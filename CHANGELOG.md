@@ -6,6 +6,10 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-28
+
+A fix for the pranks: voice messages from an iPhone get through.
+
 ### Fixed
 - **PRANKS on an iPhone:** a voice message recorded as a video now goes
   through. Record it, then tap SEND IT.
