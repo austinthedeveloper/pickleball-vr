@@ -75,8 +75,13 @@ the page shows the buttons in the headset's order.
   headset serves plain HTTP on the Wi-Fi, so a phone gets RECORD A
   MESSAGE instead. That opens the phone's own recorder (`<input
   capture>`, which takes audio or a video's sound). Android's browsers
-  open a recorder. On an iPhone it may only offer the camera: the clip's
-  sound still works. HTTPS (a self-signed certificate in Godot) would
+  open a recorder. An iPhone only offers the camera, and Safari can't
+  decode a video's sound directly (decodeAudioData fails on its .mov).
+  So when decoding fails, the page shows SEND IT: the tap plays the clip
+  silently through the audio graph (a media element source) and catches
+  its sound as it plays. That takes as long as the clip, and the tap is
+  what lets Safari play it (amended 2026-10-28, after the lead's iPhone
+  failed). HTTPS (a self-signed certificate in Godot) would
   give HOLD TO TALK everywhere, but means a certificate warning to tap
   through: later, if it's missed.
 - The sounds are synthesized and want a listen in the headset; they're
