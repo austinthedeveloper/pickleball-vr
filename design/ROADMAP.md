@@ -28,6 +28,9 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 
 ## Releases
 
+- **v0.3.0** (2026-10-28): the coaching update. The coach companion and
+  its tablet in the headset, the coach's ball machine, rigged bodies,
+  dartboard targets, passthrough, timed runs, TUNING, paddle profiles.
 - **v0.2.0** (2026-10-27): the practice update. DINK PARTNER, the ball
   machine's volley feeds, the new look, the paddle tuned on logged
   strokes, FOCUS.

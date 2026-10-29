@@ -6,6 +6,14 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-28
+
+The coaching update. A coach follows along on a phone, places targets
+and feeds, runs the ball machine and saves every session; pause a drill
+and the same panel stands beside you in the headset. The partner has a
+real body, targets are dartboards, passthrough shows your room, and
+timed runs keep records.
+
 ### Added
 - **The coach tablet in the headset:** pause a practice drill and the
   coaching panel stands beside you. It shows your run, where your shots
@@ -47,6 +55,26 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 - **Targets are dartboards:** bigger, with an outer ring (1 point), an
   inner ring (2) and a bullseye (3). Anywhere on the board counts, and
   the scoreboard keeps your POINTS.
+- **Four new kitchen drills** on PRACTICE PARTNER:
+  - **CALL THE SPOT:** a green spot lights on their side for each ball;
+    dink onto it. It lights later and gets smaller the harder you set it.
+  - **LINE AND CROSS:** only one half of their kitchen counts, straight
+    ahead, cross court, or alternating.
+  - **VOLLEY DINKS:** soft floaters at your kitchen line; volley them
+    onto the spot without stepping in.
+  - **ATTACK OR DINK:** speed up the dinks that sit up, dink the rest.
+- **RESETS:** a new PRACTICE PARTNER drill. You stand mid-court and the
+  partner drives at you, hard and low. Block it soft into their kitchen,
+  under the red pop-up line over the net. DIFFICULTY sets the pace and
+  how low the line is.
+- **PADDLE** (on MAIN), with profiles for paddle accessories. DEFAULT is
+  the paddle you had. PROFILE 1-3 set the ANGLE (-30 to 90), TWIST and
+  REACH (how far out the face sits) to fit an accessory, and the paddle
+  in your hand moves as you change them.
+- **HANDS:** a new PRACTICE PARTNER drill (DRILL: HANDS). You and the
+  partner stand at your kitchen lines and volley hard at each other; it
+  takes every ball out of the air and sends it back at you. DIFFICULTY
+  is the pace.
 
 ### Changed
 - **Full swings hit full:** a big drive from the baseline now carries
@@ -58,11 +86,9 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 - **Checking for paddle drift:** PADDLE > CHECK reads the paddle laid
   flat on the floor, live. The swing log records tracking quality for
   every hit.
-- **Blocks keep more pace:** stick the paddle out at a hard-hit ball and
-  it goes back with up to 72% of its speed (was 60%).
 - **Coach: START NEW** starts the drill the coach just set, mid-run.
-- **Stronger hit vibration** (raised twice), and a light **ding** when a ball lands on
-  a target, higher toward the bullseye.
+- **Stronger hit vibration** (raised twice), and a light **ding** when a
+  ball lands on a target, higher toward the bullseye.
 - **Paddle profiles turn any way:** TWIST goes a full turn, ANGLE runs
   from -90 to 90, and a new TURN swings the face left or right. That
   covers paddle accessories that only hold the controller one way.
@@ -73,35 +99,6 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
   as well as a hit.
 - **Leaning over the kitchen line isn't a fault in practice:** you're
   only in when your head is 45 cm past the line.
-- **Four new kitchen drills** on PRACTICE PARTNER:
-  - **CALL THE SPOT:** a green spot lights on their side for each ball;
-    dink onto it. It lights later and gets smaller the harder you set it.
-  - **LINE AND CROSS:** only one half of their kitchen counts, straight
-    ahead, cross court, or alternating.
-  - **VOLLEY DINKS:** soft floaters at your kitchen line; volley them
-    onto the spot without stepping in.
-  - **ATTACK OR DINK:** speed up the dinks that sit up, dink the rest.
-- **Every partner feed has a lead-in:** the partner holds the next ball
-  up, drops it and hits it as it falls, so you see where it's coming
-  from and when.
-- **Menu arrows both work:** clicking the < on a setting steps it back,
-  the > steps it on.
-- **RESETS:** a new PRACTICE PARTNER drill. You stand mid-court and the
-  partner drives at you, hard and low. Block it soft into their kitchen,
-  under the red pop-up line over the net. DIFFICULTY sets the pace and
-  how low the line is.
-- **PADDLE** (on MAIN), with profiles for paddle accessories. DEFAULT is
-  the paddle you had. PROFILE 1-3 set the ANGLE (-30 to 90), TWIST and
-  REACH (how far out the face sits) to fit an accessory, and the paddle
-  in your hand moves as you change them.
-- **Blocks keep their pace:** stick your paddle out against a hard-hit
-  ball and it goes back with real speed, not a dead drop into the net.
-- **HANDS:** a new PRACTICE PARTNER drill (DRILL: HANDS). You and the
-  partner stand at your kitchen lines and volley hard at each other; it
-  takes every ball out of the air and sends it back at you. DIFFICULTY
-  is the pace.
-
-### Changed
 - DINK PARTNER is now PRACTICE PARTNER, with DINKS and HANDS drills.
 - PADDLE ANGLE moved from MATCH SETUP to the PADDLE page, so it's
   reachable from practice too.
@@ -114,6 +111,15 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 - **The dink zone** now runs 2.5 ft past the kitchen line.
 - **FOCUS is much stronger:** it starts at 5 in a row and the world is
   nearly black around the court by 13.
+- **Blocks keep more pace:** stick the paddle out at a hard-hit ball and
+  it goes back with up to 72% of its speed.
+- **Every partner feed has a lead-in:** the partner holds the next ball
+  up, drops it and hits it as it falls, so you see where it's coming
+  from and when.
+
+### Fixed
+- **Menu arrows both work:** clicking the < on a setting steps it back,
+  the > steps it on.
 
 ## [0.2.0] - 2026-10-27
 
