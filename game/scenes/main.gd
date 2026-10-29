@@ -59,7 +59,7 @@ func _new_view() -> MatchView:
 	menu = null
 	view = MatchView.new()
 	view.left_handed = settings.left_handed
-	view.partner_model = "rb_male_01" if settings.partner_look == 1 else ""
+	view.partner_model = Settings.PARTNER_MODELS[clampi(settings.partner_look, 0, Settings.PARTNER_MODELS.size() - 1)]
 	view.passthrough = settings.passthrough
 	var pose := settings.paddle_pose()
 	view.paddle_tilt = pose[0]
@@ -136,7 +136,7 @@ func _page(id: String) -> Menu3D:
 			m.add_row("ptargets", "TARGETS", OFF_ON, 1 if settings.partner_targets else 0)
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
 			m.add_row("ptime", "MODE", Drill.TIME_NAMES, settings.partner_time)
-			m.add_row("plook", "PARTNER LOOK", ["CLASSIC", "NEW"], settings.partner_look)
+			m.add_row("plook", "PARTNER LOOK", Settings.PARTNER_LOOKS, settings.partner_look)
 			m.add_row("pstart", "START")
 			m.add_row("to_records", "RECORDS")
 			m.add_row("back", "BACK")

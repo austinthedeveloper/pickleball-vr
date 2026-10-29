@@ -109,9 +109,13 @@ The Body now poses any rig, not only the base body's:
 Such a person wears their own clothes, hair and shoes, so no shirt shells,
 team colours or cap.
 
-PRACTICE PARTNER > PARTNER LOOK (CLASSIC / NEW) picks the partner, saved
-in the settings. The CPU players stay classic until the lead decides.
-`test_avatar.test_another_rig_follows_the_joints` checks:
+PRACTICE PARTNER > PARTNER LOOK picks the partner, saved in the
+settings:
+- CLASSIC;
+- NEW MAN (Male_Adult_01);
+- NEW WOMAN (Female_Adult_12: a hoodie, shorts and sneakers, the most
+  court-ready of the women). The CPU players stay classic until the lead decides.
+`test_avatar.test_another_rig_follows_the_joints` checks, for each of them:
 - the grip and the feet land where the Avatar wants them;
 - the fingers close;
 - the view with the new partner still never writes to the sim.

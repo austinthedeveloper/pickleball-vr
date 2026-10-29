@@ -11,9 +11,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
   wind-ups.
 
 ### Added
-- **PARTNER LOOK** on PRACTICE PARTNER: NEW puts a more realistic person
-  across the net (from Microsoft's free Rocketbox library), in a striped
-  polo, cargo shorts and sneakers. CLASSIC is the partner you had.
+- **PARTNER LOOK** on PRACTICE PARTNER puts a more realistic person
+  across the net, from Microsoft's free Rocketbox library:
+  - NEW MAN, in a striped polo and cargo shorts;
+  - NEW WOMAN, in a hoodie, shorts and sneakers;
+  - CLASSIC, the partner you had.
 
 ### Changed
 - **A real net:** square mesh you can see through, the white tape over

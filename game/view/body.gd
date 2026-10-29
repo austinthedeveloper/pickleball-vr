@@ -57,6 +57,7 @@ static var _meshes := {}             ## file -> the body mesh with T-pose places
 ## hair are their own.
 const MODELS := {
 	"rb_male_01": {"file": "rocketbox/male_adult_01.fbx", "rig": "bip", "tex": "rocketbox/male_adult_01_"},
+	"rb_female_12": {"file": "rocketbox/female_adult_12.fbx", "rig": "bip", "tex": "rocketbox/female_adult_12_"},
 }
 ## Canonical bone name -> the rig's.
 const RIGS := {"bip": {

@@ -74,10 +74,16 @@ func test_the_body_follows_the_joints() -> void:
 ## the same places, its fingers close toward the palm, and the view with it
 ## still never writes to the sim.
 func test_another_rig_follows_the_joints() -> void:
+	for model in Settings.PARTNER_MODELS:
+		if model != "":
+			_another_rig(model)
+
+
+func _another_rig(model: String) -> void:
 	var sim := Sim.new(Settings.new().partner_config())
 	var a := Avatar.new()
 	a.slot = 2
-	a.model = "rb_male_01"
+	a.model = model
 	runner.root.add_child(a)
 	for i in 60:
 		a.show_from(sim, 1.0 / 72.0)
@@ -100,7 +106,7 @@ func test_another_rig_follows_the_joints() -> void:
 	a.queue_free()
 	var s := Settings.new()
 	var v := MatchView.new()
-	v.partner_model = "rb_male_01"
+	v.partner_model = model
 	runner.root.add_child(v)
 	v.setup(s.partner_config(), false)
 	for i in 900:
@@ -115,7 +121,7 @@ func test_another_rig_follows_the_joints() -> void:
 ## Known issue 9: through a whole rally, both bodies keep the paddle in the
 ## hand (it used to float off when a wind-up aimed past the arm's reach).
 func test_the_paddle_never_leaves_the_hand() -> void:
-	for model in ["", "rb_male_01"]:
+	for model in Settings.PARTNER_MODELS:
 		var s := Settings.new()
 		var v := MatchView.new()
 		v.partner_model = model
