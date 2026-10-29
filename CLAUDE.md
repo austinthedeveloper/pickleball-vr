@@ -36,7 +36,8 @@ plugin-free). Godot's version and SHA-512s are pinned in
 `design/COACHING.md` tracks every coaching idea (C-1..C-23) and its status. `design/ROADMAP.md` is the milestone sheet: keep it current with each
 branch. `design/KNOWN_ISSUES.md` lists the defects, and
 `decisions/README.md` the ADRs (next: ADR-026). `design/QUEST_SETUP.md`
-covers the headset build.
+covers the headset build. `design/TEST_CHANNEL.md` is the plan for
+sharing builds with friends on Meta's ALPHA channel.
 
 **The canon bible** is `../pickleball/docs/PICKLEBALL_94_BIBLE.md`. The VR
 game is one of its artifacts and may not contradict it. Port kit

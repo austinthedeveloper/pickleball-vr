@@ -108,7 +108,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-61 | Drift: tracking in the swing log, PADDLE > CHECK (ADR-015) | `feature/cld-vr-drives` | Ready to test |
 | VR-62 | Tablet: a clean court per drill; taps show and say what they did (ADR-024) | `feature/cld-vr-tablet-2` | Ready to test |
 | VR-63 | PRANKS: soundboard, silly balls and paddles, weather, antics, voice, selfie; MERCY (ADR-025, C-23) | `feature/cld-vr-pranks` | Played: "no notes" |
-| VR-64 | PRANKS voice from an iPhone: a video's sound, caught by playing it (ADR-025) | `feature/cld-vr-iphone-voice` | Ready to test |
+| VR-64 | PRANKS voice from an iPhone: a video's sound, caught by playing it (ADR-025) | `feature/cld-vr-iphone-voice` | Played: works, normal and monster |
+| VR-65 | Friends on Meta's ALPHA channel: release key, release builds, upload (design/TEST_CHANNEL.md) | — | Planned: waiting on the lead's Meta account |
 
 ## Phase 1: singles
 

@@ -87,6 +87,12 @@ kit does) is possible later: the same steps as `design/QUEST_SETUP.md`
 in a workflow, with `fetch_openxr_vendors.sh` for the plugin and the
 keystore as a secret. The tests already run there (see CI above).
 
+## Sharing with friends
+
+Planned: Meta's ALPHA release channel, so friends install from the Store
+and get updates. The plan, and what each side does, is in
+`design/TEST_CHANNEL.md`.
+
 ## Signing
 
 Releases are **debug-signed**, with the Mac's Android debug keystore
