@@ -17,6 +17,7 @@ var _spot_at := Vector2.ZERO
 var _rings: Array[MeshInstance3D] = []
 var _discs: Array[MeshInstance3D] = []
 var _flash := 0.0
+var _face: MeshInstance3D
 var _t := 0.0
 
 
@@ -71,6 +72,28 @@ func show_from(sim: Sim, delta: float) -> void:
 	scale = Vector3(pulse, 1, pulse)
 	for i in _discs.size():
 		(_discs[i].material_override as StandardMaterial3D).albedo_color.a = DISC_ALPHA[i] + 0.5 * _flash
+
+
+## A prank: their face on the bullseye (ADR-025); null takes it off.
+func set_face(tex: Texture2D) -> void:
+	if _face:
+		_face.free()
+		_face = null
+	if tex == null:
+		return
+	_face = MeshInstance3D.new()
+	var q := QuadMesh.new()
+	var r: float = radius / float(K.M) * Drill.RING_EDGES[-1] / 100.0
+	q.size = Vector2(r * 2.2, r * 2.2)
+	_face.mesh = q
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = tex
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	_face.material_override = m
+	_face.rotation.x = -PI / 2           # flat, its top away from you
+	_face.position.y = 0.006
+	add_child(_face)
 
 
 func flare() -> void:

@@ -6,6 +6,16 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+### Added
+- **PRANKS:** hand the coach's phone to a kid. A soundboard (airhorn,
+  boo, sad trombone, whoopee...), the announcer calling OUT! on a good
+  ball, silly balls (a rubber duck that squeaks, a watermelon that
+  splats, their face) and paddles (a frying pan that clangs, a baguette,
+  a fly swatter, a foam #1 hand), snow, bubbles and confetti, a partner
+  who dances and flexes, their voice in your headset (robot, chipmunk or
+  monster), and their selfie on the partner's face. Pause and pick
+  MERCY for a minute's peace; COACH > PRANKS FROM THE PHONE turns it off.
+
 ## [0.3.0] - 2026-10-28
 
 The coaching update. A coach follows along on a phone, places targets

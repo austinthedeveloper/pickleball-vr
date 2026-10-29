@@ -34,6 +34,7 @@ const BACKSWING := 0.42              ## seconds before contact the backswing sta
 const FORWARD := 0.12                ## ...and the forward swing
 const FOLLOW := 0.3
 const RECOVER := 0.35
+const MASK_AT := Vector3(0, 0.075, 0.13)   ## a prank's face photo, from the head bone
 
 var slot := 2
 var shirt := Color(0.95, 0.55, 0.12)
@@ -72,6 +73,12 @@ var _backhand := false
 var _plan_seen := -2
 var _last_hitter := -9
 var _last_swing := -1
+# A prank's antic (ADR-025): what, for how long, how far in. A swing comes
+# first: the antic waits while the ball is theirs to hit.
+var _antic := ""
+var _antic_len := 0.0
+var _antic_t := 0.0
+var _mask: MeshInstance3D
 
 
 func _ready() -> void:
@@ -124,6 +131,82 @@ static func _box(size: Vector3) -> BoxMesh:
 	var m := BoxMesh.new()
 	m.size = size
 	return m
+
+
+# --- Pranks (ADR-025) ------------------------------------------------------------
+
+## Do an antic for `seconds` (Pranks.ANTICS, or "talk"); "" stops.
+func antic(kind: String, seconds: float) -> void:
+	_antic = kind
+	_antic_len = seconds
+	_antic_t = 0.0
+
+
+func antic_on() -> String:
+	return _antic
+
+
+## A photo over the face, like a cut-out mask on a stick; null takes it off.
+func set_mask(tex: Texture2D) -> void:
+	if _mask:
+		_mask.get_parent().free()
+		_mask = null
+	if tex == null or figure == null:
+		return
+	var on := BoneAttachment3D.new()
+	on.bone_name = "Head"
+	figure.skel.add_child(on)
+	_mask = MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(0.27, 0.27)
+	_mask.mesh = q
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = tex
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_mask.material_override = m
+	_mask.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_mask.position = MASK_AT
+	on.add_child(_mask)
+
+
+## The antic's pose this frame: {} for none, else any of "pelvis" (an
+## offset), "hand", "off" (the hands) and "pole" (elbows, for both arms).
+func _antic_pose(delta: float, pelvis: Vector3, face: Vector3, right: Vector3) -> Dictionary:
+	if _antic == "":
+		return {}
+	_antic_t += delta
+	if _antic_t >= _antic_len:
+		_antic = ""
+		return {}
+	if _swing and (_since >= 0.0 and _since < FOLLOW or _since < 0.0 and _until < BACKSWING):
+		return {}                        # the ball first: the swing, then back to it
+	var t := _antic_t
+	var up := Vector3.UP
+	match _antic:
+		"dance":
+			# Disco: the paddle hand points up and across, then down; the
+			# hips sway to the beat; the other hand on the hip.
+			var beat := sin(TAU * 1.0 * t)
+			var sway := right * 0.07 * sin(TAU * 1.0 * t) + up * 0.035 * absf(sin(TAU * 2.0 * t))
+			var hi := pelvis + right * 0.4 + up * 1.05 + face * 0.15
+			var lo := pelvis - right * 0.12 + up * 0.15 + face * 0.32
+			return {"pelvis": sway, "hand": hi if beat > 0.0 else lo,
+				"off": pelvis - right * 0.24 + up * 0.08 + face * 0.02}
+		"flex":
+			var pump := 0.03 * sin(TAU * 2.0 * t)
+			return {"hand": pelvis + right * 0.3 + up * (0.78 + pump) + face * 0.05,
+				"off": pelvis - right * 0.3 + up * (0.78 + pump) + face * 0.05, "pole": Vector3.DOWN * 0.3, "wide": true}
+		"wave":
+			return {"off": pelvis - right * (0.3 + 0.13 * sin(TAU * 2.2 * t)) + up * 1.1 + face * 0.12}
+		"jump":
+			return {"pelvis": up * 0.07 * absf(sin(TAU * 1.5 * t)), "hand": pelvis + right * 0.22 + up * 1.2 + face * 0.08,
+				"off": pelvis - right * 0.22 + up * 1.2 + face * 0.08}
+		"talk":
+			return {"off": pelvis - right * 0.18 + face * 0.38 + up * (0.4 + 0.06 * sin(TAU * 2.5 * t)),
+				"nod": 0.12 * sin(TAU * 3.0 * t)}
+	return {}
 
 
 # --- Posing helpers ------------------------------------------------------------
@@ -231,6 +314,9 @@ func show_from(sim: Sim, delta: float) -> void:
 	var hips_h: float = (READY_HIPS if ready or speed > 1.0 else TALL_HIPS) + 0.06 * sin(_hop * PI) \
 		- (0.04 if _swing and _until < 0.2 else 0.0) - 0.03 * bob
 	var pelvis := Vector3(feet_mid.x, hips_h, feet_mid.z) + ahead + _face * 0.03
+	var fun := _antic_pose(delta, pelvis, _face, _face.cross(Vector3.UP).normalized())
+	if fun.has("pelvis"):
+		pelvis += fun["pelvis"]
 	_gait += speed * delta * 4.0
 	# Torso: leans in when ready, coils into the backswing.
 	var coil_want := 0.0
@@ -262,7 +348,7 @@ func show_from(sim: Sim, delta: float) -> void:
 		var toe := _face.rotated(Vector3.UP, 0.25 if i == 0 else -0.25)
 		figure.orient("foot" + s, toe, Vector3.UP)
 	# Arms: the paddle hand on its swing; the other out for balance.
-	var hand_want := _paddle_target(pelvis, t_face, t_right, ball)
+	var hand_want: Vector3 = fun.get("hand", _paddle_target(pelvis, t_face, t_right, ball))
 	var rate := 22.0 if _swing else 9.0
 	_hand = _hand.lerp(hand_want, clampf(delta * rate, 0.0, 1.0))
 	var off_want := pelvis + t_face * (0.32 + 0.12 * sin(_gait) * clampf(speed / 2.5, 0.0, 1.0)) \
@@ -270,8 +356,11 @@ func show_from(sim: Sim, delta: float) -> void:
 	var holding := sim.drill != null and slot == 2 and sim.drill.stage == Drill.SETUP and sim.tick < sim.drill.toss_at + 6
 	if holding:
 		off_want = ball + Vector3(0, -0.07, 0)    # holding the next ball up, then letting it go
+	elif fun.has("off"):
+		off_want = fun["off"]
 	_off = _off.lerp(off_want, clampf(delta * 8.0, 0.0, 1.0))
-	var elbow_pole := Vector3.DOWN * 0.7 - t_face * 0.3
+	var elbow_pole: Vector3 = fun.get("pole", Vector3.DOWN * 0.7 - t_face * 0.3)
+	var out_w := 1.2 if fun.has("wide") else 0.4   # flexing: elbows out
 	var hands := [_off, _hand]
 	var wrist := Vector3.ZERO
 	for i in 2:
@@ -279,7 +368,7 @@ func show_from(sim: Sim, delta: float) -> void:
 		var sh := figure.at("upperarm" + s)
 		# The paddle hand reaches its grip, a palm past the wrist.
 		var fore := figure.fore_len + (PALM if i == 1 else 0.0)
-		var arm := two_bone(sh, hands[i], figure.upper_len, fore, elbow_pole + t_right * (0.4 if i == 1 else -0.4))
+		var arm := two_bone(sh, hands[i], figure.upper_len, fore, elbow_pole + t_right * (out_w if i == 1 else -out_w))
 		figure.aim("upperarm" + s, arm[0])
 		figure.aim("lowerarm" + s, arm[1])
 		if i == 1:
@@ -309,7 +398,10 @@ func show_from(sim: Sim, delta: float) -> void:
 	var flat_len := Vector2(look.x, look.z).length()
 	look.y = clampf(look.y, -0.5 * flat_len, 0.6 * flat_len)
 	_look = _look.slerp(look.normalized(), clampf(delta * 10.0, 0.0, 1.0)) if _look != Vector3.ZERO else look.normalized()
-	figure.orient("Head", _look, Vector3.UP)
+	var head_dir := _look
+	if fun.has("nod"):
+		head_dir = (_look + Vector3.UP * float(fun["nod"])).normalized()
+	figure.orient("Head", head_dir, Vector3.UP)
 	figure.apply()
 
 

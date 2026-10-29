@@ -30,6 +30,18 @@ var run_from := 0                    ## where the drill under way starts in `liv
 var pending := {}
 const LIVE_KEEP := 400
 var machine_on := false              ## the coach started the ball machine: their settings feed it (C-21)
+## Pranks (ADR-025, C-23): the looks on now, put back on every new view; the
+## face photo as it came; until when MERCY holds them off (msec).
+var prank := {"ball": "", "paddle": "", "weather": ""}
+var face_jpg := PackedByteArray()
+var mercy_until := 0
+var _cool := {}                      ## a kind of prank -> when it may go again (msec)
+const MERCY_SECONDS := 60
+## How soon each kind of prank may go again, msec: enough to keep it fun.
+const COOL_MS := {"sound": 1200, "call": 1500, "antic": 2500, "confetti": 3000, "voice": 1500, "look": 300}
+const VOICE_RATES := [8000, 24000]   ## the clip's sample rate, at least and at most
+const VOICE_SECONDS := 8
+const FACE_BYTES := 200000
 var _t := 0.0
 
 
@@ -45,6 +57,7 @@ func set_on(on: bool) -> void:
 	elif not on and coach != null:
 		coach.queue_free()
 		coach = null
+		_clear_pranks()
 
 
 func _process(delta: float) -> void:
@@ -78,6 +91,11 @@ func on_new_view(v: MatchView) -> void:
 		pending = {}
 	for m in marks:
 		v.add_mark(m[0], m[1], m[2])
+	if not face_jpg.is_empty():
+		v.pranks.set_face(face_jpg)
+	v.pranks.set_ball(prank["ball"])
+	v.pranks.set_paddle(prank["paddle"])
+	v.pranks.set_weather(prank["weather"])
 	if machine_on and v.sim.drill and not v.sim.drill.partner and not v.spectate:
 		v.command(machine_command(main.settings.coach_machine))
 
@@ -399,6 +417,8 @@ func handle(msg: Dictionary) -> void:
 			s.save()
 			live = []
 			session = null                   # the next shot starts their session
+		"prank":
+			_prank(msg)
 		"sessions":
 			_send({"type": "sessions", "list": Sessions.list(s.player)})
 		"session":
@@ -406,6 +426,94 @@ func handle(msg: Dictionary) -> void:
 		_:
 			return
 	_send(state())
+
+
+# --- Pranks (ADR-025, C-23) ----------------------------------------------------------
+
+## Pranks go: COACH > PRANKS is on and no MERCY is holding them off.
+func pranks_ok() -> bool:
+	return main.settings.pranks and Time.get_ticks_msec() >= mercy_until
+
+
+## MERCY (the pause menu): every prank off, and none for a minute.
+func mercy() -> void:
+	mercy_until = Time.get_ticks_msec() + MERCY_SECONDS * 1000
+	_clear_pranks()
+	if _view():
+		_view().cue("NO PRANKS FOR A MINUTE")
+	_send(state())
+
+
+func _clear_pranks() -> void:
+	prank = {"ball": "", "paddle": "", "weather": ""}
+	face_jpg = PackedByteArray()
+	if _view() and _view().pranks:
+		_view().pranks.clear()
+
+
+## Can this kind go now? If so, it can't again for a moment.
+func _cooled(kind: String) -> bool:
+	var now := Time.get_ticks_msec()
+	if now < int(_cool.get(kind, 0)):
+		return false
+	_cool[kind] = now + int(COOL_MS[kind])
+	return true
+
+
+func _prank(msg: Dictionary) -> void:
+	var v := _view()
+	if v == null or v.pranks == null or not pranks_ok():
+		return
+	var p := v.pranks
+	var id := String(msg.get("id", ""))
+	match String(msg.get("what", "")):
+		"sound":
+			if Pranks.SOUNDS.has(id) and _cooled("sound"):
+				p.sound(id)
+		"call":
+			if Pranks.CALLS.has(id) and _cooled("call"):
+				p.call_out(id)
+		"antic":
+			if Pranks.ANTICS.has(id) and _cooled("antic"):
+				p.antic(id)
+		"confetti":
+			if _cooled("confetti"):
+				p.confetti()
+		"ball":
+			if Pranks.BALLS.has(id) and _cooled("look"):
+				p.set_ball(id)
+				prank["ball"] = p.ball
+		"paddle":
+			if Pranks.PADDLES.has(id) and _cooled("look"):
+				p.set_paddle(id)
+				prank["paddle"] = p.paddle
+		"weather":
+			if Pranks.WEATHER.has(id) and _cooled("look"):
+				p.set_weather(id)
+				prank["weather"] = p.weather
+		"face":
+			var jpg := Marshalls.base64_to_raw(String(msg.get("jpg", "")))
+			if jpg.size() <= FACE_BYTES and p.set_face(jpg):
+				face_jpg = jpg
+		"face_clear":
+			face_jpg = PackedByteArray()
+			p.clear_face()
+			prank["ball"] = p.ball
+		"voice":
+			var rate := int(msg.get("rate", 0))
+			var pcm := Marshalls.base64_to_raw(String(msg.get("pcm", "")))
+			if rate >= VOICE_RATES[0] and rate <= VOICE_RATES[1] and pcm.size() >= 2 \
+					and pcm.size() <= rate * 2 * VOICE_SECONDS and _cooled("voice"):
+				var seconds := p.voice(pcm, rate)
+				_cool["voice"] = Time.get_ticks_msec() + roundi(seconds * 1000) + int(COOL_MS["voice"])
+
+
+func _prank_state() -> Dictionary:
+	return {"on": main.settings.pranks, "mercy": maxi(ceili((mercy_until - Time.get_ticks_msec()) / 1000.0), 0),
+		"ball": prank["ball"], "paddle": prank["paddle"], "weather": prank["weather"], "face": not face_jpg.is_empty(),
+		"sounds": Pranks.SOUNDS, "calls": Pranks.CALLS, "balls": Pranks.BALLS, "paddles": Pranks.PADDLES,
+		"weathers": Pranks.WEATHER, "antics": Pranks.ANTICS, "voice_seconds": VOICE_SECONDS,
+		"partner": _view() != null and _view().partner_avatar != null}
 
 
 # --- What the coach sees -------------------------------------------------------------
@@ -428,7 +536,8 @@ func state() -> Dictionary:
 		"challenge": challenge, "workout": {} if workout.is_empty() else
 			{"name": workout["name"], "step": workout["step"], "of": (workout["steps"] as Array).size()},
 		"tunes": _sliders(),
-		"machine": s.coach_machine.merged({"on": machine_on and _playing()})}
+		"machine": s.coach_machine.merged({"on": machine_on and _playing()}),
+		"pranks": _prank_state()}
 	var d: Drill = v.sim.drill if v and v.sim and _playing() else null
 	if d:
 		st["run"] = {"name": Settings.run_name(d) if d.time_limit > 0 else d.mode_name(), "score": d.score(),

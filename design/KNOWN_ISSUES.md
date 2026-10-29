@@ -25,3 +25,8 @@
 7. **The announcer and the crowd are untested by ear.** The clips come
    from the port kit and are all present (`test_audio`). The volumes and
    the call timing need a listen in the headset.
+8. **HOLD TO TALK needs HTTPS** (ADR-025). The headset serves plain HTTP,
+   so a phone's browser won't open the microphone; the PRANKS tab opens
+   the phone's recorder instead. An iPhone may offer only the camera (a
+   short video's sound works). The prank sounds are synthesized and
+   unheard in the headset yet.

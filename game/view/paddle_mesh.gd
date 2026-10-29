@@ -14,6 +14,8 @@ const HANDLE := 0.13
 
 var color := Color(0.85, 0.15, 0.2)
 var accent := Color(0.98, 0.95, 0.9)
+var skin := ""                       ## a prank's silly paddle (Pranks.PADDLES), "" the real one
+var _skin: Node3D
 
 
 func _ready() -> void:
@@ -65,6 +67,20 @@ func _ready() -> void:
 	cap.material_override = _mat(color.darkened(0.3), 0.5)
 	cap.position = grip.position + Vector3(0, 0, HANDLE / 2)
 	add_child(cap)
+
+
+## A prank's silly paddle in place of this one (ADR-025); "" puts it back.
+## Only the look: the sim's paddle stays the same.
+func set_skin(kind: String) -> void:
+	skin = kind
+	if _skin:
+		_skin.free()
+		_skin = null
+	for c in get_children():
+		(c as Node3D).visible = kind == ""
+	if kind != "":
+		_skin = Pranks.paddle_skin(kind)
+		add_child(_skin)
 
 
 static func _mat(c: Color, rough: float) -> StandardMaterial3D:

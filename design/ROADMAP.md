@@ -103,6 +103,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-60 | The tablet shows the drill's own controls (ADR-024) | `feature/cld-vr-drives` | Ready to test |
 | VR-61 | Drift: tracking in the swing log, PADDLE > CHECK (ADR-015) | `feature/cld-vr-drives` | Ready to test |
 | VR-62 | Tablet: a clean court per drill; taps show and say what they did (ADR-024) | `feature/cld-vr-tablet-2` | Ready to test |
+| VR-63 | PRANKS: soundboard, silly balls and paddles, weather, antics, voice, selfie; MERCY (ADR-025, C-23) | `feature/cld-vr-pranks` | Ready to test |
 
 ## Phase 1: singles
 
