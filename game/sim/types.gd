@@ -90,6 +90,9 @@ class MatchConfig:
 	var styles: Array = []
 	## The ladder team on the far side, for the view (the sim reads `styles`).
 	var opponent := -1
+	## FRIENDLY DINK (ADR-027): singles from the kitchen lines, rallies
+	## counted, no score. Two humans (online); a CPU would serve it as a match.
+	var friendly := false
 	## Practice (ADR-007): a Drill's settings; null plays a match.
 	var drill: Drill = null
 	## The venue, for the view only (ADR-008).

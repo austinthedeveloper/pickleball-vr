@@ -25,6 +25,7 @@ var point_winner := K.NO_TEAM
 var match_winner := K.NO_TEAM
 var still_ticks := 0
 var shots := 0                       ## hits this rally
+var best_rally := 0                  ## FRIENDLY DINK: the most returns in a rally
 ## The last human contact's distance from the face's centre (um): the
 ## view's haptics and sound read it.
 var last_offset := 0
@@ -79,6 +80,7 @@ func new_match() -> void:
 	serving_team = config.first_server
 	match_winner = K.NO_TEAM
 	point_winner = K.NO_TEAM
+	best_rally = 0
 	events = []
 	for p in players:
 		p.cpu = not is_human(p.slot)
@@ -122,6 +124,9 @@ func set_phase(p: int) -> void:
 
 # --- Serving ---------------------------------------------------------------
 
+## FRIENDLY DINK: where both stand, behind their kitchen lines.
+const FRIENDLY_BACK := 400000
+
 ## The player of `team` in its right court (if `right`) or left. Singles
 ## has one player, who serves and receives from either.
 func _player_on(team: int, right: bool) -> int:
@@ -149,6 +154,8 @@ func serve_spot(slot: int) -> Array[int]:
 	var right := serve_from_right()
 	if config.doubles:
 		return _doubles_spot(slot)
+	if config.friendly:
+		return [0, side * (K.KITCHEN_DEPTH + FRIENDLY_BACK)]
 	if team == serving_team:
 		var sx := K.right_sign(team) * (1 if right else -1) * (K.COURT_HALF_WIDTH / 3)
 		return [sx, side * (K.COURT_HALF_LENGTH + 350000)]
@@ -227,8 +234,9 @@ func _serve_setup() -> void:
 
 
 func _serve_struck(slot: int) -> void:
-	required_bounce = K.REQUIRED_BOUNCE_SERVE
-	serve_pending = true
+	# FRIENDLY DINK starts with a dink off a drop: no box, no bounce rule.
+	required_bounce = K.REQUIRED_BOUNCE_NONE if config.friendly else K.REQUIRED_BOUNCE_SERVE
+	serve_pending = not config.friendly
 	bounce_count = 0
 	last_hitter = slot
 	shots = 1
@@ -271,6 +279,9 @@ func _hitter_team() -> int:
 func resolve_point(losing_team: int, fault: int) -> void:
 	if phase == K.PHASE_POINT_RESULT or phase == K.PHASE_MATCH_RESULT:
 		return
+	if config.friendly:
+		_rally_over(losing_team, fault)
+		return
 	var winner := 1 - losing_team
 	point_winner = winner
 	last_fault = fault
@@ -286,11 +297,28 @@ func resolve_point(losing_team: int, fault: int) -> void:
 	required_bounce = K.REQUIRED_BOUNCE_NONE
 
 
+## FRIENDLY DINK: no point, the rally's count. Whoever missed has the ball
+## and starts the next one.
+func _rally_over(losing_team: int, fault: int) -> void:
+	var rally := maxi(shots - 1, 0)
+	best_rally = maxi(best_rally, rally)
+	point_winner = 1 - losing_team
+	last_fault = fault
+	serving_team = losing_team
+	if fault != K.FAULT_NONE and fault != K.FAULT_SECOND_BOUNCE:
+		emit(K.EVENT_FAULT, fault, losing_team, 0)
+	emit(K.EVENT_RALLY, rally, best_rally, losing_team)
+	set_phase(K.PHASE_POINT_RESULT)
+	required_bounce = K.REQUIRED_BOUNCE_NONE
+
+
 func score_wins(s: int, other: int) -> bool:
 	return s >= config.points_to_win and (not config.win_by_2 or s >= other + 2)
 
 
 func team_won(team: int) -> bool:
+	if config.friendly:
+		return false
 	return score_wins(score[team], score[team ^ 1])
 
 
@@ -302,7 +330,9 @@ func _rules_hit(slot: int) -> bool:
 		resolve_point(team, K.FAULT_EARLY_VOLLEY)
 		return false
 	var p := players[slot]
-	if bounce_count == 0 and K.in_kitchen(p.x, p.z, team):
+	# FRIENDLY DINK leans as practice does (ADR-019): the head over the line.
+	var lean := K.side_sign(team) * Drill.KITCHEN_LEAN if config.friendly else 0
+	if bounce_count == 0 and K.in_kitchen(p.x, p.z + lean, team):
 		resolve_point(team, K.FAULT_KITCHEN)
 		return false
 	return true
@@ -455,7 +485,7 @@ func _assist(team: int, v: Array[int]) -> Array[int]:
 		# kitchen (a dink stays a dink), anything firmer to mid-court.
 		depth = K.KITCHEN_DEPTH * 7 / 10 if pace < SOFT_PACE else K.KITCHEN_DEPTH + 1500000
 	depth = clampi(depth, m, K.COURT_HALF_LENGTH - m)
-	if phase == K.PHASE_TOSS:
+	if phase == K.PHASE_TOSS and not config.friendly:
 		var box := K.right_sign(1 - team) * (1 if serve_from_right() else -1)
 		tx = box * clampi(tx * box, m, K.COURT_HALF_WIDTH - m)
 		depth = clampi(depth, K.KITCHEN_DEPTH + m, K.COURT_HALF_LENGTH - m)
@@ -849,6 +879,8 @@ func snapshot() -> Array:
 			1 if p.court_right else 0, 1 if p.let_go else 0])
 	if drill:
 		a.append_array(drill.snapshot())
+	if config.friendly:
+		a.append(best_rally)
 	return a
 
 

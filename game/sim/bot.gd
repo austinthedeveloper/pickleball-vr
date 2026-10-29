@@ -124,6 +124,15 @@ func _rest(h: SimTypes.HumanInput) -> void:
 	h.normal = [0, 0, -side * K.Q14]
 
 
+## Where to wait, front to back: the baseline, or (FRIENDLY DINK) the
+## kitchen line.
+func _home_z() -> int:
+	var side := K.side_sign(_team())
+	if sim.config.friendly:
+		return side * (K.KITCHEN_DEPTH + Sim.FRIENDLY_BACK)
+	return side * (K.COURT_HALF_LENGTH - 300000)
+
+
 func _incoming() -> bool:
 	var team := _team()
 	if sim.phase == K.PHASE_TOSS:
@@ -135,7 +144,7 @@ func _move() -> void:
 	var team := _team()
 	var side := K.side_sign(team)
 	var gx := _lane_x()
-	var gz := side * (K.COURT_HALF_LENGTH - 300000)
+	var gz := _home_z()
 	if sim.drill:
 		gx = sim.drill.spot_x               # practice: back to your spot
 		gz = sim.drill.spot_z
@@ -152,13 +161,13 @@ func _move() -> void:
 				# Nothing to plan yet (the ball's not on its way): home, not a
 				# stale goal (it used to walk to (0, 0), the middle of the net).
 				_goal_x = sim.drill.spot_x if sim.drill else _lane_x()
-				_goal_z = sim.drill.spot_z if sim.drill else side * (K.COURT_HALF_LENGTH - 300000)
+				_goal_z = sim.drill.spot_z if sim.drill else _home_z()
 			elif sim.covers(slot, plan[1]):
 				_goal_x = plan[4]
 				_goal_z = plan[5]
 			else:
 				_goal_x = _lane_x()
-				_goal_z = side * (K.COURT_HALF_LENGTH - 300000)
+				_goal_z = _home_z()
 		gx = _goal_x
 		gz = _goal_z
 	elif sim.phase != K.PHASE_LIVE:
@@ -297,6 +306,9 @@ func _target(b: Ball) -> Array[int]:
 	var team := _team()
 	var opp := 1 - team
 	var os := K.side_sign(opp)
+	if sim.config.friendly:
+		# FRIENDLY DINK: every ball a dink, deep in their kitchen.
+		return [0, os * K.KITCHEN_DEPTH * 6 / 10, 40000]
 	if sim.phase == K.PHASE_TOSS:
 		var box := K.right_sign(opp) * (1 if sim.serve_from_right() else -1)
 		return [box * K.COURT_HALF_WIDTH / 2, os * (K.COURT_HALF_LENGTH - 1500000), 95000]

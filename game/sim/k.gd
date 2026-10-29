@@ -142,6 +142,7 @@ const EVENT_FEED := 8                ## the machine fed: target x, z, shot
 const EVENT_DRILL := 9               ## a drill's result: result, streak, finished 0/1
 const EVENT_TARGET := 10             ## a floor target hit: x, z, ring
 const EVENT_TIME_UP := 11            ## a timed drill's clock ran out: score, good, best streak
+const EVENT_RALLY := 12              ## FRIENDLY DINK's rally ended: returns, best, the team that missed
 
 
 static func fault_text(f: int) -> String:
