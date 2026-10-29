@@ -252,39 +252,106 @@ func set_focus(a: float) -> void:
 		_env.background_color = _bg_base * k
 
 
+## The net (a real one's parts): square-mesh cord sagging to the
+## centre's height as the sim's net does, the white tape over the top, a
+## centre strap down to the court, white bindings at the ends, and metal
+## posts with caps, collars and a winder. The cord is a texture: from
+## near you see the squares, far off it blends to a dark veil.
+const NET_CELL := 0.045                ## the mesh's squares (1.75 in)
+const NET_BOTTOM := 0.06               ## its lower edge, above the court
+const TAPE := 0.05
+
+
 func _net() -> void:
 	var post := K.NET_POST_X / float(K.M)
 	var top := K.NET_HEIGHT_POST / float(K.M)
 	var mid := K.NET_HEIGHT_CENTER / float(K.M)
+	var metal := material(Color(0.12, 0.13, 0.14))
+	metal.metallic = 0.6
+	metal.roughness = 0.35
 	for s in [-1, 1]:
-		_cylinder(Vector3(s * post, 0, 0), 0.04, top + 0.03, Color(0.2, 0.2, 0.22))
-	# The mesh: a strip of quads that sags to the centre's height.
+		var p := _cylinder(Vector3(s * post, 0, 0), 0.024, top + 0.04, Color.BLACK)
+		p.material_override = _track(metal)
+		var cap := _sphere(Vector3(s * post, top + 0.04, 0), 0.03, 0.6, Color.BLACK)
+		cap.material_override = _track(metal)
+		var collar := _cylinder(Vector3(s * post, 0, 0), 0.045, 0.02, Color(0.2, 0.2, 0.21))
+		collar.material_override = _track(metal)
+	# The winder: a small box with a handle on the right-hand post.
+	var winder := _box(Vector3(post + 0.04, top - 0.1, 0), Vector3(0.05, 0.08, 0.06), Color.BLACK)
+	winder.material_override = _track(metal)
+	var handle := _box(Vector3(post + 0.075, top - 0.08, 0.035), Vector3(0.012, 0.012, 0.07), Color.BLACK)
+	handle.material_override = _track(metal)
+	# The mesh: two panels, post to centre, the top following the tape.
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var n := 16
-	for i in n:
-		var x0 := -post + 2 * post * i / n
-		var x1 := -post + 2 * post * (i + 1) / n
-		var h0 := mid + (top - mid) * absf(x0) / post
-		var h1 := mid + (top - mid) * absf(x1) / post
-		for v in [Vector3(x0, 0.08, 0), Vector3(x1, 0.08, 0), Vector3(x1, h1 - 0.05, 0),
-				Vector3(x0, 0.08, 0), Vector3(x1, h1 - 0.05, 0), Vector3(x0, h0 - 0.05, 0)]:
+	for s in [-1.0, 1.0]:
+		var quad := [Vector3(s * post, NET_BOTTOM, 0), Vector3(0, NET_BOTTOM, 0),
+			Vector3(0, mid - TAPE / 2, 0), Vector3(s * post, top - TAPE / 2, 0)]
+		for k in [0, 1, 2, 0, 2, 3]:
+			var v: Vector3 = quad[k]
+			st.set_uv(Vector2(v.x / NET_CELL, -v.y / NET_CELL))
 			st.add_vertex(v)
-		var tape := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		var len := Vector2(x1 - x0, h1 - h0).length()
-		bm.size = Vector3(len, 0.05, 0.012)
-		tape.mesh = bm
-		tape.material_override = material(Color(0.96, 0.96, 0.94))
-		tape.position = Vector3((x0 + x1) / 2, (h0 + h1) / 2 - 0.025, 0)
-		tape.rotation.z = atan2(h1 - h0, x1 - x0)
-		add_child(tape)
 	var net := MeshInstance3D.new()
 	net.mesh = st.commit()
-	var mat := material(Color(0.05, 0.05, 0.06, 0.55))
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	net.material_override = mat
+	net.material_override = net_material()
+	net.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(net)
+	# The tape over the top, and a cord along the bottom.
+	var white := material(Color(0.97, 0.97, 0.95))
+	for s in [-1.0, 1.0]:
+		_strip(Vector3(s * post, top - TAPE / 2, 0), Vector3(0, mid - TAPE / 2, 0), TAPE, 0.014, white)
+		_strip(Vector3(s * post, NET_BOTTOM, 0), Vector3(0, NET_BOTTOM, 0), 0.008, 0.008, material(Color(0.08, 0.08, 0.09)))
+		# The binding up each end, laced to the post.
+		_strip(Vector3(s * (post - 0.02), NET_BOTTOM, 0), Vector3(s * (post - 0.02), top - TAPE, 0), 0.03, 0.012, white, true)
+	# The centre strap, from the tape down to its anchor in the court.
+	_strip(Vector3(0, mid, 0), Vector3(0, 0.0, 0), 0.05, 0.016, white, true)
+	var anchor := _box(Vector3(0, 0.01, 0), Vector3(0.09, 0.02, 0.05), Color(0.25, 0.25, 0.26))
+	anchor.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+## A flat band from `a` to `b`, `w` wide (across, in the net's plane) and
+## `t` thick. `upright`: the width runs along x (a vertical band).
+func _strip(a: Vector3, b: Vector3, w: float, t: float, mat: Material, upright := false) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	var d := b - a
+	if upright:
+		bm.size = Vector3(w, d.length(), t)
+	else:
+		bm.size = Vector3(d.length(), w, t)
+		mi.rotation.z = atan2(d.y, d.x)
+	mi.mesh = bm
+	mi.material_override = mat
+	mi.position = (a + b) / 2
+	add_child(mi)
+	return mi
+
+
+static var _net_mat: StandardMaterial3D
+
+
+## The net's cord: a square mesh painted into a small texture, mipmapped
+## so it greys into a veil with distance.
+static func net_material() -> StandardMaterial3D:
+	if _net_mat:
+		return _net_mat
+	const N := 32
+	var img := Image.create(N, N, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0.05, 0.05, 0.06, 0.06))
+	var cord := Color(0.05, 0.05, 0.06, 1.0)
+	for i in N:
+		for w in 3:
+			img.set_pixel(i, w, cord)
+			img.set_pixel(w, i, cord)
+	img.generate_mipmaps()
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = ImageTexture.create_from_image(img)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.roughness = 0.9
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	_net_mat = m
+	return m
 
 
 func _fences(hx: float, hz: float, c: Color) -> void:

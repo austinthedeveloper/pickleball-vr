@@ -122,6 +122,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-65 | Friends on Meta's ALPHA channel: release key, release builds, upload (design/TEST_CHANNEL.md) | — | Planned: waiting on the lead's Meta account |
 | VR-66 | Remote coaching through the shared relay (C-20; plan in the port kit's design/RELAY.md) | — | Planned: waiting on the lead's Azure sign-in |
 | VR-67 | Cleanup: the roadmap split (HISTORY.md), README, CLAUDE.md, known issues, merged branches | `feature/cld-vr-cleanup` | Done |
+| VR-68 | A real net: square mesh, tape, strap, bindings, metal posts (ADR-012) | `feature/cld-vr-court-assets` | Ready to test |
 
 ## Next
 

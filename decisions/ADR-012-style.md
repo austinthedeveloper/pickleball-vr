@@ -75,3 +75,17 @@ are untouched.
 - Later: real textures (court, grass, the shirts' patterns), baked
   lighting, and a proper skinned character if the shapes stop being
   enough.
+
+## Amendment (2026-10-28): a real net
+
+The net is built from a real one's parts (`World._net`):
+- **The mesh:** square cord (1.75 in squares) painted into a small
+  mipmapped texture. Up close you see the squares; far off they blend
+  into a dark veil.
+- **The top:** the white tape follows the sim's net line exactly (36 in
+  at the posts, 34 at the centre).
+- **The rest:** a centre strap to an anchor in the court, white bindings
+  at the ends, a bottom cord, and metal posts with caps, collars and a
+  winder.
+
+It costs a handful of draw calls.
