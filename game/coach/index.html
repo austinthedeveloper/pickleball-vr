@@ -325,7 +325,8 @@
         <button data-v="normal" class="on">Normal</button><button data-v="robot">Robot</button><button data-v="chipmunk">Chipmunk</button><button data-v="monster">Monster</button>
       </div>
       <button id="bTalk">HOLD TO TALK</button>
-      <input type="file" id="voiceFile" accept="audio/*,video/*" capture class="hidden">
+      <input type="file" id="voiceFile" accept="audio/*,video/*" capture="user" class="hidden">
+      <button class="go hidden" id="bSendClip" style="width:100%;margin-top:10px;padding:18px 6px;font-size:17px">📣 SEND IT!</button>
       <div class="hint" id="talkNote"></div>
     </div>
     <div class="card">
@@ -915,20 +916,91 @@ function drawPranks(p) {
 
 // A clip: decoded, mixed to mono, given its voice, trimmed, at VOICE_RATE,
 // as 16-bit PCM in base64 (the headset can't decode a phone's formats).
+const AC = window.AudioContext || window.webkitAudioContext;
+let clipFile = null;
+
+// A recording file: decoded if the browser can (an Android recorder's
+// audio), else it waits for SEND IT (an iPhone's video: Safari only reads
+// its sound by playing it, and playing needs a tap).
 async function sendVoice(blob) {
   $("talkNote").textContent = "Sending…";
+  let x, sr;
   try {
-    const AC = window.AudioContext || window.webkitAudioContext;
     const ctx = new AC();
     const buf = await blob.arrayBuffer();
     const audio = await new Promise((ok, no) => ctx.decodeAudioData(buf, ok, no));
-    const sr = audio.sampleRate, n = audio.length;
-    let x = new Float32Array(n);
+    sr = audio.sampleRate;
+    x = new Float32Array(audio.length);
     for (let c = 0; c < audio.numberOfChannels; c++) {
       const d = audio.getChannelData(c);
-      for (let i = 0; i < n; i++) x[i] += d[i] / audio.numberOfChannels;
+      for (let i = 0; i < audio.length; i++) x[i] += d[i] / audio.numberOfChannels;
     }
     if (ctx.close) ctx.close();
+  } catch (e) {
+    clipFile = blob;
+    $("bSendClip").classList.remove("hidden");
+    $("talkNote").textContent = "Got it! Tap SEND IT.";
+    return;
+  }
+  sendSamples(x, sr);
+}
+
+// SEND IT: the clip played silently through the audio graph, its sound
+// caught as it goes (as long as the clip, up to the limit).
+async function sendClip() {
+  const file = clipFile;
+  if (!file) return;
+  $("bSendClip").classList.add("hidden");
+  const ctx = new AC();                  // in the tap: Safari only starts sound from one
+  const media = document.createElement("video");
+  media.playsInline = true;
+  media.setAttribute("playsinline", "");
+  media.preload = "auto";
+  media.src = URL.createObjectURL(file);
+  const src = ctx.createMediaElementSource(media);
+  const tap = ctx.createScriptProcessor(4096, 2, 1);
+  const quiet = ctx.createGain();
+  quiet.gain.value = 0;                  // caught, not heard
+  const parts = [];
+  const most = ctx.sampleRate * state.pranks.voice_seconds * 1.6;   // a monster voice slows it down
+  let got = 0, done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    media.pause();
+    tap.disconnect(); src.disconnect();
+    URL.revokeObjectURL(media.src);
+    const x = new Float32Array(got);
+    let at = 0;
+    for (const p of parts) { x.set(p.subarray(0, Math.min(p.length, got - at)), at); at += p.length; }
+    if (ctx.close) ctx.close();
+    clipFile = null;
+    if (got < ctx.sampleRate * 0.2) { $("talkNote").textContent = "Couldn't hear anything in that one. Try again?"; return; }
+    sendSamples(x, ctx.sampleRate);
+  };
+  tap.onaudioprocess = (e) => {
+    if (done || media.paused) return;
+    const n = e.inputBuffer.length, chans = e.inputBuffer.numberOfChannels, mono = new Float32Array(n);
+    for (let c = 0; c < chans; c++) { const d = e.inputBuffer.getChannelData(c); for (let i = 0; i < n; i++) mono[i] += d[i] / chans; }
+    parts.push(mono);
+    got += n;
+    if (got >= most) finish();
+  };
+  src.connect(tap); tap.connect(quiet); quiet.connect(ctx.destination);
+  media.onended = () => setTimeout(finish, 150);
+  media.onerror = () => { done = true; clipFile = null; $("talkNote").textContent = "Couldn't play that recording. Try again?"; };
+  $("talkNote").textContent = "Listening to it…";
+  const playing = media.play();          // before any await, still in the tap
+  if (ctx.resume) ctx.resume();
+  try { await playing; }
+  catch (e) { done = true; clipFile = null; $("talkNote").textContent = "Couldn't play that recording. Try again?"; }
+}
+
+// Samples (mono, at `sr`) to the headset: voiced, trimmed, at VOICE_RATE,
+// 16-bit PCM in base64.
+function sendSamples(x, sr) {
+  try {
+    const n = x.length;
     // Trim the quiet ends.
     let a = 0, b = n - 1;
     while (a < b && Math.abs(x[a]) < 0.02) a++;
@@ -1021,6 +1093,7 @@ if (canMic()) {
   $("bTalk").onclick = () => $("voiceFile").click();
   $("voiceFile").onchange = () => { if ($("voiceFile").files[0]) sendVoice($("voiceFile").files[0]); $("voiceFile").value = ""; };
 }
+$("bSendClip").onclick = sendClip;
 $("bConfetti").dataset.cool = "confetti";
 $("bConfetti").onclick = () => prank("confetti", "", "confetti");
 $("bSelfie").onclick = () => $("selfieFile").click();
