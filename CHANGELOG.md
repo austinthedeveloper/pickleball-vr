@@ -11,6 +11,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
   wind-ups.
 
 ### Added
+- **COACH FROM ANYWHERE** on the COACH page: your coach can watch and
+  coach from anywhere, not just your Wi-Fi. The headset shows a room
+  (like ROOM BXKM); the coach opens the relay's page, types the room,
+  then the code. There, HOLD TO TALK uses the phone's microphone, iPhones
+  included.
 - **PARTNER LOOK** on PRACTICE PARTNER puts a more realistic person
   across the net, from Microsoft's free Rocketbox library:
   - NEW MAN, in a striped polo and cargo shorts;

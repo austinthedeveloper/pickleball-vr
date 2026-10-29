@@ -31,5 +31,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [023](ADR-023-coach-companion.md) | The coach companion: a web page served by the headset |
 | [024](ADR-024-coaching-suite.md) | The coaching suite |
 | [025](ADR-025-pranks.md) | Pranks from the coach's phone |
+| [026](ADR-026-coach-anywhere.md) | COACH FROM ANYWHERE, through the relay |
 
-Next: ADR-026.
+Next: ADR-027.

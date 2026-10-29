@@ -120,7 +120,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-63 | PRANKS: soundboard, silly balls and paddles, weather, antics, voice, selfie; MERCY (ADR-025, C-23) | `feature/cld-vr-pranks` | Played: "no notes" |
 | VR-64 | PRANKS voice from an iPhone: a video's sound, caught by playing it (ADR-025) | `feature/cld-vr-iphone-voice` | Played: works, normal and monster |
 | VR-65 | Friends on Meta's ALPHA channel: release key, release builds, upload (design/TEST_CHANNEL.md) | — | Planned: waiting on the lead's Meta account |
-| VR-66 | Remote coaching through the shared relay (C-20; plan in the port kit's design/RELAY.md) | — | Planned: the relay is live (`../pickleball-relay`); ANYWHERE on the COACH page next |
+| VR-66 | COACH FROM ANYWHERE: a room on the shared relay, the page served there (ADR-026, C-20) | `feature/cld-vr-relay-live` | Ready to test: checked live from the Mac |
 | VR-67 | Cleanup: the roadmap split (HISTORY.md), README, CLAUDE.md, known issues, merged branches | `feature/cld-vr-cleanup` | Done |
 | VR-68 | A real net: square mesh, tape, strap, bindings, metal posts (ADR-012) | `feature/cld-vr-court-assets` | Ready to test |
 | VR-69 | A textured paddle: carbon twill, the colour panel, "94", a wound grip (ADR-012) | `feature/cld-vr-court-assets` | Ready to test |
@@ -133,9 +133,6 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 
 - **VR-65:** friends on Meta's ALPHA channel. It waits on your Meta
   developer account (`design/TEST_CHANNEL.md`).
-- **VR-66:** remote coaching through the relay. The relay is live in
-  East US (`../pickleball-relay`; the port kit's `design/RELAY.md`); the
-  headset's side is next.
 - **THIRD SHOT DROPS:** the one kitchen drill not built yet
   (`design/KITCHEN_DRILLS.md`).
 - **VR-17:** more venues (DINOSAUR, UNDERSEA, TIME of day).
@@ -146,8 +143,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 - **Meta:** a developer account, the app, an upload token and the
   release key's password, for VR-65 (`design/TEST_CHANNEL.md`, "What you
   do").
-- **Azure:** a subscription, a region and `az login` on this Mac, for
-  the relay (VR-66).
+- **COACH FROM ANYWHERE (VR-66):** try it with someone off your Wi-Fi.
+  A short domain for the relay is your call (ADR-026).
 - **A listen:** the PRANKS sounds and the announcer, in the headset.
   Say which sound is off.
 - **Still open from earlier:**

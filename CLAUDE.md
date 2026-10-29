@@ -38,7 +38,7 @@ plugin-free). Godot's version and SHA-512s are pinned in
 status. `design/ROADMAP.md` is the milestone sheet (phases, releases,
 every task's status, next, "For you"): keep it current with each branch.
 What to try for each task goes in `design/HISTORY.md`. `design/KNOWN_ISSUES.md` lists the defects, and
-`decisions/README.md` the ADRs (next: ADR-026). `design/QUEST_SETUP.md`
+`decisions/README.md` the ADRs (next: ADR-027). `design/QUEST_SETUP.md`
 covers the headset build. `design/TEST_CHANNEL.md` is the plan for
 sharing builds with friends on Meta's ALPHA channel.
 

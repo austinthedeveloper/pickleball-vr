@@ -6,7 +6,9 @@
 <title>Pickleball '94 Coach</title>
 <!-- The coach companion (ADR-023, design/COACHING.md): served by the game on
      the headset; talks to it over a WebSocket on the next port. One file,
-     no libraries, no outside requests. -->
+     no libraries, no outside requests. The headset also sends it to the
+     relay for COACH FROM ANYWHERE (ADR-026): served at /c/ROOM, it talks
+     to the headset through that room instead. -->
 <style>
   :root {
     --bg: #0b1020; --panel: #141b31; --panel2: #1b2440; --line: #2a355a;
@@ -120,7 +122,7 @@
 
 <div id="login">
   <h1>PICKLEBALL '94 COACH</h1>
-  <p>Enter the code shown on the headset's COACH page.</p>
+  <p id="loginHint">Enter the code shown on the headset's COACH page.</p>
   <input id="code" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000">
   <button class="go" id="join" style="width:100%">CONNECT</button>
   <p class="err" id="loginErr"></p>
@@ -383,9 +385,38 @@ let tapMode = "watch", pending = null, steps = [], past = null;
 const marks = () => (state && state.marks) || [];
 
 // --- Connection -------------------------------------------------------------------
+// Served by the relay at /c/ROOM: the same messages, through the room (ADR-026).
+const ROOM = (location.pathname.match(/^\/c\/([A-Za-z]{4})\/?$/) || [])[1] || "";
+if (ROOM) $("loginHint").textContent = `Room ${ROOM.toUpperCase()}. Enter the code shown on the headset's COACH page.`;
+let relayError = "";
+
+// The relay's guest socket, looking like the headset's: JSON text in and out
+// (inside binary frames), open once the relay welcomes us into the room.
+function relaySocket() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const s = new WebSocket(`${proto}://${location.host}/v1/join?game=pb94-vr-coach&code=${ROOM.toUpperCase()}`);
+  s.binaryType = "arraybuffer";
+  const me = {
+    get readyState() { return me.ready ? s.readyState : 0; },
+    send: (text) => s.send(new TextEncoder().encode(text)),
+    close: () => s.close(),
+  };
+  s.onmessage = (ev) => {
+    if (typeof ev.data === "string") {
+      let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.op === "welcome") { me.ready = true; relayError = ""; if (me.onopen) me.onopen(); }
+      else if (m.op === "error") relayError = m.reason;
+      return;
+    }
+    if (me.onmessage) me.onmessage({ data: new TextDecoder().decode(ev.data) });
+  };
+  s.onclose = () => { if (me.onclose) me.onclose(); };
+  return me;
+}
+
 function connect(code) {
   const port = (parseInt(location.port || "8094", 10) + 1);
-  ws = new WebSocket(`ws://${location.hostname}:${port}`);
+  ws = ROOM ? relaySocket() : new WebSocket(`ws://${location.hostname}:${port}`);
   ws.onopen = () => ws.send(JSON.stringify({ type: "hello", code }));
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
@@ -398,6 +429,13 @@ function connect(code) {
   };
   ws.onclose = () => {
     const pill = $("where"); pill.textContent = "OFFLINE"; pill.className = "pill off";
+    if (relayError === "NO SUCH ROOM" || relayError === "HOST LEFT") {
+      // The headset closed the room (or opened a new one): back to the start.
+      $("app").classList.add("hidden"); $("login").classList.remove("hidden");
+      $("loginErr").textContent = `Room ${ROOM.toUpperCase()} is closed. Check the room on the headset's COACH page.`;
+      return;
+    }
+    if (relayError === "ROOM FULL") { $("loginErr").textContent = "That room is full."; return; }
     if (!$("app").classList.contains("hidden")) setTimeout(() => connect(code), Math.min(1000 * ++retry, 5000));
   };
 }

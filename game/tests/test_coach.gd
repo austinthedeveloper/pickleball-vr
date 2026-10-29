@@ -337,3 +337,108 @@ func test_the_coach_machine_stands_where_it_was_put() -> void:
 	check(not main.desk.machine_on, "MENU: the coach's machine is off")
 	main.queue_free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
+
+
+## A stand-in for the relay (the port kit's design/RELAY.md): one socket,
+## the headset's, with the relay's frames. The real relay has its own tests.
+class FakeRelay:
+	var server := TCPServer.new()
+	var ws: WebSocketPeer
+	var text: Array = []             ## the headset's control messages
+	var binary: Array = []           ## its frames to coaches
+
+	func _init(port: int) -> void:
+		server.listen(port, "127.0.0.1")
+
+	func pump() -> void:
+		if server.is_connection_available():
+			ws = WebSocketPeer.new()
+			ws.inbound_buffer_size = 1 << 20
+			ws.accept_stream(server.take_connection())
+		if ws == null:
+			return
+		ws.poll()
+		while ws.get_available_packet_count() > 0:
+			var b := ws.get_packet()
+			if ws.was_string_packet():
+				text.append(JSON.parse_string(b.get_string_from_utf8()))
+			else:
+				binary.append(b)
+
+	func say(msg: Dictionary) -> void:
+		ws.send_text(JSON.stringify(msg))
+
+	func from_guest(g: int, msg: Dictionary) -> void:
+		var out := PackedByteArray([g])
+		out.append_array(JSON.stringify(msg).to_utf8_buffer())
+		ws.send(out)
+
+
+func test_anywhere_through_the_relay() -> void:
+	var c := Coach.new()
+	c.port = TEST_PORT + 20
+	runner.root.add_child(c)
+	var relay := FakeRelay.new(TEST_PORT + 25)
+	var got: Array = []
+	c.command.connect(func(m: Dictionary) -> void: got.append(m))
+	var changes := [0]
+	c.room_changed.connect(func() -> void: changes[0] += 1)
+	c.set_relay("ws://127.0.0.1:%d" % (TEST_PORT + 25))
+	_pump(c, 60, relay.pump)
+	check(relay.ws != null and relay.ws.get_ready_state() == WebSocketPeer.STATE_OPEN, "the headset dials the relay")
+	relay.say({"op": "room", "code": "BXKM"})
+	_pump(c, 30, relay.pump)
+	eq(c.room, "BXKM", "the room")
+	eq(changes[0], 1, "the COACH page hears of it")
+	var page: Array = relay.text.filter(func(m: Variant) -> bool: return m is Dictionary and m["op"] == "page")
+	check(page.size() == 1 and String(page[0]["html"]).contains("<title>Pickleball '94 Coach</title>"), "and the relay gets the page")
+	# A coach joins through the relay: the code first, as on the Wi-Fi.
+	relay.say({"op": "joined", "guest": 2, "ver": ""})
+	relay.from_guest(2, {"type": "start"})
+	relay.from_guest(2, {"type": "hello", "code": c.code})
+	_pump(c, 30, relay.pump)
+	eq(got.size(), 0, "nothing before the code")
+	eq(c.coaches(), 1, "one coach, anywhere")
+	var first: PackedByteArray = relay.binary[-1]
+	eq(first[0], 2, "the reply goes to that coach")
+	eq(JSON.parse_string(first.slice(1).get_string_from_utf8()), {"type": "welcome"}, "welcome")
+	relay.from_guest(2, {"type": "start"})
+	c.broadcast({"type": "state", "where": "lobby"})
+	_pump(c, 30, relay.pump)
+	eq(got, [{"type": "start"}], "the coach's command comes through")
+	var last: PackedByteArray = relay.binary[-1]
+	eq([last[0], JSON.parse_string(last.slice(1).get_string_from_utf8())["type"]], [2, "state"], "and the state goes out")
+	relay.say({"op": "left", "guest": 2})
+	_pump(c, 30, relay.pump)
+	eq(c.coaches(), 0, "the coach left")
+	# The relay goes away: the room's gone, and the headset dials again.
+	relay.ws.close()
+	_pump(c, 40, relay.pump)
+	eq(c.room, "", "no room")
+	eq(changes[0], 2, "the COACH page hears that too")
+	relay.ws = null
+	_pump(c, 160, relay.pump)
+	check(relay.ws != null, "dialled again")
+	c.set_relay("")
+	_pump(c, 20, relay.pump)
+	c.queue_free()
+	relay.server.stop()
+
+
+func test_the_coach_page_offers_anywhere() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	runner.root.add_child(main)
+	main.settings.coach = true
+	main.settings.coach_anywhere = true
+	main._coach_on(true)
+	main.coach.set_relay("")                     # no internet in tests
+	main.lobby("coach")
+	eq(main.menu.value("anywhere"), 1, "COACH FROM ANYWHERE on")
+	eq(main.menu.row("info_room")["label"], "ANYWHERE   CONNECTING...", "waiting for a room")
+	main.coach.room = "BXKM"
+	main._on_room()
+	eq(main.menu.row("info_room")["label"], "ANYWHERE   ROOM BXKM", "then the room, in place")
+	main._on_changed("anywhere", 0)
+	check(not main.settings.coach_anywhere and main.coach.relay == "", "off: no relay")
+	main.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))

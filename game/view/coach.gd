@@ -10,6 +10,11 @@
 ##
 ## Only while COACH MODE is on (Settings.coach). Display and menu side
 ## only: commands reach the game through main, as a menu press would.
+##
+## ANYWHERE (ADR-026): the headset also opens a room on the relay (the
+## port kit's design/RELAY.md) and sends it this page, so a coach can open
+## it from anywhere at RELAY/c/ROOM. The relay's guests are coaches like
+## the Wi-Fi's: the same JSON, the same code, inside binary frames.
 class_name Coach
 extends Node
 
@@ -19,7 +24,13 @@ const MAX_REQUEST := 8192
 const HTTP_TIMEOUT := 3.0            ## a request that doesn't arrive whole, dropped
 const INBOUND := 1 << 20             ## a coach's biggest message, bytes: 8 s of voice, base64
 
+const RELAY := "wss://pb94-relay.wonderfulground-3bc64e4e.eastus.azurecontainerapps.io"
+const RELAY_GAME := "pb94-vr-coach"
+const RELAY_RETRY := [2.0, 5.0, 10.0, 30.0]   ## seconds before each try again
+const RELAY_KEEP := 60.0             ## a word to the relay this often, so a quiet room stays open
+
 signal command(msg: Dictionary)      ## an authorised coach's message
+signal room_changed                  ## ANYWHERE's room opened, or closed
 
 var code := ""                       ## the four digits the headset shows
 var port := PORT
@@ -28,6 +39,13 @@ var _ws := TCPServer.new()
 var _requests: Array = []            ## [StreamPeerTCP, bytes so far, seconds waited]
 var _peers: Array = []               ## [WebSocketPeer, authorised]
 var _page := PackedByteArray()
+var relay := ""                      ## ANYWHERE: the relay's address, or "" for Wi-Fi only
+var room := ""                       ## the relay's room code, once it's open
+var _relay: WebSocketPeer
+var _guests := {}                    ## the relay's guest number -> authorised
+var _relay_wait := 0.0               ## seconds until the next try
+var _relay_tries := 0
+var _relay_keep := 0.0
 
 
 func _ready() -> void:
@@ -44,6 +62,8 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	if _relay:
+		_relay.close()
 	for p in _peers:
 		(p[0] as WebSocketPeer).close()
 	_http.stop()
@@ -57,7 +77,18 @@ func listening() -> bool:
 
 ## Coaches connected and past the code.
 func coaches() -> int:
-	return _peers.filter(func(p: Array) -> bool: return p[1]).size()
+	return _peers.filter(func(p: Array) -> bool: return p[1]).size() \
+		+ _guests.values().filter(func(a: bool) -> bool: return a).size()
+
+
+## ANYWHERE on or off: a room on the relay at `url`, or none.
+func set_relay(url: String) -> void:
+	if url == relay:
+		return
+	relay = url
+	_relay_close()
+	_relay_tries = 0
+	_relay_wait = 0.0
 
 
 ## Where a phone on the same network finds it.
@@ -72,6 +103,7 @@ static func addresses() -> Array[String]:
 func _process(delta: float) -> void:
 	_serve_pages(delta)
 	_serve_sockets()
+	_serve_relay(delta)
 
 
 func _serve_pages(delta: float) -> void:
@@ -121,17 +153,95 @@ func _serve_sockets() -> void:
 			_peers.erase(e)
 			continue
 		while st == WebSocketPeer.STATE_OPEN and p.get_available_packet_count() > 0:
-			var msg: Variant = JSON.parse_string(p.get_packet().get_string_from_utf8())
-			if not msg is Dictionary:
-				continue
-			if not e[1]:
-				if String(msg.get("type", "")) == "hello" and String(msg.get("code", "")) == code:
-					e[1] = true
-					_send(p, {"type": "welcome"})
-				else:
-					_send(p, {"type": "bad_code"})
-				continue
-			command.emit(msg)
+			e[1] = _receive(p.get_packet(), e[1], func(m: Dictionary) -> void: _send(p, m))
+
+
+## A coach's message, from the Wi-Fi or the relay: the code first, then
+## commands. Returns whether that coach is authorised now.
+func _receive(bytes: PackedByteArray, authorised: bool, reply: Callable) -> bool:
+	var msg: Variant = JSON.parse_string(bytes.get_string_from_utf8())
+	if not msg is Dictionary:
+		return authorised
+	if not authorised:
+		if String(msg.get("type", "")) == "hello" and String(msg.get("code", "")) == code:
+			reply.call({"type": "welcome"})
+			return true
+		reply.call({"type": "bad_code"})
+		return false
+	command.emit(msg)
+	return true
+
+
+func _serve_relay(delta: float) -> void:
+	if relay == "":
+		return
+	if _relay == null:
+		_relay_wait -= delta
+		if _relay_wait <= 0.0:
+			_relay_open()
+		return
+	_relay.poll()
+	var st := _relay.get_ready_state()
+	if st == WebSocketPeer.STATE_CLOSED:
+		push_warning("coach: the relay closed (%d %s)" % [_relay.get_close_code(), _relay.get_close_reason()])
+		_relay_close()
+		_relay_wait = RELAY_RETRY[mini(_relay_tries, RELAY_RETRY.size() - 1)]
+		_relay_tries += 1
+		return
+	if st != WebSocketPeer.STATE_OPEN:
+		return
+	_relay_keep += delta
+	if _relay_keep >= RELAY_KEEP and room != "":
+		_relay_keep = 0.0
+		_relay.send_text(JSON.stringify({"op": "keep"}))
+	while _relay.get_available_packet_count() > 0:
+		var bytes := _relay.get_packet()
+		if _relay.was_string_packet():
+			_relay_control(JSON.parse_string(bytes.get_string_from_utf8()))
+		elif bytes.size() > 1 and _guests.has(bytes[0]):
+			var g: int = bytes[0]
+			_guests[g] = _receive(bytes.slice(1), _guests[g], func(m: Dictionary) -> void: _send_guest(g, m))
+
+
+## The relay's own messages: the room, and coaches coming and going.
+func _relay_control(msg: Variant) -> void:
+	if not msg is Dictionary:
+		return
+	match String(msg.get("op", "")):
+		"room":
+			room = String(msg.get("code", ""))
+			_relay_tries = 0
+			_relay.send_text(JSON.stringify({"op": "page", "html": _page.get_string_from_utf8()}))
+			print("coach: anywhere at %s/c/%s" % [relay.replace("wss://", "https://"), room])
+			room_changed.emit()
+		"joined":
+			_guests[int(msg.get("guest", 0))] = false
+		"left":
+			_guests.erase(int(msg.get("guest", 0)))
+
+
+func _relay_open() -> void:
+	_relay = WebSocketPeer.new()
+	_relay.inbound_buffer_size = INBOUND + 1024
+	_relay.outbound_buffer_size = maxi(1 << 18, _page.size() * 2)
+	var ver := String(ProjectSettings.get_setting("application/config/version", ""))
+	var err := _relay.connect_to_url("%s/v1/host?game=%s&ver=%s" % [relay, RELAY_GAME, ver.uri_encode()])
+	if err != OK:
+		push_warning("coach: can't reach the relay (%d)" % err)
+		_relay = null
+		_relay_wait = RELAY_RETRY[mini(_relay_tries, RELAY_RETRY.size() - 1)]
+		_relay_tries += 1
+
+
+func _relay_close() -> void:
+	if _relay:
+		_relay.close()
+	_relay = null
+	_guests.clear()
+	_relay_keep = 0.0
+	if room != "":
+		room = ""
+		room_changed.emit()
 
 
 ## To every authorised coach.
@@ -139,6 +249,17 @@ func broadcast(msg: Dictionary) -> void:
 	for e in _peers:
 		if e[1]:
 			_send(e[0], msg)
+	for g in _guests:
+		if _guests[g]:
+			_send_guest(g, msg)
+
+
+## To one of the relay's coaches: its number, then the JSON.
+func _send_guest(g: int, msg: Dictionary) -> void:
+	if _relay and _relay.get_ready_state() == WebSocketPeer.STATE_OPEN:
+		var out := PackedByteArray([g])
+		out.append_array(JSON.stringify(msg, "", false).to_utf8_buffer())
+		_relay.send(out)
 
 
 func _send(p: WebSocketPeer, msg: Dictionary) -> void:

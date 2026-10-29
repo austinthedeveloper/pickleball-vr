@@ -32,6 +32,8 @@ func _ready() -> void:
 		Tune.load_saved()
 	if OS.get_cmdline_user_args().has("coach"):
 		settings.coach = true
+	if OS.get_cmdline_user_args().has("anywhere"):
+		settings.coach_anywhere = true
 	_coach_on(settings.coach)
 	var args := OS.get_cmdline_user_args()
 	if args.has("demo") or args.has("play") or args.has("doubles"):
@@ -182,6 +184,10 @@ func _page(id: String) -> Menu3D:
 				m.add_row("info_n", "COACHES CONNECTED   %d" % coach.coaches())
 			elif settings.coach:
 				m.add_row("info_err", "CAN'T START: NO NETWORK?")
+			if settings.coach:
+				m.add_row("anywhere", "COACH FROM ANYWHERE", OFF_ON, 1 if settings.coach_anywhere else 0)
+				if settings.coach_anywhere:
+					m.add_row("info_room", _room_line())
 			m.add_row("pranks", "PRANKS FROM THE PHONE", OFF_ON, 1 if settings.pranks else 0)
 			m.add_row("back", "BACK")
 		"tune":
@@ -229,6 +235,12 @@ func _on_changed(id: String, index: int) -> void:
 			_coach_on(settings.coach)
 			settings.save()
 			lobby.call_deferred("coach")     # the address and code
+			return
+		"anywhere":
+			settings.coach_anywhere = index == 1
+			_coach_on(settings.coach)
+			settings.save()
+			lobby.call_deferred("coach")     # the room's line
 			return
 		"angle":
 			if settings.profile() == null:
@@ -413,6 +425,24 @@ func _coach_on(on: bool) -> void:
 		desk = CoachDesk.new(self)
 		add_child(desk)
 	desk.set_on(on)
+	if coach:
+		if not coach.room_changed.is_connected(_on_room):
+			coach.room_changed.connect(_on_room)
+		coach.set_relay(Coach.RELAY if settings.coach_anywhere else "")
+
+
+## ANYWHERE's line on the COACH page: the room once the relay has opened it.
+func _room_line() -> String:
+	if coach and coach.room != "":
+		return "ANYWHERE   ROOM %s" % coach.room
+	return "ANYWHERE   CONNECTING..."
+
+
+## The room opened or closed: the COACH page's line follows, in place.
+func _on_room() -> void:
+	if menu and page == "coach" and not menu.row("info_room").is_empty():
+		menu.row("info_room")["label"] = _room_line()
+		menu.refresh()
 
 
 func coach_state() -> Dictionary:
