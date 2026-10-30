@@ -161,7 +161,9 @@ does the SUNSET's low sun get in your eyes too much?
 
 ## Phase 7: sharing and online
 
-**VR-74..77, ready to test: dinking online with a friend (ADR-027).**
+**VR-74..77, played (2026-10-29): the Quest against the Mac through the
+relay, moving and turning the paddle: "it all worked".** Dinking online
+with a friend (ADR-027).
 Both of you install the same version (0.6.0 or later; the headset says
 YOUR FRIEND HAS ... if not).
 1. One picks MAIN > PLAY A FRIEND > HOST: OPEN A ROOM. The page shows
