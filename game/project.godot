@@ -13,6 +13,10 @@ config/version="0.7.0"
 config/icon="res://icon.png"
 boot_splash/bg_color=Color(0.04, 0.06, 0.12, 1)
 
+[audio]
+
+driver/enable_input.pc=true
+
 [display]
 
 window/size/viewport_width=1280

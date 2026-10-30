@@ -6,6 +6,18 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+### Added
+
+- COACH VIEW's panel on a computer has the phone's PRANKS tab: the sounds,
+  the announcer's calls, the partner's antics, confetti, the silly ball,
+  paddle and weather, and HOLD TO TALK (or hold T) through the computer's
+  microphone, in the phone's four voices (ADR-029).
+
+### Changed
+
+- The headset's COACH row PRANKS FROM THE PHONE is now PRANKS FROM THE
+  COACH: it covers a watching computer too.
+
 ### Fixed
 
 - On a computer, a quick mouse click (or a trackpad tap) on a menu row now

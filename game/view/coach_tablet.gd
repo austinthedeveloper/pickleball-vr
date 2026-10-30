@@ -71,6 +71,16 @@ var _t := 0.0
 var _state := {}
 var _holder: Control                 ## overlay: the panel on the screen
 var _slider_vals: Array = []         ## the sliders' values, as the source says them
+## COACH VIEW's PRANKS (ADR-029): the coach's own page of the phone's pranks.
+var tab := "coach"
+var voice_kind := "NORMAL"
+var _coach_page: VBoxContainer
+var _prank_page: VBoxContainer
+var _tabs := {}                      ## "coach"/"pranks" -> Button
+var _prank_buttons := {}             ## "what:id" -> Button
+var _antics: Control
+var _voice: VoiceRec
+var _t_was := false
 
 
 func _ready() -> void:
@@ -147,6 +157,21 @@ func _build(parent: Node) -> void:
 	run.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	head.add_child(run)
 	if desk and desk.remote:
+		var tabs := HBoxContainer.new()
+		tabs.add_theme_constant_override("separation", 8)
+		root.add_child(tabs)
+		for t in [["coach", "COACH"], ["pranks", "PRANKS"]]:
+			var id: String = t[0]
+			var b := _button(t[1], 24, func() -> void: show_tab(id))
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			tabs.add_child(b)
+			_tabs[id] = b
+		_build_pranks(root)
+		_coach_page = VBoxContainer.new()
+		_coach_page.add_theme_constant_override("separation", 12)
+		_coach_page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		root.add_child(_coach_page)
+		root = _coach_page
 		_build_session(root)
 	var stats := HBoxContainer.new()
 	stats.add_theme_constant_override("separation", 10)
@@ -249,6 +274,8 @@ func _build(parent: Node) -> void:
 	_labels["go"] = go
 	_machine_box.add_child(go)
 	_set_mode(mode)
+	if _coach_page:
+		show_tab(tab)
 
 
 ## COACH VIEW: the session's controls the phone page has, for a coach
@@ -288,6 +315,141 @@ func _build_session(root: VBoxContainer) -> void:
 	for c in CoachDesk.CUES:
 		var text: String = c
 		cues.add_child(_button(text, 18, func() -> void: desk.handle({"type": "cue", "text": text})))
+
+
+# --- PRANKS (ADR-029): the phone's tab, for a coach watching on a computer --------
+
+func _build_pranks(root: VBoxContainer) -> void:
+	_prank_page = VBoxContainer.new()
+	_prank_page.add_theme_constant_override("separation", 10)
+	_prank_page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(_prank_page)
+	var note := _label("p_note", "", 22, BAD)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_prank_page.add_child(note)
+	_prank_page.add_child(_label("h_talk", "TALK TO THEM", 22, DIM))
+	var kinds := HBoxContainer.new()
+	kinds.add_theme_constant_override("separation", 6)
+	_prank_page.add_child(kinds)
+	for k in VoiceRec.KINDS:
+		var kind: String = k
+		var b := _button(kind, 24, func() -> void: set_voice(kind))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		kinds.add_child(b)
+		_prank_buttons["kind:" + kind] = b
+	var talk := _button("HOLD TO TALK", 30, func() -> void: pass)
+	talk.custom_minimum_size = Vector2(0, 84)
+	talk.button_down.connect(talk_start)
+	talk.button_up.connect(talk_stop)
+	_labels["talk"] = talk
+	_prank_page.add_child(talk)
+	_prank_page.add_child(_label("talk_note", "OR HOLD T. THEY HEAR IT IN THEIR HEADSET.", 20, DIM))
+	_voice = VoiceRec.new()
+	_voice.finished.connect(_talk_done)
+	add_child(_voice)
+	_chips("h_sounds", "SOUNDS", "sound", Pranks.SOUNDS)
+	_chips("h_calls", "THE ANNOUNCER SAYS", "call", Pranks.CALLS)
+	_antics = _chips("h_antics", "THE PARTNER", "antic", Pranks.ANTICS)
+	var fun := _button("CONFETTI!", 26, func() -> void: prank("confetti", ""))
+	_prank_page.add_child(fun)
+	var balls := Pranks.BALLS.duplicate()
+	balls.erase("face")                  # THEIR FACE needs the phone's photo
+	_chips("h_balls", "SILLY BALL", "ball", balls)
+	_chips("h_paddles", "SILLY PADDLE", "paddle", Pranks.PADDLES)
+	_chips("h_weather", "WEATHER", "weather", Pranks.WEATHER)
+
+
+## A heading and its buttons, one a prank each: the box they're in.
+func _chips(key: String, text: String, what: String, names: Dictionary) -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	_prank_page.add_child(box)
+	box.add_child(_label(key, text, 22, DIM))
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 6)
+	flow.add_theme_constant_override("v_separation", 6)
+	box.add_child(flow)
+	for id in names:
+		var i: String = id
+		var b := _button(String(names[id]), 26, func() -> void: prank(what, i))
+		flow.add_child(b)
+		_prank_buttons[what + ":" + i] = b
+	return box
+
+
+func set_voice(kind: String) -> void:
+	voice_kind = kind
+	refresh()
+
+
+func show_tab(t: String) -> void:
+	tab = t
+	if _coach_page == null:
+		return
+	_coach_page.visible = t == "coach"
+	_prank_page.visible = t == "pranks"
+	for id in _tabs:
+		_mark(_tabs[id], id == t)
+
+
+## A prank, as the phone sends it.
+func prank(what: String, id: String) -> void:
+	desk.handle({"type": "prank", "what": what, "id": id})
+
+
+func talk_start() -> void:
+	var p: Dictionary = _state.get("pranks", {})
+	if not _voice.start(int(p.get("voice_seconds", CoachDesk.VOICE_SECONDS))):
+		(_labels["talk_note"] as Label).text = "NO MICROPHONE TO HEAR YOU ON"
+		return
+	(_labels["talk"] as Button).text = "LISTENING... LET GO TO SEND"
+	(_labels["talk_note"] as Label).text = ""
+
+
+func talk_stop() -> void:
+	_voice.stop()
+
+
+func _talk_done(x: PackedFloat32Array, sr: float) -> void:
+	(_labels["talk"] as Button).text = "HOLD TO TALK"
+	var p: Dictionary = _state.get("pranks", {})
+	var msg := VoiceRec.message(x, sr, voice_kind, int(p.get("voice_seconds", CoachDesk.VOICE_SECONDS)))
+	if msg.is_empty():
+		(_labels["talk_note"] as Label).text = "COULDN'T HEAR YOU. CLOSER TO THE MIC?"
+		return
+	desk.handle(msg)
+	var seconds := Marshalls.base64_to_raw(msg["pcm"]).size() / 2.0 / VoiceRec.RATE
+	(_labels["talk_note"] as Label).text = "SENT: %.1f S" % seconds
+
+
+## The silly ball on now, as the headset says.
+func remote_ball() -> String:
+	return String((_state.get("pranks", {}) as Dictionary).get("ball", ""))
+
+
+func _mark(b: Button, on: bool) -> void:
+	b.add_theme_stylebox_override("normal", _box(GOLD if on else PANEL, 10))
+	b.add_theme_stylebox_override("hover", _box(GOLD if on else LINE, 10))
+	b.add_theme_color_override("font_color", Color(0.1, 0.08, 0.0) if on else TEXT)
+	b.add_theme_color_override("font_hover_color", Color(0.1, 0.08, 0.0) if on else TEXT)
+
+
+## The PRANKS page from the headset's state: on or held off, the looks on now.
+func _show_pranks() -> void:
+	var p: Dictionary = _state.get("pranks", {})
+	var off := ""
+	if not p.is_empty() and not bool(p.get("on", true)):
+		off = "PRANKS ARE OFF ON THEIR HEADSET: COACH, PRANKS FROM THE COACH."
+	elif int(p.get("mercy", 0)) > 0:
+		off = "MERCY! NO PRANKS FOR %d S." % int(p["mercy"])
+	(_labels["p_note"] as Label).text = off
+	(_labels["p_note"] as Label).visible = off != ""
+	_antics.visible = bool(p.get("partner", false))
+	for key in _prank_buttons:
+		var at := String(key).split(":")
+		match at[0]:
+			"kind": _mark(_prank_buttons[key], at[1] == voice_kind)
+			"ball", "paddle", "weather": _mark(_prank_buttons[key], String(p.get(at[0], "")) == at[1])
 
 
 ## A step through the drills or levels the player's headset offers.
@@ -476,6 +638,13 @@ func _process(delta: float) -> void:
 	lock = maxf(lock - delta, 0.0)
 	if not visible:
 		return
+	if _voice and overlay and _holder.visible:
+		var t := Input.is_physical_key_pressed(KEY_T)
+		if t and not _voice.recording and not _t_was:
+			talk_start()
+		elif not t and _t_was:
+			talk_stop()
+		_t_was = t
 	_t += delta
 	if _t >= REFRESH:
 		_t = 0.0
@@ -526,6 +695,8 @@ func refresh() -> void:
 		(_labels["s_restart"] as Button).disabled = where == "lobby"
 		var v: MatchView = desk.current_view()
 		(_labels["s_replay"] as Button).text = "LIVE" if v and v.replay else "REPLAY"
+	if _prank_page:
+		_show_pranks()
 	_show_context()
 	_court.queue_redraw()
 

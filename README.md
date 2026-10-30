@@ -105,7 +105,8 @@ game/meta/    settings, opponents (the ladder), lessons, venues, tune (TUNING),
 game/view/    world (the venues), match_view, xr_rig, flat_rig, avatar,
               body and cloth (the rigged person), paddle_mesh, floor_target,
               scoreboard, menu_3d, machine, crowd, announcer, focus, look,
-              perf, coach (the coach page's server), coach_tablet, pranks
+              perf, coach (the coach page's server), coach_tablet, pranks,
+              voice_rec (a watching coach's HOLD TO TALK, ADR-029)
 game/scenes/  main (XR or flat), coach_desk (what a coach can ask of the game)
 game/data/    opponents.json (imported), lessons.json
 game/coach/   index.html: the coach page the headset serves (ADR-023)

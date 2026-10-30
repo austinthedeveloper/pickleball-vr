@@ -76,6 +76,7 @@ func join(code: String, url := address()) -> bool:
 
 func _dial(url: String) -> bool:
 	ws.inbound_buffer_size = 1 << 20     # a watched drill's whole state comes in one (ADR-028)
+	ws.outbound_buffer_size = 1 << 19    # a coach's voice clip goes in one (ADR-029)
 	if ws.connect_to_url(url) != OK:
 		error = "CAN'T REACH THE SERVER"
 		return false

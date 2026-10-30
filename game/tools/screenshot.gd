@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|online|online_guest|watch> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|online|online_guest|watch> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti] [panel [pranks] (watch)]
 extends SceneTree
 
 var frames := 240
@@ -81,7 +81,7 @@ func _initialize() -> void:
 				view.cam_view = int(a.trim_prefix("view="))
 			if a.begins_with("replay="):
 				_replay_at = int(a.trim_prefix("replay="))
-		view.flat.set_help("WATCHING ALEX: DINKS     1-4 CAMERA   TAB PANEL   ESC MENU")
+		view.flat.set_help("WATCHING ALEX: DINKS     1-4 CAMERA   TAB PANEL   T TALK   ESC MENU")
 		if args.has("panel"):
 			# The coach's controls (VR-80), as a player's headset would fill them.
 			var rc := RemoteCoach.new(null, null)
@@ -89,12 +89,16 @@ func _initialize() -> void:
 				"setup": {"drill": 0, "drills": Drill.KIND_NAMES, "level": 1, "levels": Drill.PACE_NAMES},
 				"run": {"name": "DINKS", "score": 7, "streak": 7, "good": 9, "timed": false},
 				"machine": {"speed": 8.0, "spin": 0.0, "clear": 0.4, "every": 3.0, "on": false},
-				"tunes": []})
+				"tunes": [], "pranks": {"on": true, "mercy": 0, "ball": "duck", "paddle": "", "weather": "snow",
+					"partner": true, "voice_seconds": 8}})
 			for i in 9:
 				rc.on_json({"type": "shot", "good": i % 4 != 0, "side": "FH" if i % 3 else "BH", "clear": 0.1 + 0.03 * i,
 					"x": -1.0 + 0.25 * i, "z": -1.2 - 0.1 * (i % 3), "speed": 4.5})
 			rc.main = null
 			view.show_coach_panel(rc)
+			if args.has("pranks"):
+				view.coach_panel.show_tab("pranks")
+				view.coach_panel.refresh()
 	else:
 		view.setup(cfg, false, demo or mode in ["machine", "lesson", "partner"])
 	if mode == "lesson":

@@ -193,6 +193,23 @@ func test_a_coach_watches_through_the_menus() -> void:
 	check(player.view.sim.drill.target_pinned, "the coach's target pinned in the player's drill")
 	panel.refresh()
 	eq((panel._labels["s_pause"] as Button).text, "PAUSE", "the button follows")
+	# PRANKS from the coach's panel (ADR-029): a sound, a look, and their voice.
+	player.settings.pranks = true
+	panel.show_tab("pranks")
+	check(panel._prank_page.visible and not panel._coach_page.visible, "the PRANKS page")
+	panel.prank("sound", "airhorn")
+	panel.prank("ball", "duck")
+	panel._talk_done(_speech(7.0, 48000.0), 48000.0)   # a long one: ~300 KB on the line
+	for i in 30:
+		_frame(player, coach_main, relay)
+		OS.delay_msec(2)
+	var done: Array[String] = player.view.pranks.done
+	check(done.has("sound:airhorn"), "the airhorn on the player's court: %s" % [done])
+	eq(player.view.pranks.ball, "duck", "the rubber duck")
+	check(done.has("voice"), "and the coach's voice in their headset")
+	panel.refresh()
+	eq(panel.remote_ball(), "duck", "the panel shows the duck's on")
+	panel.show_tab("coach")
 	for i in 120:
 		_frame(player, coach_main, relay)
 		OS.delay_msec(1)
@@ -224,6 +241,37 @@ func test_a_coach_watches_through_the_menus() -> void:
 	coach_main.queue_free()
 	player.queue_free()
 	relay.stop()
+
+
+## `seconds` of a tone with a quiet second either side, at `sr`: a voice.
+func _speech(seconds: float, sr: float) -> PackedFloat32Array:
+	var x := PackedFloat32Array()
+	x.resize(int(sr * (seconds + 2.0)))
+	for i in int(sr * seconds):
+		x[int(sr) + i] = 0.5 * sin(TAU * 220.0 * i / sr)
+	return x
+
+
+## The coach's voice, made as the phone page makes it (ADR-029).
+func test_a_voice_clip_is_the_phones() -> void:
+	var sr := 48000.0
+	var m := VoiceRec.message(_speech(1.0, sr), sr)
+	eq([m.get("what"), m.get("rate")], ["voice", VoiceRec.RATE], "a voice prank at the phone's rate")
+	var pcm := Marshalls.base64_to_raw(m["pcm"])
+	var seconds := pcm.size() / 2.0 / VoiceRec.RATE
+	check(seconds > 1.0 and seconds < 1.25, "the quiet trimmed: %.2f s" % seconds)
+	var peak := 0
+	for i in pcm.size() / 2:
+		peak = maxi(peak, absi(pcm.decode_s16(i * 2)))
+	check(peak > 29000 and peak <= 32767, "as loud as it goes: %d" % peak)
+	var fast := Marshalls.base64_to_raw(VoiceRec.message(_speech(1.0, sr), sr, "CHIPMUNK")["pcm"])
+	check(fast.size() < pcm.size() * 0.7, "the chipmunk's quicker")
+	var long := Marshalls.base64_to_raw(VoiceRec.message(_speech(12.0, sr), sr)["pcm"])
+	eq(long.size(), VoiceRec.RATE * 2 * CoachDesk.VOICE_SECONDS, "no longer than the headset takes")
+	eq(VoiceRec.message(PackedFloat32Array([0.0, 0.001, 0.0]), sr), {}, "silence: nothing to send")
+	var silence := PackedFloat32Array()
+	silence.resize(int(sr))
+	eq(VoiceRec.message(silence, sr), {}, "a quiet second: nothing either")
 
 
 ## Instant replay (VR-81). A watched drill `ticks` long, its stream fed

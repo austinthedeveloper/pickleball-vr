@@ -55,7 +55,7 @@ marks: they go back on every new view until changed or cleared.
 - **MERCY** on the pause menu (while COACH MODE and PRANKS are on) takes
   every prank off and holds them off for a minute. The phone shows the
   countdown.
-- **COACH > PRANKS FROM THE PHONE** turns the tab off on the headset
+- **COACH > PRANKS FROM THE COACH** (PRANKS FROM THE PHONE until ADR-029) turns the tab off on the headset
   (saved; on by default).
 - **Nothing that disorients:** no shaking, flipping, darkening or moving
   the world, and no ball from behind. In a headset those make people

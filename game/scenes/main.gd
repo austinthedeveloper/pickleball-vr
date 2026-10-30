@@ -192,7 +192,7 @@ func _page(id: String) -> Menu3D:
 				m.add_row("anywhere", "COACH FROM ANYWHERE", OFF_ON, 1 if settings.coach_anywhere else 0)
 				if settings.coach_anywhere:
 					m.add_row("info_room", _room_line())
-			m.add_row("pranks", "PRANKS FROM THE PHONE", OFF_ON, 1 if settings.pranks else 0)
+			m.add_row("pranks", "PRANKS FROM THE COACH", OFF_ON, 1 if settings.pranks else 0)
 			m.add_row("back", "BACK")
 		"tune":
 			m = _tune_menu("")
@@ -905,7 +905,7 @@ func _start_watch() -> void:
 	if view.flat:
 		var who := String(watching.info.get("player", ""))
 		var what := "IN THE MENU" if bool(watching.info.get("lobby", false)) else String(watching.info.get("mode", ""))
-		view.flat.set_help("WATCHING %s: %s     1-4 CAMERA   TAB PANEL   ESC MENU" % [who, what])
+		view.flat.set_help("WATCHING %s: %s     1-4 CAMERA   TAB PANEL   T TALK   ESC MENU" % [who, what])
 		view.show_coach_panel(remote_coach)
 
 
