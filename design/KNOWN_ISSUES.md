@@ -31,3 +31,14 @@
 9. ~~The CPUs' paddle could leave their hand~~ in some wind-ups. Fixed
    (VR-71): the hand stops at the arm's reach, and
    `test_the_paddle_never_leaves_the_hand` watches a whole rally.
+10. **Online, a guessed sound can't be taken back** (ADR-027). When the
+    prediction guessed your friend's paddle met the ball and it really
+    didn't, you hear a hit that didn't happen; the ball then eases to
+    where it really is. Rare: a guess carries their swing on for only
+    8 ticks.
+11. **Online, a third player waits forever** (ADR-027). The relay lets a
+    `pb94-vr` room take 3 guests, but the host talks only to the first.
+    The fix is the relay's `GAMES` entry (1 guest) or a refusal from the
+    host.
+12. **Flat mode's help line says SHIFT SOFT** in FRIENDLY DINK, where soft
+    is the default and Shift drives (ADR-027).

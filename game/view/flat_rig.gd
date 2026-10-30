@@ -21,6 +21,8 @@ var _pinned := false                 ## a fixed camera (screenshots' close-ups)
 var _pin_at := Vector3.ZERO
 var _pin_look := Vector3.ZERO
 var spectate := false                ## fixed camera, the mouse free for menus
+## Which end you play from: 1 the near (+z), -1 the far (online's guest, ADR-027).
+var end := 1
 var click := false
 var pause_pressed := false
 var nav := Vector2i.ZERO
@@ -29,6 +31,7 @@ var _keys_was := {}
 
 
 func _ready() -> void:
+	aim.z = -4.5 * end
 	camera = Camera3D.new()
 	camera.fov = 80.0
 	camera.near = 0.03
@@ -70,17 +73,17 @@ func begin_frame(delta: float) -> void:
 			float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A)),
 			float(Input.is_physical_key_pressed(KEY_S)) - float(Input.is_physical_key_pressed(KEY_W)))
 		move = (move + keys).limit_length(1.0)
-		head += Vector3(move.x, 0, move.y) * MOVE_SPEED * delta
+		head += Vector3(move.x, 0, move.y) * MOVE_SPEED * delta * end
 		var hl := K.COURT_HALF_LENGTH / float(K.M)
 		head.x = clampf(head.x, -(K.COURT_HALF_WIDTH + K.RUNOFF_SIDE) / float(K.M),
 			(K.COURT_HALF_WIDTH + K.RUNOFF_SIDE) / float(K.M))
-		head.z = clampf(head.z, K.NET_GAP / float(K.M), hl + K.RUNOFF_BACK / float(K.M))
+		head.z = end * clampf(head.z * end, K.NET_GAP / float(K.M), hl + K.RUNOFF_BACK / float(K.M))
 		soft = Input.is_physical_key_pressed(KEY_SHIFT)
 		_aim_from_mouse()
 	serve_pressed = Input.is_physical_key_pressed(KEY_SPACE)
 	menu_pressed = Input.is_physical_key_pressed(KEY_ENTER)
 	camera.global_position = head
-	camera.rotation_degrees = Vector3(PITCH, 0, 0)
+	camera.rotation_degrees = Vector3(PITCH, 0 if end > 0 else 180, 0)
 	if _pinned:
 		camera.global_position = _pin_at
 		camera.look_at(_pin_look, Vector3.UP)
@@ -100,7 +103,7 @@ func _aim_from_mouse() -> void:
 	var hit := from + dir * (-from.y / dir.y)
 	var hw := K.COURT_HALF_WIDTH / float(K.M)
 	var hl := K.COURT_HALF_LENGTH / float(K.M)
-	aim = Vector3(clampf(hit.x, -hw + 0.3, hw - 0.3), 0, clampf(hit.z, -hl + 0.3, -0.3))
+	aim = Vector3(clampf(hit.x, -hw + 0.3, hw - 0.3), 0, -end * clampf(-hit.z * end, 0.3, hl - 0.3))
 
 
 ## Fix the camera at `at`, looking at `look` (screenshots).
@@ -139,4 +142,4 @@ func pointer() -> Array[Vector3]:
 
 
 func forward() -> Vector3:
-	return Vector3.FORWARD
+	return Vector3.FORWARD * end

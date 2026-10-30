@@ -21,6 +21,8 @@ shot ball-machine machine 400
 shot dink-partner partner 420
 shot dink-partner-cross partner 420 cross
 shot lesson-dink lesson 200 x 3
+shot online-host online 900
+shot online-guest online_guest 900
 for v in PARK LAKESIDE SUNSET GYM SPACE; do
   shot "venue-$(echo $v | tr A-Z a-z)" demo 500 x "venue=$v"
 done

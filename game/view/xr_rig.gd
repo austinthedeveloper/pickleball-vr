@@ -21,6 +21,9 @@ var paddle_tilt := 0.0               ## degrees, the face tipped forward in the 
 var paddle_twist := 0.0              ## degrees, the face turned about the handle (profiles, ADR-015)
 var paddle_reach := 0.0              ## metres, the paddle slid out along its handle
 var paddle_turn := 0.0               ## degrees, the face swung left or right (profiles)
+## Which end you play from: 1 the near (+z, facing -z), -1 the far
+## (online's guest, ADR-027).
+var end := 1
 
 var _prev_head := Vector3.ZERO
 var _head := Vector3.ZERO
@@ -179,9 +182,10 @@ func recenter(at: Vector3) -> void:
 	_prev_head = _head
 
 
-## Turn the play space so you face -z (down the court).
+## Turn the play space so you face down the court: -z from the near end,
+## +z from the far.
 func face_court() -> void:
-	var fwd := -camera.global_transform.basis.z
+	var fwd := -camera.global_transform.basis.z * end
 	var yaw := atan2(-fwd.x, -fwd.z)
 	var pivot := camera.global_position
 	global_transform = global_transform.rotated(Vector3.UP, -yaw)
@@ -237,4 +241,4 @@ func show_laser(on: bool) -> void:
 func forward() -> Vector3:
 	var f := -camera.global_transform.basis.z
 	f.y = 0
-	return f.normalized() if f.length() > 0.01 else Vector3.FORWARD
+	return f.normalized() if f.length() > 0.01 else Vector3.FORWARD * end

@@ -307,7 +307,10 @@ func _target(b: Ball) -> Array[int]:
 	var opp := 1 - team
 	var os := K.side_sign(opp)
 	if sim.config.friendly:
-		# FRIENDLY DINK: every ball a dink, deep in their kitchen.
+		# FRIENDLY DINK: every ball a dink, deep in their kitchen (or where
+		# flat mode aims it).
+		if has_aim:
+			return [aim_x, aim_z, pace]
 		return [0, os * K.KITCHEN_DEPTH * 6 / 10, 40000]
 	if sim.phase == K.PHASE_TOSS:
 		var box := K.right_sign(opp) * (1 if sim.serve_from_right() else -1)

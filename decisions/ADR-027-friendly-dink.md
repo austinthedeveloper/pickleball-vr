@@ -1,8 +1,8 @@
 # ADR-027: FRIENDLY DINK, and dinking online with a friend
 
-**Status:** Accepted (2026-10-29). The sim's part (VR-74) and the
-netcode (VR-75) are built; the friend on court and the menu are planned
-(VR-76..78).
+**Status:** Accepted (2026-10-29). The sim's part (VR-74), the netcode
+(VR-75) and the friend on court (VR-76) are built; the menu and a
+playtest are planned (VR-77, VR-78).
 
 ## Context
 
@@ -81,6 +81,33 @@ Voice isn't part of it: a phone call or Discord at first.
 - `Sim.save_state()` / `load_state()` copy every script variable of the
   sim, its ball, players and drill (the config is shared).
 
+**On court, as built (VR-76):**
+
+- **Each end.** MatchView takes the session (`setup(..., online)`), draws
+  its prediction and plays slot `me`: 0 for the host, 2 for the guest.
+  The rigs take an `end` (1 near, -1 far): the guest's XR rig faces +z
+  and the flat camera turns round, its keys and aim with it. The
+  scoreboard turns to the guest. Everything stays in the sim's
+  coordinates; nothing is mirrored. FRIENDLY DINK doesn't move you
+  between rallies.
+- **The friend is an Avatar with `human` on:** their paddle drawn exactly
+  where theirs is in the sim (the ball bounces off what you see), the
+  hand on its grip, the free hand where theirs is, the feet under their
+  head. No CPU swing is planned for them.
+- **The ball eases after a correction:** the jump between where you saw
+  it and where it really is fades (half gone in 60 ms; over 1.5 m it
+  snaps: a new rally). The sim is untouched.
+- **Each event plays once** (`MatchView._fresh`): an event of the same
+  kind (and hitter) within 3 ticks of one already played is the same
+  one, run again by a correction.
+- FRIENDLY DINK's board shows this rally's returns and BEST; a rally's
+  end says RALLY n (NEW BEST! from 5) and the crowd and announcer
+  answer a long one.
+- Flat mode in FRIENDLY DINK dinks where the mouse aims, soft unless
+  Shift is held.
+- The screenshot tool's `online` and `online_guest` show either end, the
+  other a Bot on its own session.
+
 ## Consequences
 
 - Two friends can dink online in the code; there's no screen yet.
@@ -102,7 +129,11 @@ Voice isn't part of it: a phone call or Discord at first.
   which the view must hide. Only a playtest can say if it's good enough.
 - Golden traces are unchanged: every rule change checks `config.friendly`,
   and the snapshot only grows when it's on.
-- Tests: `test_online` covers a saved state stepping as before (a match
+- Tests: `test_online_view` covers two MatchViews dinking over a
+  loopback (in sync, rallies, the friend's paddle where theirs is, the
+  logged inputs replaying to the confirmed match), each end and its
+  rig, the friend's body, an event playing once, the ball easing, and
+  the friend leaving. `test_online` covers a saved state stepping as before (a match
   and a drill), the pose-free snapshot, the config, two sessions
   dinking with rollback on a jittery loopback, a slow line that waits,
   versions, a stand-in relay, and the real relay server when it's

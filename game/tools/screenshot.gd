@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|online|online_guest> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti]
 extends SceneTree
 
 var frames := 240
@@ -9,6 +9,9 @@ var _focus := -1.0
 var _tick := -1                      ## tick=N: shoot when the sim reaches it
 var _view: MatchView
 var _prank_items := PackedStringArray()   ## put on once the scene is built
+## online / online_guest (ADR-027): the other end, a Bot on its own session.
+var _other: OnlineSession
+var _other_bot: Bot
 
 
 func _initialize() -> void:
@@ -58,7 +61,10 @@ func _initialize() -> void:
 		cfg.drill = Lessons.drill(int(args[3]) if args.size() > 3 else 0)
 	view.partner_model = "rb_male_01" if args.has("rocketbox") else ("rb_female_12" if args.has("rocketbox_f") else "")
 	view.passthrough = args.has("passthrough")      # the court-only world (no headset: black behind)
-	view.setup(cfg, false, demo or mode in ["machine", "lesson", "partner"])
+	if mode == "online" or mode == "online_guest":
+		_online(view, mode == "online_guest", cfg.venue)
+	else:
+		view.setup(cfg, false, demo or mode in ["machine", "lesson", "partner"])
 	if mode == "lesson":
 		var l := Lessons.lesson(int(args[3]) if args.size() > 3 else 0)
 		view.show_lesson(String(l["title"]), l["lines"])
@@ -103,6 +109,30 @@ static func _pranks(view: MatchView, items: PackedStringArray) -> void:
 				view.pranks.set_face(img.save_jpg_to_buffer())
 
 
+## FRIENDLY DINK online over a loopback: the view is the host (or the
+## guest), and the other end is a Bot on its own session, stepped as the
+## view steps.
+func _online(view: MatchView, guest: bool, venue: int) -> void:
+	var links := LoopbackLink.pair(6)
+	var host := OnlineSession.new(links[0], true)
+	var other := OnlineSession.new(links[1], false)
+	for s in [host, other]:
+		s.my_hello = OnlineSession.hello()
+	for i in 30:
+		host.poll()
+		other.poll()
+	var cfg := OnlineSession.friendly_config()
+	cfg.venue = venue
+	host.begin({"cfg": OnlineSession.config_to_dict(cfg), "venue": venue})
+	for i in 30:
+		host.poll()
+		other.poll()
+	var mine := other if guest else host
+	_other = host if guest else other
+	view.setup(mine.rollback.pred.config, false, true, false, mine)
+	_other_bot = Bot.new(_other.rollback.pred, _other.slot())
+
+
 ## cam=x,y,z and look=x,y,z (metres) pin the camera for a close-up.
 static func _vec(args: PackedStringArray, key: String) -> Variant:
 	for a in args:
@@ -114,6 +144,10 @@ static func _vec(args: PackedStringArray, key: String) -> Variant:
 
 func _process(_delta: float) -> bool:
 	n += 1
+	if _other:
+		while _other.rollback.predicted < _view.session.rollback.predicted:
+			_other.tick(_other_bot.input())
+		_other.poll()
 	if n == 3 and _view and not _prank_items.is_empty():
 		_pranks(_view, _prank_items)
 	if n == 5 and _focus >= 0.0 and _view:

@@ -7,6 +7,9 @@ const BOARD := Color(0.08, 0.1, 0.16)
 
 var them := "CPU"
 var drill := false                   ## practice: the streak, or the lesson's count
+## Online (ADR-027): the board and the call turned to whoever plays the far
+## end, so the guest reads them as the host does.
+var far := false
 var score_label: Label3D
 var info_label: Label3D
 var call_label: Label3D
@@ -14,6 +17,8 @@ var _call_time := 0.0
 
 
 func _ready() -> void:
+	if far:
+		rotation_degrees = Vector3(0, 180, 0)
 	var board := Node3D.new()
 	board.position = Vector3(-(K.NET_POST_X / float(K.M)) - 0.9, 1.9, -0.4)
 	board.rotation_degrees = Vector3(0, 35, 0)
@@ -75,6 +80,13 @@ func show_from(sim: Sim, delta: float) -> void:
 		else:
 			score_label.text = "%d" % d.streak
 			info_label.text = "STREAK   BEST %d%s" % [d.best, tgt]
+		_fade(delta)
+		return
+	if sim.config.friendly:
+		# FRIENDLY DINK: this rally's returns (the last one's, till the next
+		# starts), and the best.
+		score_label.text = "%d" % maxi(sim.shots - 1, 0)
+		info_label.text = "RALLY   BEST %d" % sim.best_rally
 		_fade(delta)
 		return
 	var srv := sim.serving_team

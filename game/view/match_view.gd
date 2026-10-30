@@ -15,9 +15,18 @@ signal drill_done
 signal time_up(score: int, good: int, best: int)   ## a timed run's clock ran out (ADR-022)
 signal shot_done(info: Dictionary)   ## a practice shot of yours and how it ended (the coach, ADR-023)
 signal pause_requested
+signal online_closed(reason: String)   ## the friend left or the line went (ADR-027)
 
 var sim: Sim
 var bot: Bot
+## The slot you play: 0, or 2 as online's guest at the far end (ADR-027).
+var me := 0
+## Online (ADR-027): the session ticks the match, and `sim` is its
+## prediction (Rollback.pred), drawn and heard; null offline.
+var session: OnlineSession
+var _played := {}                    ## online: event key -> the ticks it was played at
+var _ball_off := Vector3.ZERO        ## online: the drawn ball's lag after a correction, eased away
+var _corrections := 0
 var xr: XrRig
 var flat: FlatRig
 var demo := false
@@ -77,11 +86,18 @@ var _inherited := false              ## XR: the play space came over from the la
 var _stay := false                   ## ...and you're on the same spot (the lobby, rebuilt)
 
 
-func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectating := false) -> void:
-	sim = Sim.new(cfg)
+func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectating := false,
+		online: OnlineSession = null) -> void:
+	session = online
+	if online:
+		sim = online.rollback.pred
+		cfg = sim.config
+		me = online.slot()
+	else:
+		sim = Sim.new(cfg)
 	spectate = spectating
 	demo = demo_mode or spectating
-	bot = Bot.new(sim, 0)
+	bot = Bot.new(sim, me)
 	if cfg.opponent >= 0:
 		them = String(Opponents.team(cfg.opponent)["team"])
 	world = World.new()
@@ -96,6 +112,7 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		xr.paddle_twist = paddle_twist
 		xr.paddle_reach = paddle_reach
 		xr.paddle_turn = paddle_turn
+		xr.end = K.side_sign(me >> 1)
 		add_child(xr)
 		var openxr := XRServer.find_interface("OpenXR")
 		if openxr and openxr.has_signal("pose_recentered"):
@@ -104,6 +121,7 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		flat = FlatRig.new()
 		flat.demo = demo
 		flat.spectate = spectate
+		flat.end = K.side_sign(me >> 1)
 		add_child(flat)
 		bot.auto_move = demo
 		bot.auto_serve = demo
@@ -112,9 +130,11 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		bot.rest_forward = 600000
 	const SHIRTS := [Color(0.85, 0.15, 0.2), Color(0.95, 0.85, 0.2), Color(0.95, 0.55, 0.12), Color(0.55, 0.25, 0.75)]
 	for s in sim.active_slots():
-		if (sim.players[s].cpu or spectate) and not sim.drill:
+		var friend := session != null and s != me
+		if (sim.players[s].cpu or spectate or friend) and not sim.drill:
 			var a := Avatar.new()
 			a.slot = s
+			a.human = friend
 			a.shirt = SHIRTS[s]
 			a.skin = Avatar.SKINS[(s * 7 + maxi(cfg.opponent, 0)) % Avatar.SKINS.size()]
 			a.hair = Avatar.HAIRS[(s * 5 + maxi(cfg.opponent, 0) * 3) % Avatar.HAIRS.size()]
@@ -130,7 +150,8 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 			add_child(a)
 			avatars.append(a)
 	board = Scoreboard.new()
-	board.them = them
+	board.them = "FRIEND" if session else them
+	board.far = me >= 2
 	add_child(board)
 	ball_mesh = MeshInstance3D.new()
 	var sm := SphereMesh.new()
@@ -347,7 +368,7 @@ func show_lesson(title: String, lines: Array) -> void:
 func _start_spot() -> Vector3:
 	if sim.drill:
 		return World.m(sim.drill.spot_x, 0, sim.drill.spot_z)
-	return _spot(0)
+	return _spot(me)
 
 
 ## The headset's first tracked frame: face down the court and stand on the
@@ -387,7 +408,7 @@ func _on_recentered() -> void:
 	if spectate:
 		xr.recenter(SPECTATE)
 	else:
-		xr.recenter(World.m(sim.players[0].x, 0, sim.players[0].z))
+		xr.recenter(World.m(sim.players[me].x, 0, sim.players[me].z))
 
 
 ## Show a menu panel in front of you, pointed at with the laser or mouse.
@@ -488,14 +509,15 @@ func _play(n: String, at: Vector3, pitch := 1.0, db := 0.0) -> void:
 ## line you were, where on the face it struck (mm: along the face toward
 ## the tip, and across it), and your paddle's height as they struck.
 func _shot_start(speed: int, volley: bool) -> Dictionary:
-	var p := sim.players[0]
+	var p := sim.players[me]
 	var b := sim.ball
-	var right := 1 if not left_handed else -1
+	var side := K.side_sign(me >> 1)
+	var right := (1 if not left_handed else -1) * side
 	var info := {"speed": snappedf(speed * K.TICK_HZ / 1e6, 0.1), "height": snappedf(b.y / 1e6, 0.01),
 		"from_x": snappedf(b.x / 1e6, 0.01), "from_z": snappedf(b.z / 1e6, 0.01), "volley": volley,
 		# Facing -z, your right is +x: the ball on your paddle side is a forehand.
 		"side": "FH" if (b.x - p.x) * right >= 0 else "BH",
-		"behind": snappedf((p.z - K.KITCHEN_DEPTH) / 1e6, 0.01)}
+		"behind": snappedf((p.z * side - K.KITCHEN_DEPTH) / 1e6, 0.01)}
 	if _ready_y >= 0.0:
 		info["ready"] = snappedf(_ready_y, 0.01)
 	var pm: PaddleMesh = xr.paddle if xr else (flat.paddle if flat else null)
@@ -509,7 +531,8 @@ func _shot_start(speed: int, volley: bool) -> Dictionary:
 ## Net clearance (C-3): how high over the tape your ball crossed.
 func _track_net() -> void:
 	var b := sim.ball
-	if not _shot.is_empty() and not _shot.has("clear") and _ball_z_was > 0 and b.z <= 0:
+	var side := K.side_sign(me >> 1)
+	if not _shot.is_empty() and not _shot.has("clear") and _ball_z_was * side > 0 and b.z * side <= 0:
 		_shot["clear"] = snappedf((b.y - K.net_height(b.x)) / 1e6, 0.01)
 	_ball_z_was = b.z
 
@@ -556,6 +579,8 @@ func command(c: Array) -> void:
 
 
 func _exit_tree() -> void:
+	if session and not session.closed():
+		session.quit()
 	sim = null
 	bot = null
 
@@ -568,6 +593,13 @@ func _spot(slot: int) -> Vector3:
 func _process(delta: float) -> void:
 	if sim == null:
 		return
+	if session:
+		session.poll()
+		if session.closed():
+			var why := session.reason
+			session = null
+			online_closed.emit(why)
+			return
 	var t0 := Time.get_ticks_usec()
 	if xr:
 		xr.begin_frame(delta)
@@ -633,16 +665,81 @@ func _tick(alpha: float, first: bool) -> void:
 			bot.aim_x = aim[0]
 			bot.aim_z = aim[2]
 			bot.pace = 40000 if flat.soft else 105000
+			if sim.config.friendly:
+				bot.pace = 105000 if flat.soft else 40000   # FRIENDLY DINK: soft unless you hold Shift
 		var tb := Time.get_ticks_usec()
 		h = bot.input()
 		Perf.add("bot", Time.get_ticks_usec() - tb)
 		if flat:
 			flat.show_paddle(h)
-	input_log.append(h.to_array())
 	var ts := Time.get_ticks_usec()
-	sim.step([h], _commands)
+	if session:
+		_tick_online(h)
+		Perf.add("sim", Time.get_ticks_usec() - ts)
+		return
+	input_log.append(h.to_array())
+	var human: Array = [null, null, null]
+	human[me] = h
+	sim.step(human, _commands)
 	Perf.add("sim", Time.get_ticks_usec() - ts)
 	_commands = []
+	_after_step()
+	for e in sim.drain_events():
+		_on_event(e)
+
+
+## Online (ADR-027): the session steps the prediction, maybe re-running
+## ticks after a correction. The ball you see is eased from where it was
+## to where it really is; each event plays once, however many times its
+## tick runs.
+func _tick_online(h: SimTypes.HumanInput) -> void:
+	for c in _commands:
+		session.command(c)
+	_commands = []
+	var was := World.m(sim.ball.x, sim.ball.y, sim.ball.z) + _ball_off
+	var out := session.tick(h)
+	if session.rollback == null:
+		return
+	if session.rollback.corrections != _corrections:
+		_corrections = session.rollback.corrections
+		var now := World.m(sim.ball.x, sim.ball.y, sim.ball.z)
+		var step := Vector3(sim.ball.vx, sim.ball.vy, sim.ball.vz) / float(K.M)
+		_ball_off = was + step - now
+		if sim.ball.held or _ball_off.length() > EASE_MAX:
+			_ball_off = Vector3.ZERO
+	if not out["stepped"]:
+		return
+	input_log.append(h.to_array())       # the inputs the match used (a stalled tick's weren't)
+	_after_step()
+	for evs in out["played"]:
+		for e in evs:
+			if _fresh(e):
+				_on_event(e)
+
+
+const EASE_MAX := 1.5                ## m: a bigger jump is a new rally, not a lag
+const EASE_RATE := 12.0              ## 1/s: the lag's half gone in 60 ms
+const SAME_EVENT := 3                ## ticks: an event this close to one played is the same
+
+
+## Online: false if this event was played already (a corrected tick ran it
+## again, a tick or so off).
+func _fresh(e: Array) -> bool:
+	var kind := int(e[0])
+	var key := "%d:%d" % [kind, int(e[1]) if kind == K.EVENT_HIT else 0]
+	var at := int(e[4])
+	var ticks: Array = _played.get(key, [])
+	for t in ticks:
+		if absi(int(t) - at) <= SAME_EVENT:
+			return false
+	ticks.append(at)
+	while ticks.size() > 8:
+		ticks.pop_front()
+	_played[key] = ticks
+	return true
+
+
+func _after_step() -> void:
 	_track_net()
 	if sim.tick % PATH_EVERY == 0 and not sim.ball.held:
 		_path.append([snappedf(sim.ball.x / 1e6, 0.01), snappedf(sim.ball.y / 1e6, 0.01), snappedf(sim.ball.z / 1e6, 0.01)])
@@ -651,12 +748,10 @@ func _tick(alpha: float, first: bool) -> void:
 	if sim.phase != _last_phase:
 		_on_phase(sim.phase)
 		_last_phase = sim.phase
-	for e in sim.drain_events():
-		_on_event(e)
 
 
 func _on_phase(p: int) -> void:
-	if p == K.PHASE_SERVE and not spectate and not sim.drill:
+	if p == K.PHASE_SERVE and not spectate and not sim.drill and not sim.config.friendly:
 		if sim.score[0] + sim.score[1] == 0 and announcer.said.is_empty():
 			announcer.say(["match_begin", "match_doubles" if sim.config.doubles else "match_singles"], Announcer.TOP)
 		else:
@@ -666,12 +761,12 @@ func _on_phase(p: int) -> void:
 				if sim.score_wins(sim.score[t] + 1, sim.score[1 - t]):
 					announcer.say(["match_point"], Announcer.HIGH, true)
 					break
-	if p == K.PHASE_SERVE_SETUP:
+	if p == K.PHASE_SERVE_SETUP and not sim.config.friendly:   # FRIENDLY DINK: stay where you are
 		if xr:
 			if _placed and not spectate:
-				xr.recenter(_spot(0))      # to your serve or return spot (the lobby stays put)
+				xr.recenter(_spot(me))     # to your serve or return spot (the lobby stays put)
 		elif not demo:
-			flat.recenter(_spot(0))
+			flat.recenter(_spot(me))
 
 
 func _on_event(e: Array) -> void:
@@ -728,18 +823,19 @@ func _on_event(e: Array) -> void:
 				announcer.say(["rally_%d_1" % e[2]], Announcer.HIGH)
 		K.EVENT_HIT:
 			var speed: int = e[2]
-			if e[1] == 0:
+			var mine: bool = e[1] == me
+			if mine:
 				_shot = _shot_start(speed, e[3] == 1)
 				_shot["in_path"] = _path.duplicate()     # how the ball came to you
-				_shot["me"] = [snappedf(sim.players[0].x / 1e6, 0.01), snappedf(sim.players[0].z / 1e6, 0.01)]
-			elif e[1] >= 2:
-				_ready_y = sim.players[0].py / 1e6   # your paddle as they strike: ready or not
+				_shot["me"] = [snappedf(sim.players[me].x / 1e6, 0.01), snappedf(sim.players[me].z / 1e6, 0.01)]
+			elif e[1] >> 1 != me >> 1:
+				_ready_y = sim.players[me].py / 1e6   # your paddle as they strike: ready or not
 			_path = [[snappedf(sim.ball.x / 1e6, 0.01), snappedf(sim.ball.y / 1e6, 0.01), snappedf(sim.ball.z / 1e6, 0.01)]]
-			if e[1] == 0 and Perf.on and not demo:     # your swings, not the lobby's bot
+			if mine and Perf.on and not demo:          # your swings, not the lobby's bot
 				_log_swing()
 			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf())
-			pranks.on_hit(at, e[1] == 0)
-			if xr and e[1] == 0:
+			pranks.on_hit(at, mine)
+			if xr and mine:
 				# Crisp from the sweet spot, a duller, longer buzz off the rim.
 				var off := clampf(sim.last_offset / float(K.PADDLE_FACE_RADIUS), 0.0, 1.0)
 				var strength := (HAPTIC_BASE + HAPTIC_GAIN * speed / 83333.0) / 100.0
@@ -747,7 +843,7 @@ func _on_event(e: Array) -> void:
 		K.EVENT_BOUNCE:
 			_play("1_bounce", World.m(e[1], 0, e[2]), 1.0, -4.0)
 			pranks.on_bounce(World.m(e[1], 0, e[2]))
-			if not _shot.is_empty() and not _shot.has("x") and e[2] < 0:
+			if not _shot.is_empty() and not _shot.has("x") and e[2] * K.side_sign(me >> 1) < 0:
 				_shot["x"] = snappedf(e[1] / 1e6, 0.01)       # where your ball landed on their side
 				_shot["z"] = snappedf(e[2] / 1e6, 0.01)
 		K.EVENT_NET:
@@ -779,6 +875,19 @@ func _on_event(e: Array) -> void:
 			elif e[1] == 0 and sim.config.opponent >= 0 and not spectate and _quip.randi() % 3 == 0:
 				var quips: Array = Opponents.team(sim.config.opponent)["quips"]
 				board.announce(String(quips[_quip.randi() % quips.size()]), Color(1, 0.8, 0.4), 2.2)
+		K.EVENT_RALLY:
+			# FRIENDLY DINK (ADR-027): the rally's count, the crowd for a long one.
+			var n: int = e[1]
+			crowd.react(n / 14.0)
+			if n >= 8:
+				_play("4_applause", Vector3(-7, 1, 0), 1.0, linear_to_db(clampf(n / 16.0 + 0.3, 0.3, 1.0)))
+			var best: bool = n > 0 and n == e[2]
+			board.announce(("NEW BEST!  %d" if best and n >= 5 else "RALLY %d") % n,
+				Color(1, 0.9, 0.2) if best else Color(0.5, 1, 0.5), 1.8)
+			for r in [30, 20, 15, 10]:
+				if n >= r:
+					announcer.say(["rally_%d" % r], Announcer.HIGH, true)
+					break
 		K.EVENT_MATCH:
 			_play("4_applause", Vector3(0, 2, 0))
 			crowd.react(1.0)
@@ -793,12 +902,17 @@ func _on_event(e: Array) -> void:
 
 func _draw(delta: float) -> void:
 	var b := World.m(sim.ball.x, sim.ball.y, sim.ball.z)
-	var held_by_you := not sim.players[0].cpu and sim.server_slot == 0 \
+	var held_by_you := not sim.players[me].cpu and sim.server_slot == me \
 		and (sim.phase == K.PHASE_SERVE or sim.phase == K.PHASE_SERVE_SETUP)
 	if xr:
 		xr.show_held_ball(held_by_you)
 		ball_mesh.visible = not held_by_you
 	_focus(delta)
+	if _ball_off != Vector3.ZERO:
+		_ball_off *= exp(-EASE_RATE * delta)
+		if _ball_off.length() < 0.002:
+			_ball_off = Vector3.ZERO
+		b += _ball_off
 	ball_mesh.global_position = b
 	ball_mesh.rotation += Vector3(sim.ball.wx, sim.ball.wy, sim.ball.wz) / float(K.URAD) * delta * K.TICK_HZ
 	_trail_draw(b, delta)

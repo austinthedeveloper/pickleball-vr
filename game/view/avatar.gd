@@ -46,6 +46,9 @@ var female := false
 var style := "parted"                ## Body.HAIR_STYLES
 var beard := false
 var model := ""                      ## Body.MODELS: another person in their own clothes (no cap)
+## A human's body (online's friend, ADR-027): the paddle where theirs is in
+## the sim, the arms reaching for it and their free hand; no CPU swing.
+var human := false
 var paddle: PaddleMesh
 var figure: Body
 
@@ -287,7 +290,10 @@ func show_from(sim: Sim, delta: float) -> void:
 	if delta > 0.0:
 		_vel = _vel.lerp((body - _root) / delta, clampf(delta * 10.0, 0.0, 1.0))
 	_root = body
-	_track_swing(sim, body, ball, delta)
+	if human:
+		_swing = false
+	else:
+		_track_swing(sim, body, ball, delta)
 	# Facing: the ball while it's coming, else the other side.
 	var want := Vector3(0, 0, -side)
 	if _incoming(sim) or _swing:
@@ -352,6 +358,11 @@ func show_from(sim: Sim, delta: float) -> void:
 	# Arms: the paddle hand on its swing; the other out for balance.
 	var hand_want: Vector3 = fun.get("hand", _paddle_target(pelvis, t_face, t_right, ball))
 	var rate := 22.0 if _swing else 9.0
+	if human:
+		# Their paddle, exactly: the hand goes to its grip.
+		paddle.pose(World.m(p.px, p.py, p.pz), Vector3(p.normal[0], p.normal[1], p.normal[2]) / float(K.Q14))
+		hand_want = paddle.transform * Vector3(0, 0, PaddleMesh.FACE_CENTER.z + PaddleMesh.FACE_H / 2 + PaddleMesh.HANDLE / 2 - 0.01)
+		rate = 30.0
 	_hand = _hand.lerp(hand_want, clampf(delta * rate, 0.0, 1.0))
 	var off_want := pelvis + t_face * (0.32 + 0.12 * sin(_gait) * clampf(speed / 2.5, 0.0, 1.0)) \
 		- t_right * 0.26 + Vector3(0, 0.32 if ready else 0.12, 0)
@@ -360,6 +371,8 @@ func show_from(sim: Sim, delta: float) -> void:
 		off_want = ball + Vector3(0, -0.07, 0)    # holding the next ball up, then letting it go
 	elif fun.has("off"):
 		off_want = fun["off"]
+	elif human:
+		off_want = World.m(p.hand_x, p.hand_y, p.hand_z)
 	_off = _off.lerp(off_want, clampf(delta * 8.0, 0.0, 1.0))
 	var elbow_pole: Vector3 = fun.get("pole", Vector3.DOWN * 0.7 - t_face * 0.3)
 	var out_w := 1.2 if fun.has("wide") else 0.4   # flexing: elbows out
@@ -386,7 +399,11 @@ func show_from(sim: Sim, delta: float) -> void:
 	var face_n := _out if _swing else t_face
 	if _backhand:
 		face_n = face_n.rotated(Vector3.UP, 0.4)
-	paddle.pose_grip(_hand, along, face_n)
+	if human:
+		along = -paddle.transform.basis.z
+		face_n = paddle.transform.basis.x
+	else:
+		paddle.pose_grip(_hand, along, face_n)
 	# The hand round the handle: thumb up it, palm behind the face.
 	figure.orient("hand_r", along, -face_n)
 	figure.curl(1, 1.0)
