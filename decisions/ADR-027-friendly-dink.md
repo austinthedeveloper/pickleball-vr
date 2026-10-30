@@ -1,7 +1,8 @@
 # ADR-027: FRIENDLY DINK, and dinking online with a friend
 
-**Status:** Accepted (2026-10-29). The sim's part is built (VR-74); the
-netcode, the friend on court and the menu are planned (VR-75..78).
+**Status:** Accepted (2026-10-29). The sim's part (VR-74) and the
+netcode (VR-75) are built; the friend on court and the menu are planned
+(VR-76..78).
 
 ## Context
 
@@ -53,15 +54,59 @@ partner on slot 2.
 
 Voice isn't part of it: a phone call or Discord at first.
 
+**The netcode as built (VR-75, `game/net/`):**
+
+- `NetLink`, `LoopbackLink` and `RelayLink` are the port kit's; the relay
+  game is `pb94-vr`, and the version is `application/config/version`.
+- **Your input isn't delayed** (`Rollback.DELAY` 0): your paddle in the
+  sim is where your hand is. The port delays its own input 1 or 2
+  frames to cut corrections; in a headset that would put the paddle
+  behind the hand.
+- **A guess is wrong only when it changed what both share.** A friend's
+  hands move every tick, so a guess of them is never exactly right, and
+  comparing inputs (the port's way) would roll back every tick. Instead,
+  `pred`'s shared state is hashed after each tick (`Sim.snapshot(slot)`:
+  everything but that slot's head and paddle, and a held ball's place),
+  and when `truth` steps the same tick on the real input and the hash
+  differs, `pred` is reset and runs again. A swing that missed the ball
+  costs nothing; one that hit it is a correction.
+- **The guess carries the friend's head, paddle and hand on** at their
+  last two ticks' speed (up to 8 ticks), with the face held and never
+  a toss.
+- Prediction runs at most 36 ticks (300 ms) past what's confirmed and
+  waits beyond that. The time sync holds a tick for the side that's 2 or
+  more ahead, once a second. A hash of `truth` is compared every 2 s.
+- **Messages:** each tick's input is a PackedInt32Array (12 ints), and a
+  frame's messages go out together as one "B".
+- `Sim.save_state()` / `load_state()` copy every script variable of the
+  sim, its ball, players and drill (the config is shared).
+
 ## Consequences
 
-- Two friends can dink in the sim today; there's no screen or online play yet.
+- Two friends can dink online in the code; there's no screen yet.
+- **Measured (VR-75):**
+  - Two Bots through the live relay from the Mac: a room in 0.17 s,
+    connected in 1.8 s, an 83 ms round trip, 60 s in sync (30 hashes),
+    no stalls, 17 and 23 corrections, about 6 ticks predicted ahead.
+  - On a loopback at 50 ms each way with jitter: 90 s, about one
+    correction per friend's hit (35), and a best rally of 30.
+  - A sim step is 10 us on the Mac, and a save and load 77 us, so a
+    correction's re-run of 6 to 12 ticks is well under a millisecond
+    there; the Quest is slower and is checked in VR-78.
+- **For the view (VR-76):** a corrected tick's events play again, so
+  sounds must be played once per hit (the port's EventLedger idea).
+  The relay lets `pb94-vr` rooms take 3 guests; the host talks only to
+  the first, so a third person would wait forever.
 - Your own hits will be instant (rollback predicts the friend); the
   friend's will reach you a round trip late, 50 to 100 ms on the relay,
   which the view must hide. Only a playtest can say if it's good enough.
 - Golden traces are unchanged: every rule change checks `config.friendly`,
   and the snapshot only grows when it's on.
-- Tests: `test_friendly` (two Bots dink for three minutes, with rallies
+- Tests: `test_online` covers a saved state stepping as before (a match
+  and a drill), the pose-free snapshot, the config, two sessions
+  dinking with rollback on a jittery loopback, a slow line that waits,
+  versions, a stand-in relay, and the real relay server when it's
+  beside the game (skipped on CI). Also `test_friendly` (two Bots dink for three minutes, with rallies
   counted and no score; the start; who starts next; the kitchen with the
   lean; determinism). Ten minutes of two Bots: 53 rallies, an average of 7
   returns, a best of 63, and every bounce in the dink zone.

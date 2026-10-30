@@ -867,15 +867,26 @@ func _update_ball_only() -> void:
 # --- Inspection --------------------------------------------------------------------
 
 ## Everything that decides the future, as ints (tests, golden traces).
-func snapshot() -> Array:
+## `without_pose`: that slot's head and paddle as zeros, and a held ball's
+## place too (it's in the server's hand): rollback's check that a guessed
+## pose changed nothing shared (ADR-027).
+func snapshot(without_pose := -1) -> Array:
 	var a: Array = [tick, phase, phase_timer, score[0], score[1], serving_team, server_slot,
 		required_bounce, 1 if serve_pending else 0, bounce_count, last_hitter, last_fault,
 		point_winner, match_winner, shots, rng, receiver_slot,
 		ball.x, ball.y, ball.z, ball.vx, ball.vy, ball.vz, ball.wx, ball.wy, ball.wz,
 		1 if ball.held else 0]
+	if without_pose >= 0 and ball.held:
+		a[17] = 0
+		a[18] = 0
+		a[19] = 0
 	for s in active_slots():
 		var p := players[s]
-		a.append_array([p.x, p.z, p.px, p.py, p.pz, p.cooldown, p.goal_x, p.goal_z, p.plan_tick,
+		if s == without_pose:
+			a.append_array([0, 0, 0, 0, 0])
+		else:
+			a.append_array([p.x, p.z, p.px, p.py, p.pz])
+		a.append_array([p.cooldown, p.goal_x, p.goal_z, p.plan_tick,
 			1 if p.court_right else 0, 1 if p.let_go else 0])
 	if drill:
 		a.append_array(drill.snapshot())
@@ -886,3 +897,49 @@ func snapshot() -> Array:
 
 func state_hash() -> int:
 	return hash(snapshot())
+
+
+## The whole state (ADR-027, for rollback): load_state(save_state()) leaves
+## the sim stepping exactly as before. The config is shared, not saved.
+func save_state() -> Array:
+	var ps := []
+	for p in players:
+		ps.append(_vars(p))
+	return [_vars(self, ["config", "ball", "players", "drill"]), _vars(ball), ps,
+		_vars(drill) if drill else {}]
+
+
+func load_state(state: Array) -> void:
+	_set_vars(self, state[0])
+	_set_vars(ball, state[1])
+	for i in players.size():
+		_set_vars(players[i], state[2][i])
+	if drill:
+		_set_vars(drill, state[3])
+
+
+static var _names := {}              ## script -> its variables' names
+
+
+## An object's script variables, deep-copied (less `skip`).
+static func _vars(o: Object, skip: Array = []) -> Dictionary:
+	var sc: Script = o.get_script()
+	if not _names.has(sc):
+		var n := []
+		for p in o.get_property_list():
+			if p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
+				n.append(p["name"])
+		_names[sc] = n
+	var d := {}
+	for k in _names[sc]:
+		if k in skip:
+			continue
+		var v = o.get(k)
+		d[k] = v.duplicate(true) if v is Array or v is Dictionary else v
+	return d
+
+
+static func _set_vars(o: Object, d: Dictionary) -> void:
+	for k in d:
+		var v = d[k]
+		o.set(k, v.duplicate(true) if v is Array or v is Dictionary else v)
