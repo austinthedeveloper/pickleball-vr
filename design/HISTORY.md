@@ -193,8 +193,11 @@ behind it.
    letters, WATCH ROOM.
 3. You on court, about a quarter of a second behind. Keys 1 to 4 change
    the camera: BEHIND, SIDE, ACROSS, ABOVE. Esc for the menu.
-4. Change drills on the Quest: the Mac follows. The phone page still
-   coaches as before, alongside.
+4. Change drills on the Quest: the Mac follows.
+5. **The coach's panel (VR-80),** on the right of the Mac's screen (Tab
+   hides it): pick the drill and level, START, PAUSE, a cue, and click the
+   court for the target or the partner's next ball. The Quest should do
+   it at once. The phone page still works alongside.
 
 Look for: your swing as the coach sees it (does the body read as you?),
 and any hitch when a drill starts.

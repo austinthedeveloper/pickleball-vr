@@ -164,9 +164,47 @@ func test_a_coach_watches_through_the_menus() -> void:
 			me = a
 	check(me != null and me.human, "the player on court, on their own paddle")
 	check(coach_main.view.partner_avatar != null, "and the partner")
+	# The coach's controls on their screen (VR-80): the tablet, its state
+	# from the player's headset, its taps driving the player's drill.
+	var panel: CoachTablet = coach_main.view.coach_panel
+	check(panel != null and panel.overlay and panel.overlay_share() > 0.0, "the coach's panel on the screen")
+	check(coach_main.remote_coach.state().get("where", "") == "playing", "it knows the player is playing")
+	panel.refresh()
+	eq((panel._labels["s_pause"] as Button).text, "PAUSE", "PAUSE offered")
+	var level: int = player.settings.partner_level
+	panel._pick("level", "levels", 1)
+	panel._session("s_pause")
+	panel.desk.handle({"type": "cue", "text": "SOFT HANDS"})
+	panel.mode = "TARGET"
+	panel.tap(1.0, -1.5)
+	for i in 30:
+		_frame(player, coach_main, relay)
+		OS.delay_msec(2)
+	eq(player.settings.partner_level, (level + 1) % 3, "the level the coach picked")
+	check(player.view.paused, "the coach paused the player")
+	check(player.view.cue_label != null and player.view.cue_label.text == "SOFT HANDS", "the cue over the player's net")
+	check(not player.view.sim.drill.target_pinned, "a target tapped while paused waits for RESUME")
+	panel.refresh()                          # its own _process does this 4 times a second
+	panel._session("s_pause")
+	for i in 30:
+		_frame(player, coach_main, relay)
+		OS.delay_msec(2)
+	check(not player.view.paused, "and resumed it")
+	check(player.view.sim.drill.target_pinned, "the coach's target pinned in the player's drill")
+	panel.refresh()
+	eq((panel._labels["s_pause"] as Button).text, "PAUSE", "the button follows")
+	for i in 120:
+		_frame(player, coach_main, relay)
+		OS.delay_msec(1)
+	check(coach_main.watching.sim.drill.target_pinned, "the target on the coach's screen too: the command is in the stream")
+	eq(coach_main.watching.resyncs, 0, "still in step")
 	# The coach's menu: the camera, and the replay playing on behind it.
 	coach_main._on_pause()
 	eq(coach_main.view.menu.title, "WATCHING", "the watching menu")
+	for i in 60:
+		coach_main.view._draw(0.05)
+	check(coach_main.view.flat._pin_at.distance_to(MatchView.SPECTATE + Vector3(0, FlatRig.EYE, 0)) < 0.3,
+		"on the Mac the camera turns to the menu, where it stands")
 	coach_main.view.menu.select("wcam")
 	coach_main.view.menu.change(1)
 	eq(coach_main.view.cam_view, 1, "SIDE")

@@ -78,7 +78,20 @@ func _initialize() -> void:
 		for a in args:
 			if a.begins_with("view="):
 				view.cam_view = int(a.trim_prefix("view="))
-		view.flat.set_help("WATCHING ALEX: DINKS     1 BEHIND  2 SIDE  3 ACROSS  4 ABOVE     ESC MENU")
+		view.flat.set_help("WATCHING ALEX: DINKS     1-4 CAMERA   TAB PANEL   ESC MENU")
+		if args.has("panel"):
+			# The coach's controls (VR-80), as a player's headset would fill them.
+			var rc := RemoteCoach.new(null, null)
+			rc.on_json({"type": "state", "where": "playing", "player": "ALEX",
+				"setup": {"drill": 0, "drills": Drill.KIND_NAMES, "level": 1, "levels": Drill.PACE_NAMES},
+				"run": {"name": "DINKS", "score": 7, "streak": 7, "good": 9, "timed": false},
+				"machine": {"speed": 8.0, "spin": 0.0, "clear": 0.4, "every": 3.0, "on": false},
+				"tunes": []})
+			for i in 9:
+				rc.on_json({"type": "shot", "good": i % 4 != 0, "side": "FH" if i % 3 else "BH", "clear": 0.1 + 0.03 * i,
+					"x": -1.0 + 0.25 * i, "z": -1.2 - 0.1 * (i % 3), "speed": 4.5})
+			rc.main = null
+			view.show_coach_panel(rc)
 	else:
 		view.setup(cfg, false, demo or mode in ["machine", "lesson", "partner"])
 	if mode == "lesson":

@@ -1,7 +1,7 @@
 # ADR-028: COACH VIEW, watching a player's drill in a coach's game
 
-**Status:** Accepted (2026-10-29). Step 1, watching, is built (VR-79).
-Controls on the coach's screen (VR-80) and instant replay (VR-81) are
+**Status:** Accepted (2026-10-29). Watching (VR-79) and the coach's
+controls on their screen (VR-80) are built. Instant replay (VR-81) is
 planned.
 
 ## Context
@@ -56,8 +56,32 @@ stands at the lobby's spot beside the court and can walk. The menu (Esc
 or the menu button) has CAMERA, BACK TO WATCHING and STOP WATCHING; the
 replay plays on behind it.
 
-**Control stays where it is for now:** the phone page, which works
-alongside a watching game in the same room.
+**The coach's controls, in the coach's game (VR-80).** The coach tablet
+(C-22) now talks to a source instead of CoachDesk itself: `handle(msg)`,
+`state()`, `run_shots()`, `pending`, `machine_settings()`,
+`current_view()`.
+
+- **Two sources.** In the headset the source is CoachDesk, as before. In
+  a watching game it's `RemoteCoach`, which sends each tap to the
+  player's headset as the phone page's message over the watch link, and
+  shows the state and shots the headset broadcasts to its coaches. The
+  watching games get that JSON now, next to their stream.
+- **The session's own controls,** for a remote source only: the drill and
+  level, START, PAUSE or RESUME, RESTART, MENU, and the six cues, as on
+  the phone. Then the tablet's own: the numbers, the court (tap for the
+  target or the partner's next ball, or the machine's spot and bounce),
+  what the numbers say, the partner's pace and size, the ball machine.
+- **On a Mac** the tablet is drawn on the screen (`overlay`), at the
+  right, as tall as it fits, and the mouse uses it directly. Tab hides it
+  and brings it back. The picture's centre moves left (the camera's
+  `h_offset`) so the player stays in the part that's left.
+- **In a headset** the tablet stands beside the watching menu, as it
+  does beside PAUSED.
+- The phone page still works alongside, in the same room.
+
+A fix to VR-79 came with it. The watching menu (Esc) stands at the
+lobby's spot, which a following camera may not see, so on a Mac the
+camera turns to it while it's open.
 
 **Not yet watchable:** a FRIENDLY DINK match (ADR-027). Its other
 player's inputs aren't on the headset in time. The coach's page says so.
@@ -69,6 +93,10 @@ player's inputs aren't on the headset in time. The coach's page says so.
   after WATCH ROOM, and 30 s later 30 ticks (0.25 s) behind with the same
   state as the player's and no resyncs. When the player switched to the
   ball machine, the coach's screen followed in 0.09 s.
+- **Measured (VR-80), coaching from the Mac through the live relay:** the
+  player paused 52 ms after the coach's tap, with the level the coach
+  picked; RESUME with the coach's target took 61 ms; the target showed in
+  the coach's replay 235 ms later, still in step.
 - **Cheap:** one guest's stream is a few KB a second through the relay.
 - **Exact, not a video:** the coach's game can show any angle. Because it
   holds the inputs, instant replay (VR-81) is a matter of keeping them and
@@ -82,4 +110,8 @@ player's inputs aren't on the headset in time. The coach's page says so.
   and the coach watching through the menus over a stand-in relay. That
   last one checks the coach's state against the player's at the same
   tick, the player's body, the camera menu, a new drill following, and
-  STOP. The stand-in relay moved to `tests/stand_in_relay.gd`.
+  STOP. VR-80 adds, in the same game: the panel on the screen, its
+  state from the player's headset, the level, PAUSE and RESUME, a cue
+  and a target from the panel reaching the player, the target then in
+  the coach's replay, and the camera turning to the menu. The stand-in
+  relay moved to `tests/stand_in_relay.gd`.

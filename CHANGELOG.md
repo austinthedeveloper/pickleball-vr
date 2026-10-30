@@ -11,7 +11,9 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
   your drill on the court in 3D: you, the partner or machine, and every
   shot, from behind you, the side, across the net or above. Turn on COACH
   FROM ANYWHERE; they pick WATCH A PLAYER on a Mac or a headset and enter
-  your room. They coach from the phone page as before.
+  your room. They coach from the panel on their screen: the drill and
+  level, start and pause, cues, the target, the partner's next ball,
+  the ball machine and the numbers. The phone page still works too.
 
 ## [0.6.0] - 2026-10-29
 

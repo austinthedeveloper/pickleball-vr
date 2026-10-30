@@ -794,6 +794,9 @@ func _on_online_closed(reason: String) -> void:
 var watching: Watch                  ## the player's drill, replayed; null when not watching
 var _watch_link: RelayLink
 var _watch_asked := false            ## asked the player's headset for its stream
+## The coach's controls while watching (VR-80): the tablet's source, sending
+## the phone page's messages to the player's headset.
+var remote_coach: RemoteCoach
 ## Tests: the relay to dial ("" the real one, RelayLink.address()).
 var relay_url := ""
 
@@ -837,6 +840,7 @@ func _watch_join() -> void:
 		lobby.call_deferred("watch")
 		return
 	_watch_link = l
+	remote_coach = RemoteCoach.new(l, self)
 	watching = Watch.new()
 	_watch_asked = false
 	_friend_note = ""
@@ -849,6 +853,7 @@ func _watch_stop() -> void:
 		_watch_link.close()
 	_watch_link = null
 	watching = null
+	remote_coach = null
 	lobby.call_deferred("watch")
 
 
@@ -860,13 +865,16 @@ func _watch_poll() -> void:
 	_watch_link.poll()
 	var had: Sim = watching.sim
 	for m in _watch_link.receive():
-		if m[0] != "JSON":
+		if m[0] == "JSON":
+			remote_coach.on_json(m[1])
+		else:
 			watching.on_message(m)
 	if _watch_link.status() == NetLink.CLOSED:
 		var why := _watch_link.error
 		_friend_note = "THE PLAYER LEFT" if why == "THE OTHER PLAYER LEFT" or why == "" else why
 		_watch_link = null
 		watching = null
+		remote_coach = null
 		lobby.call_deferred("watch")
 		return
 	if _watch_link.status() == NetLink.CONNECTED and (not _watch_asked or watching.need_state):
@@ -891,7 +899,8 @@ func _start_watch() -> void:
 	if view.flat:
 		var who := String(watching.info.get("player", ""))
 		var what := "IN THE MENU" if bool(watching.info.get("lobby", false)) else String(watching.info.get("mode", ""))
-		view.flat.set_help("WATCHING %s: %s     1 BEHIND  2 SIDE  3 ACROSS  4 ABOVE     ESC MENU" % [who, what])
+		view.flat.set_help("WATCHING %s: %s     1-4 CAMERA   TAB PANEL   ESC MENU" % [who, what])
+		view.show_coach_panel(remote_coach)
 
 
 ## The menu while watching: the camera, and STOP WATCHING. The replay
@@ -905,4 +914,6 @@ func _watch_pause() -> void:
 	m.pressed.connect(_on_pressed)
 	m.changed.connect(func(_id: String, i: int) -> void: view.cam_view = i)
 	view.show_menu(m)
+	if view.xr:
+		view.show_tablet(remote_coach)   # the controls beside it, as when you pause
 

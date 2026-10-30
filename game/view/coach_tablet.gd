@@ -4,12 +4,17 @@
 ## drill's own controls: in a partner drill, its pace and size, with taps
 ## for the target and the partner's next ball; at the ball machine, the
 ## machine's speed, spin, height and timing, with taps for where it stands
-## and where its balls bounce. It does all of it through CoachDesk, as the
-## phone does.
+## and where its balls bounce. It does all of it through its source, as
+## the phone does: CoachDesk in the headset, or RemoteCoach in a coach's
+## game watching a player (COACH VIEW, ADR-028), which also gets the
+## session's own controls: the drill and level, START, PAUSE, RESTART,
+## MENU and the cues.
 ##
 ## A 2D panel (Controls in a SubViewport) on a quad. The laser or the mouse
 ## points at it like a menu: the hit is turned into the panel's own mouse
-## events, so its buttons behave as buttons.
+## events, so its buttons behave as buttons. With `overlay` (a coach
+## watching on a Mac) the same panel is drawn on the screen instead, at
+## the right, and the mouse uses it directly.
 class_name CoachTablet
 extends Node3D
 
@@ -46,7 +51,10 @@ const WRONG := {"TARGET": "THE TARGET GOES ON THEIR SIDE: TAP ABOVE THE NET", "F
 const MACHINE := [["speed", "SPEED", 0.5, 3.0, 20.0], ["spin", "SPIN", 10.0, -100.0, 100.0],
 	["clear", "OVER THE NET", 0.05, 0.05, 3.0], ["every", "A BALL EVERY", 0.25, 1.25, 8.0]]
 
-var desk: CoachDesk
+## The source: handle(msg), state(), run_shots(), pending, machine_settings(),
+## current_view(), remote. CoachDesk or RemoteCoach.
+var desk
+var overlay := false
 var mode := "TARGET"
 var lock := Menu3D.SWITCH_LOCK
 var _vp: SubViewport
@@ -61,9 +69,22 @@ var _slider_ids: Array = []
 var _machine := false                ## the drill under way is the ball machine
 var _t := 0.0
 var _state := {}
+var _holder: Control                 ## overlay: the panel on the screen
+var _slider_vals: Array = []         ## the sliders' values, as the source says them
 
 
 func _ready() -> void:
+	if overlay:
+		var layer := CanvasLayer.new()
+		add_child(layer)
+		_holder = Control.new()
+		_holder.size = PX
+		layer.add_child(_holder)
+		_build(_holder)
+		_fit()
+		get_viewport().size_changed.connect(_fit)
+		refresh()
+		return
 	_vp = SubViewport.new()
 	_vp.size = PX
 	_vp.disable_3d = true
@@ -85,6 +106,27 @@ func _ready() -> void:
 	refresh()
 
 
+## Overlay: the panel at the screen's right, as tall as it fits.
+func _fit() -> void:
+	var win := get_viewport().get_visible_rect().size
+	var k := clampf(win.y * 0.96 / PX.y, 0.4, 1.0)
+	_holder.scale = Vector2(k, k)
+	_holder.position = Vector2(win.x - PX.x * k - win.y * 0.02, win.y * 0.02)
+
+
+## Overlay: how much of the screen's width the panel takes (the view keeps
+## the action in the rest).
+func overlay_share() -> float:
+	if _holder == null or not _holder.visible:
+		return 0.0
+	return (PX.x * _holder.scale.x) / maxf(get_viewport().get_visible_rect().size.x, 1.0)
+
+
+func show_overlay(on: bool) -> void:
+	if _holder:
+		_holder.visible = on
+
+
 # --- The panel ---------------------------------------------------------------------
 
 func _build(parent: Node) -> void:
@@ -104,6 +146,8 @@ func _build(parent: Node) -> void:
 	run.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	run.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	head.add_child(run)
+	if desk and desk.remote:
+		_build_session(root)
 	var stats := HBoxContainer.new()
 	stats.add_theme_constant_override("separation", 10)
 	root.add_child(stats)
@@ -141,7 +185,7 @@ func _build(parent: Node) -> void:
 		modes.add_child(b)
 		_mode_buttons[m] = b
 	_court = Control.new()
-	_court.custom_minimum_size = Vector2(400, 760)
+	_court.custom_minimum_size = Vector2(400, 560 if desk and desk.remote else 760)
 	_court.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_court.mouse_filter = Control.MOUSE_FILTER_STOP
 	_court.draw.connect(_draw_court)
@@ -207,6 +251,62 @@ func _build(parent: Node) -> void:
 	_set_mode(mode)
 
 
+## COACH VIEW: the session's controls the phone page has, for a coach
+## watching from another game: the drill and level, START, PAUSE or
+## RESUME, RESTART, MENU, and a cue to say.
+func _build_session(root: VBoxContainer) -> void:
+	var pick := HBoxContainer.new()
+	pick.add_theme_constant_override("separation", 8)
+	root.add_child(pick)
+	for k in [["drill", "drills"], ["level", "levels"]]:
+		var key: String = k[0]
+		var list: String = k[1]
+		if key == "level":
+			var gap := Control.new()
+			gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			pick.add_child(gap)
+		pick.add_child(_button("<", 24, func() -> void: _pick(key, list, -1)))
+		var l := _label("set_" + key, "", 24, TEXT)
+		l.custom_minimum_size = Vector2(180 if key == "drill" else 120, 0)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.clip_text = true
+		pick.add_child(l)
+		pick.add_child(_button(">", 24, func() -> void: _pick(key, list, 1)))
+	var go := HBoxContainer.new()
+	go.add_theme_constant_override("separation", 8)
+	root.add_child(go)
+	for k in [["s_start", "START"], ["s_pause", "PAUSE"], ["s_restart", "RESTART"], ["s_menu", "MENU"]]:
+		var key: String = k[0]
+		var b := _button(k[1], 24, func() -> void: _session(key))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		go.add_child(b)
+		_labels[key] = b
+	var cues := HFlowContainer.new()
+	cues.add_theme_constant_override("h_separation", 6)
+	cues.add_theme_constant_override("v_separation", 6)
+	root.add_child(cues)
+	for c in CoachDesk.CUES:
+		var text: String = c
+		cues.add_child(_button(text, 18, func() -> void: desk.handle({"type": "cue", "text": text})))
+
+
+## A step through the drills or levels the player's headset offers.
+func _pick(key: String, list: String, dir: int) -> void:
+	var setup: Dictionary = _state.get("setup", {})
+	var names: Array = setup.get(list, [])
+	if names.is_empty():
+		return
+	desk.handle({"type": "set", "key": key, "value": posmod(int(setup.get(key, 0)) + dir, names.size())})
+
+
+func _session(key: String) -> void:
+	match key:
+		"s_start": desk.handle({"type": "start"})
+		"s_pause": desk.handle({"type": "resume" if String(_state.get("where", "")) == "paused" else "pause"})
+		"s_restart": desk.handle({"type": "restart"})
+		"s_menu": desk.handle({"type": "menu"})
+
+
 func _label(key: String, text: String, size: int, c: Color) -> Label:
 	var l := Label.new()
 	l.text = text
@@ -253,14 +353,15 @@ func _tune(i: int, dir: int) -> void:
 		return
 	var id: String = _slider_ids[i]
 	var e := Tune.entry(id)
-	desk.handle({"type": "tune", "id": id, "value": clampi(Tune.value(id) + dir * int(e[7]), e[8], e[9])})
+	var now: int = _slider_vals[i] if i < _slider_vals.size() else Tune.value(id)
+	desk.handle({"type": "tune", "id": id, "value": clampi(now + dir * int(e[7]), e[8], e[9])})
 	refresh()
 
 
 func _step(key: String, dir: int) -> void:
 	for row in MACHINE:
 		if row[0] == key:
-			var m: Dictionary = desk.main.settings.coach_machine
+			var m: Dictionary = desk.machine_settings()
 			var v := clampf(float(m[key]) + dir * float(row[2]), float(row[3]), float(row[4]))
 			desk.handle({"type": "machine_set", key: snappedf(v, 0.01)})
 	refresh()
@@ -412,13 +513,23 @@ func refresh() -> void:
 			"every": t = "%.2f S" % v
 		(_labels["m_" + row[0]] as Label).text = t
 	(_labels["go"] as Button).text = "RESTART THE MACHINE" if mc.get("on", false) else "START THE MACHINE"
+	if _labels.has("s_pause"):
+		var setup: Dictionary = _state.get("setup", {})
+		for k in [["drill", "drills"], ["level", "levels"]]:
+			var names: Array = setup.get(k[1], [])
+			var at := int(setup.get(k[0], 0))
+			(_labels["set_" + k[0]] as Label).text = String(names[at]) if at < names.size() else "-"
+		var where := String(_state.get("where", ""))
+		(_labels["s_pause"] as Button).text = "RESUME" if where == "paused" else "PAUSE"
+		(_labels["s_pause"] as Button).disabled = where == "lobby"
+		(_labels["s_restart"] as Button).disabled = where == "lobby"
 	_show_context()
 	_court.queue_redraw()
 
 
 ## The drill's own controls: the machine's, or a partner drill's.
 func _show_context() -> void:
-	var v: MatchView = desk.main.view if desk.main else null
+	var v: MatchView = desk.current_view()
 	_machine = v != null and v.sim != null and v.sim.drill != null and not v.sim.drill.partner
 	_machine_box.visible = _machine
 	_partner_box.visible = not _machine
@@ -429,12 +540,14 @@ func _show_context() -> void:
 		_set_mode(allowed[0])
 	var tunes: Array = _state.get("tunes", [])
 	_slider_ids = []
+	_slider_vals = []
 	for i in MAX_SLIDERS:
 		var row: HBoxContainer = _slider_rows[i]
 		row.visible = i < tunes.size()
 		if i < tunes.size():
 			var t: Dictionary = tunes[i]
 			_slider_ids.append(t["id"])
+			_slider_vals.append(int(t["value"]))
 			(_labels["s_%d_n" % i] as Label).text = String(t["label"])
 			(_labels["s_%d" % i] as Label).text = String(t["text"]) + (" *" if t["value"] != t["default"] else "")
 
@@ -442,7 +555,7 @@ func _show_context() -> void:
 ## Lays the panel out now, not next frame (tests: like a menu's settle()).
 func settle() -> void:
 	for i in 2:
-		for c in _vp.find_children("*", "Container", true, false):
+		for c in (_holder if overlay else _vp).find_children("*", "Container", true, false):
 			c.notification(Container.NOTIFICATION_SORT_CHILDREN)
 
 
@@ -467,6 +580,8 @@ func hit_px(origin: Vector3, dir: Vector3) -> Variant:
 ## The laser or the mouse: hover moves the panel's pointer; a click clicks
 ## there. Returns whether it's on the panel.
 func point(origin: Vector3, dir: Vector3, click: bool) -> bool:
+	if overlay:
+		return false                     # on the screen: the mouse uses it directly
 	var p: Variant = hit_px(origin, dir)
 	if p == null:
 		return false

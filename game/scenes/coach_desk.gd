@@ -83,6 +83,19 @@ func _view() -> MatchView:
 	return main.view
 
 
+# --- What the coach tablet reads (CoachTablet's source; RemoteCoach is the other) ---
+
+var remote := false                  ## the tablet's source is this game's own desk
+
+
+func current_view() -> MatchView:
+	return main.view
+
+
+func machine_settings() -> Dictionary:
+	return main.settings.coach_machine
+
+
 func _playing() -> bool:
 	return main._playing()
 

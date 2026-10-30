@@ -39,6 +39,7 @@ const CAMERAS := ["BEHIND", "SIDE", "ACROSS", "ABOVE"]
 var cam_view := 0                    ## which of CAMERAS (flat mode; keys 1 to 4)
 var _cam_at := Vector3.ZERO
 var _cam_look := Vector3.ZERO
+var _tab_was := false
 var xr: XrRig
 var flat: FlatRig
 var demo := false
@@ -459,8 +460,23 @@ func hide_menu() -> void:
 		tablet.visible = false
 
 
+## COACH VIEW on a Mac (ADR-028): the tablet on the screen, at the right,
+## while watching; Tab hides it and brings it back.
+var coach_panel: CoachTablet
+
+
+func show_coach_panel(source) -> void:
+	if coach_panel == null:
+		coach_panel = CoachTablet.new()
+		coach_panel.desk = source
+		coach_panel.overlay = true
+		add_child(coach_panel)
+	coach_panel.show_overlay(true)
+
+
 ## The coach tablet (C-22): beside the menu, to your left, turned to you.
-func show_tablet(desk: CoachDesk) -> void:
+## `desk`: its source (CoachDesk, or a watching coach's RemoteCoach).
+func show_tablet(desk) -> void:
 	if tablet == null:
 		tablet = CoachTablet.new()
 		tablet.desk = desk
@@ -632,6 +648,10 @@ func _process(delta: float) -> void:
 		for i in CAMERAS.size():
 			if Input.is_physical_key_pressed(KEY_1 + i):
 				cam_view = i
+		var tab := Input.is_physical_key_pressed(KEY_TAB)
+		if tab and not _tab_was and coach_panel:
+			coach_panel.show_overlay(coach_panel.overlay_share() == 0.0)
+		_tab_was = tab
 	var pause := xr.pause_pressed if xr else flat.pause_pressed
 	if pause and (not spectate or watch) and not paused:
 		pause_requested.emit()
@@ -1002,10 +1022,18 @@ func _watch_camera(delta: float) -> void:
 		_:
 			at = Vector3(0, 11.0, 2.5)
 			look = Vector3(0, 0, 0.8)
+	if menu and menu.visible:
+		# The menu stands by the lobby's spot: look at it there.
+		at = SPECTATE + Vector3(0, FlatRig.EYE, 0)
+		look = at + Vector3.FORWARD
 	var k := clampf(delta * 4.0, 0.0, 1.0) if _cam_at != Vector3.ZERO else 1.0
 	_cam_at = _cam_at.lerp(at, k)
 	_cam_look = _cam_look.lerp(look, k)
 	flat.pin(_cam_at, _cam_look)
+	# The coach's panel covers the right: the picture's centre moves left
+	# into what's left.
+	var share := coach_panel.overlay_share() if coach_panel else 0.0
+	flat.camera.h_offset = lerpf(flat.camera.h_offset, share * 2.2, k)
 
 
 func _trail_init(r: float) -> void:

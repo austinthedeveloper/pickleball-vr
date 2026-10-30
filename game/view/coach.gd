@@ -253,13 +253,14 @@ func _relay_close() -> void:
 		room_changed.emit()
 
 
-## To every authorised coach (the phones; a watching game has its stream).
+## To every authorised coach: the phones, and the games watching (their
+## tablets read the same state, ADR-028).
 func broadcast(msg: Dictionary) -> void:
 	for e in _peers:
 		if e[1]:
 			_send(e[0], msg)
 	for g in _guests:
-		if _guests[g] and not _watchers.has(g):
+		if _guests[g]:
 			_send_guest(g, msg)
 
 
