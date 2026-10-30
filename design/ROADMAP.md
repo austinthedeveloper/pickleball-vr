@@ -38,6 +38,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 
 ## Releases
 
+- **v0.7.0** (2026-10-29): COACH VIEW: WATCH A PLAYER in 3D, the coach's
+  controls on their screen, instant replay.
 - **v0.6.0** (2026-10-29): PLAY A FRIEND, dinking online with a friend
   through the relay (FRIENDLY DINK, rollback, the friend on court).
 - **v0.5.0** (2026-10-29): COACH FROM ANYWHERE through the relay (the

@@ -6,6 +6,12 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-29
+
+The coach-view update. Your coach can watch you play in 3D from anywhere,
+run your drill from their own screen, and replay your last shot slowed
+down from any angle.
+
 ### Added
 - **WATCH A PLAYER:** a coach can watch you play from anywhere. They see
   your drill on the court in 3D: you, the partner or machine, and every
@@ -17,6 +23,10 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 - **Instant replay for the coach:** THE LAST SHOT again, from any camera,
   at full speed, half or a quarter, held on the contact, a frame at a
   time if they like. Any moment from the last minute.
+
+### Changed
+- **Your friend's body in PLAY A FRIEND** bends to a low ball, and holds
+  their paddle by the grip as they really do.
 
 ## [0.6.0] - 2026-10-29
 
