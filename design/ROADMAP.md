@@ -38,6 +38,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 
 ## Releases
 
+- **v0.6.0** (2026-10-29): PLAY A FRIEND, dinking online with a friend
+  through the relay (FRIENDLY DINK, rollback, the friend on court).
 - **v0.5.0** (2026-10-29): COACH FROM ANYWHERE through the relay (the
   room is the key), PARTNER LOOK (Rocketbox), a real net, the court's
   surroundings, a seated crowd, a proper paddle.

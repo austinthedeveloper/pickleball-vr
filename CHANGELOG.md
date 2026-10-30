@@ -6,6 +6,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-29
+
+The play-a-friend update. Dink with a friend anywhere with the internet,
+one on one, from your headset or a Mac.
+
 ### Added
 - **PLAY A FRIEND:** dink with a friend anywhere with the internet, one
   on one. One of you hosts and gets a room (four letters); the other
