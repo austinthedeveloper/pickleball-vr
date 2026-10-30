@@ -27,6 +27,18 @@ var session: OnlineSession
 var _played := {}                    ## online: event key -> the ticks it was played at
 var _ball_off := Vector3.ZERO        ## online: the drawn ball's lag after a correction, eased away
 var _corrections := 0
+## COACH VIEW (ADR-028): each tick stepped, for a watching coach's game:
+## [tick, slot 0's input, commands, hash on a Watch.HASH_EVERY tick]. The
+## desk drains it; off unless `tapping`.
+var tap: Array = []
+var tapping := false
+## COACH VIEW, the coach's side (ADR-028): the player's drill replayed from
+## their stream; `sim` is the Watch's. The view only watches.
+var watch: Watch
+const CAMERAS := ["BEHIND", "SIDE", "ACROSS", "ABOVE"]
+var cam_view := 0                    ## which of CAMERAS (flat mode; keys 1 to 4)
+var _cam_at := Vector3.ZERO
+var _cam_look := Vector3.ZERO
 var xr: XrRig
 var flat: FlatRig
 var demo := false
@@ -87,9 +99,15 @@ var _stay := false                   ## ...and you're on the same spot (the lobb
 
 
 func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectating := false,
-		online: OnlineSession = null) -> void:
+		online: OnlineSession = null, watching: Watch = null) -> void:
 	session = online
-	if online:
+	watch = watching
+	if watching:
+		sim = watching.sim
+		cfg = sim.config
+		demo_mode = true
+		spectating = true
+	elif online:
 		sim = online.rollback.pred
 		cfg = sim.config
 		me = online.slot()
@@ -131,10 +149,11 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	const SHIRTS := [Color(0.85, 0.15, 0.2), Color(0.95, 0.85, 0.2), Color(0.95, 0.55, 0.12), Color(0.55, 0.25, 0.75)]
 	for s in sim.active_slots():
 		var friend := session != null and s != me
-		if (sim.players[s].cpu or spectate or friend) and not sim.drill:
+		var player := watch != null and not sim.players[s].cpu   # the player you watch
+		if (sim.players[s].cpu or spectate or friend) and (not sim.drill or player):
 			var a := Avatar.new()
 			a.slot = s
-			a.human = friend
+			a.human = friend or player
 			a.shirt = SHIRTS[s]
 			a.skin = Avatar.SKINS[(s * 7 + maxi(cfg.opponent, 0)) % Avatar.SKINS.size()]
 			a.hair = Avatar.HAIRS[(s * 5 + maxi(cfg.opponent, 0) * 3) % Avatar.HAIRS.size()]
@@ -609,8 +628,12 @@ func _process(delta: float) -> void:
 		flat.begin_frame(delta)
 		if flat.serve_pressed and not (menu and menu.visible):
 			bot.serve_now = true
+	if watch and flat:
+		for i in CAMERAS.size():
+			if Input.is_physical_key_pressed(KEY_1 + i):
+				cam_view = i
 	var pause := xr.pause_pressed if xr else flat.pause_pressed
-	if pause and not spectate and not paused:
+	if pause and (not spectate or watch) and not paused:
 		pause_requested.emit()
 	_drive_menu()
 	if paused:
@@ -651,6 +674,9 @@ func _drive_menu() -> void:
 
 
 func _tick(alpha: float, first: bool) -> void:
+	if watch:
+		_tick_watch()
+		return
 	var h: SimTypes.HumanInput
 	if xr and not demo:
 		h = xr.sample(alpha, first)
@@ -683,6 +709,9 @@ func _tick(alpha: float, first: bool) -> void:
 	human[me] = h
 	sim.step(human, _commands)
 	Perf.add("sim", Time.get_ticks_usec() - ts)
+	if tapping:
+		tap.append([sim.tick, h.to_array() if me == 0 else [], _commands.duplicate(true),
+			sim.state_hash() if sim.tick % Watch.HASH_EVERY == 0 else 0])
 	_commands = []
 	_after_step()
 	for e in sim.drain_events():
@@ -738,6 +767,17 @@ func _fresh(e: Array) -> bool:
 		ticks.pop_front()
 	_played[key] = ticks
 	return true
+
+
+## COACH VIEW: the replay's ticks due now (none while it builds its lead,
+## two when it's behind).
+func _tick_watch() -> void:
+	for k in watch.due():
+		if watch.step() == null:
+			return
+		_after_step()
+		for e in sim.drain_events():
+			_on_event(e)
 
 
 func _after_step() -> void:
@@ -906,7 +946,7 @@ func _draw(delta: float) -> void:
 	var held_by_you := not sim.players[me].cpu and sim.server_slot == me \
 		and (sim.phase == K.PHASE_SERVE or sim.phase == K.PHASE_SERVE_SETUP)
 	if xr:
-		xr.show_held_ball(held_by_you)
+		xr.show_held_ball(held_by_you and not spectate)
 		ball_mesh.visible = not held_by_you
 	_focus(delta)
 	if _ball_off != Vector3.ZERO:
@@ -936,6 +976,36 @@ func _draw(delta: float) -> void:
 	board.show_from(sim, delta)
 	if flat and demo and not spectate:
 		flat.head = World.m(bot.head_x, 0, bot.head_z) + Vector3(0, FlatRig.EYE, 0)
+	if watch and flat:
+		_watch_camera(delta)
+
+
+## COACH VIEW on the Mac: CAMERAS[cam_view], following the player, eased.
+func _watch_camera(delta: float) -> void:
+	var p := World.m(sim.players[0].x, 0, sim.players[0].z)
+	var hl := K.COURT_HALF_LENGTH / float(K.M)
+	var at: Vector3
+	var look: Vector3
+	match cam_view:
+		0:
+			at = Vector3(p.x * 0.6, 2.2, p.z + 3.2)
+			look = Vector3(p.x * 0.4, 0.7, p.z - 3.0)
+		1:
+			# Inside the fence (3 m off the sideline), a step behind you, on
+			# the side away from the scoreboard.
+			at = Vector3(5.3, 1.9, p.z + 1.0)
+			look = Vector3(p.x, 0.9, p.z - 1.6)
+		2:
+			# Off the partner's shoulder, high enough to see past them.
+			at = Vector3(2.2, 2.8, -(hl + 0.8))
+			look = Vector3(p.x, 0.8, p.z)
+		_:
+			at = Vector3(0, 11.0, 2.5)
+			look = Vector3(0, 0, 0.8)
+	var k := clampf(delta * 4.0, 0.0, 1.0) if _cam_at != Vector3.ZERO else 1.0
+	_cam_at = _cam_at.lerp(at, k)
+	_cam_look = _cam_look.lerp(look, k)
+	flat.pin(_cam_at, _cam_look)
 
 
 func _trail_init(r: float) -> void:

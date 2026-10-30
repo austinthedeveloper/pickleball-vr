@@ -173,52 +173,9 @@ func test_versions_must_match() -> void:
 	eq(host.reason, "VERSIONS DIFFER", "and the friend is told")
 
 
-## The relay's side of one room, as pickleball-relay frames it: the first
-## to dial is the host (room BXKM), the second the guest (number 0).
-class FakeRelay:
-	var server := TCPServer.new()
-	var peers: Array = []            ## [WebSocketPeer, greeted]
-
-	func _init(port: int) -> void:
-		server.listen(port, "127.0.0.1")
-
-	func pump() -> void:
-		while server.is_connection_available():
-			var ws := WebSocketPeer.new()
-			ws.accept_stream(server.take_connection())
-			peers.append([ws, false])
-		for i in peers.size():
-			var ws: WebSocketPeer = peers[i][0]
-			ws.poll()
-			if ws.get_ready_state() != WebSocketPeer.STATE_OPEN:
-				continue
-			if not peers[i][1]:
-				peers[i][1] = true
-				if i == 0:
-					ws.send_text(JSON.stringify({"op": "room", "code": "BXKM"}))
-				else:
-					ws.send_text(JSON.stringify({"op": "welcome", "you": 0, "ver": ""}))
-					(peers[0][0] as WebSocketPeer).send_text(JSON.stringify({"op": "joined", "guest": 0, "ver": ""}))
-			while ws.get_available_packet_count() > 0:
-				var b := ws.get_packet()
-				if ws.was_string_packet() or peers.size() < 2:
-					continue
-				if i == 0:
-					(peers[1][0] as WebSocketPeer).send(b.slice(1))
-				else:
-					var out := PackedByteArray([0])
-					out.append_array(b)
-					(peers[0][0] as WebSocketPeer).send(out)
-
-	func stop() -> void:
-		for p in peers:
-			(p[0] as WebSocketPeer).close()
-		server.stop()
-
-
 ## Two sessions through a relay at `url` (pump: the fake's, or null):
 ## the room, HELLO, START, then `ticks` of two Bots dinking.
-func _through(url: String, ticks: int, relay: FakeRelay = null) -> Array:
+func _through(url: String, ticks: int, relay: StandInRelay = null) -> Array:
 	var hl := RelayLink.new()
 	check(hl.host(url), "the host dials")
 	var host := OnlineSession.new(hl, true)
@@ -274,7 +231,7 @@ func _through(url: String, ticks: int, relay: FakeRelay = null) -> Array:
 
 
 func test_two_friends_through_a_relay() -> void:
-	var relay := FakeRelay.new(FAKE_PORT)
+	var relay := StandInRelay.new(FAKE_PORT)
 	var r := _through("ws://127.0.0.1:%d" % FAKE_PORT, K.TICK_HZ * 6, relay)
 	var host: OnlineSession = r[0]
 	var guest: OnlineSession = r[1]

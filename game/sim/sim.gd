@@ -904,25 +904,25 @@ func state_hash() -> int:
 func save_state() -> Array:
 	var ps := []
 	for p in players:
-		ps.append(_vars(p))
-	return [_vars(self, ["config", "ball", "players", "drill"]), _vars(ball), ps,
-		_vars(drill) if drill else {}]
+		ps.append(object_vars(p))
+	return [object_vars(self, ["config", "ball", "players", "drill"]), object_vars(ball), ps,
+		object_vars(drill) if drill else {}]
 
 
 func load_state(state: Array) -> void:
-	_set_vars(self, state[0])
-	_set_vars(ball, state[1])
+	set_object_vars(self, state[0])
+	set_object_vars(ball, state[1])
 	for i in players.size():
-		_set_vars(players[i], state[2][i])
+		set_object_vars(players[i], state[2][i])
 	if drill:
-		_set_vars(drill, state[3])
+		set_object_vars(drill, state[3])
 
 
 static var _names := {}              ## script -> its variables' names
 
 
 ## An object's script variables, deep-copied (less `skip`).
-static func _vars(o: Object, skip: Array = []) -> Dictionary:
+static func object_vars(o: Object, skip: Array = []) -> Dictionary:
 	var sc: Script = o.get_script()
 	if not _names.has(sc):
 		var n := []
@@ -939,7 +939,7 @@ static func _vars(o: Object, skip: Array = []) -> Dictionary:
 	return d
 
 
-static func _set_vars(o: Object, d: Dictionary) -> void:
+static func set_object_vars(o: Object, d: Dictionary) -> void:
 	for k in d:
 		var v = d[k]
 		o.set(k, v.duplicate(true) if v is Array or v is Dictionary else v)

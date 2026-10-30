@@ -138,6 +138,9 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-76 | The friend on court: body, head and paddle from their inputs; their hits eased in (ADR-027) | `feature/cld-vr-friend-dink` | Done (tests, screenshots of both ends); nothing to play yet |
 | VR-77 | PLAY A FRIEND: HOST shows the room, JOIN picks four letters (ADR-027) | `feature/cld-vr-friend-dink` | Played: Quest against the Mac, "it all worked" |
 | VR-78 | Playtest: the Quest against the Mac's flat mode, then two houses (ADR-027) | — | Quest against the Mac played 2026-10-29: moving and the paddle worked; two houses next |
+| VR-79 | COACH VIEW: WATCH A PLAYER replays the player's drill from their stream, four cameras (ADR-028) | `feature/cld-vr-coach-view` | Ready to test: watched through the live relay on the Mac |
+| VR-80 | COACH VIEW: the coach's controls on their screen, as on the phone (ADR-028) | — | Next |
+| VR-81 | COACH VIEW: instant replay, any angle, slow (ADR-028) | — | Planned |
 
 ## Next
 
@@ -147,6 +150,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
   (`design/KITCHEN_DRILLS.md`).
 - **VR-17:** more venues (DINOSAUR, UNDERSEA, TIME of day).
 - **Dinking online with a friend (ADR-027):** a playtest from two houses, with a friend in a headset or on a Mac.
+- **COACH VIEW (ADR-028):** VR-80 the coach's controls on screen, then VR-81 instant replay.
 
 ## For you
 

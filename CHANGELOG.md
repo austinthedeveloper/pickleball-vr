@@ -6,6 +6,13 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+### Added
+- **WATCH A PLAYER:** a coach can watch you play from anywhere. They see
+  your drill on the court in 3D: you, the partner or machine, and every
+  shot, from behind you, the side, across the net or above. Turn on COACH
+  FROM ANYWHERE; they pick WATCH A PLAYER on a Mac or a headset and enter
+  your room. They coach from the phone page as before.
+
 ## [0.6.0] - 2026-10-29
 
 The play-a-friend update. Dink with a friend anywhere with the internet,

@@ -26,6 +26,7 @@ const REASONS := {"HOST LEFT": "THE OTHER PLAYER LEFT", "IDLE": "THE ROOM CLOSED
 	"ROOM FULL": "THAT ROOM IS FULL", "SERVER FULL": "THE SERVER IS FULL"}
 
 var ws := WebSocketPeer.new()
+var game := GAME                 ## the relay's game: "pb94-vr-coach" to watch a player (ADR-028)
 var room := ""                   ## the room's name, once the relay gives it
 var _hosting := false
 var _guest := -1                 ## the host's: the relay's number for the guest who's in
@@ -62,7 +63,7 @@ static func clean_room(s: String) -> String:
 
 func host(url := address()) -> bool:
 	_hosting = true
-	return _dial("%s/v1/host?game=%s&ver=%s" % [url, GAME, version().uri_encode()])
+	return _dial("%s/v1/host?game=%s&ver=%s" % [url, game, version().uri_encode()])
 
 
 func join(code: String, url := address()) -> bool:
@@ -70,10 +71,11 @@ func join(code: String, url := address()) -> bool:
 	if room.length() != ROOM_LEN:
 		error = "A ROOM IS %d LETTERS" % ROOM_LEN
 		return false
-	return _dial("%s/v1/join?game=%s&code=%s&ver=%s" % [url, GAME, room, version().uri_encode()])
+	return _dial("%s/v1/join?game=%s&code=%s&ver=%s" % [url, game, room, version().uri_encode()])
 
 
 func _dial(url: String) -> bool:
+	ws.inbound_buffer_size = 1 << 20     # a watched drill's whole state comes in one (ADR-028)
 	if ws.connect_to_url(url) != OK:
 		error = "CAN'T REACH THE SERVER"
 		return false
@@ -103,6 +105,12 @@ func send(msg: Array) -> void:
 	_send(msg)
 
 
+## To a coach room's host, as its phones speak (ADR-028): bare JSON.
+func send_json(msg: Dictionary) -> void:
+	if status() == CONNECTED and not _hosting:
+		ws.send(JSON.stringify(msg).to_utf8_buffer())
+
+
 func _send(msg: Array) -> void:
 	var out := PackedByteArray([_guest]) if _hosting else PackedByteArray()
 	out.append_array(var_to_bytes(msg))
@@ -121,6 +129,10 @@ func poll() -> void:
 		elif _hosting:
 			if bytes.size() > 1 and bytes[0] == _guest:
 				_message(bytes_to_var(bytes.slice(1)), now)
+		elif bytes.size() > 0 and bytes[0] == 0x7b:
+			# A coach room's host speaks JSON to its phones (ADR-028): passed on
+			# as ["JSON", the message].
+			_inbox.append(["JSON", JSON.parse_string(bytes.get_string_from_utf8())])
 		else:
 			_message(bytes_to_var(bytes), now)
 		if error != "":

@@ -98,7 +98,8 @@ game/sim/     the pure sim: k (constants), fx (int maths), ball, aim,
               intercept, sim (rules, serve, CPUs), bot, types,
               drill (the ball machine, the partner's drills, lessons)
 game/net/     dinking online (ADR-027): net_link, relay_link (the relay),
-              loopback_link (tests), rollback, online_session
+              loopback_link (tests), rollback, online_session; watch
+              (COACH VIEW's stream, ADR-028)
 game/meta/    settings, opponents (the ladder), lessons, venues, tune (TUNING),
               sessions (saved coaching sessions)
 game/view/    world (the venues), match_view, xr_rig, flat_rig, avatar,

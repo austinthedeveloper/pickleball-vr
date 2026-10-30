@@ -175,6 +175,8 @@ func _page(id: String) -> Menu3D:
 			m = _records_menu()
 		"friend":
 			m = _friend_menu()
+		"watch":
+			m = _watch_menu()
 		"coach":
 			m.title = "COACH"
 			m.add_row("coach", "COACH MODE", OFF_ON, 1 if settings.coach else 0)
@@ -200,6 +202,7 @@ func _page(id: String) -> Menu3D:
 			m.title = "PICKLEBALL '94 VR"
 			m.add_row("to_match", "PLAY A MATCH")
 			m.add_row("to_friend", "PLAY A FRIEND")
+			m.add_row("to_watch", "WATCH A PLAYER")
 			m.add_row("to_partner", "PRACTICE PARTNER")
 			m.add_row("to_machine", "BALL MACHINE")
 			m.add_row("to_lessons", "HOW TO PLAY")
@@ -298,6 +301,13 @@ func _on_pressed(id: String) -> void:
 			_friend_note = ""
 			_friend_drop()
 		"fresume": view.hide_menu()
+		"to_watch":
+			_friend_note = ""
+			lobby.call_deferred("watch")
+		"wjoin": _watch_join()
+		"wstop":
+			_friend_note = ""
+			_watch_stop()
 		"to_machine": lobby.call_deferred("machine")
 		"to_partner": lobby.call_deferred("partner")
 		"pstart": _start.call_deferred(settings.partner_config(), false)
@@ -425,6 +435,7 @@ func _paddle_check_text() -> String:
 
 func _process(_delta: float) -> void:
 	_friend_poll()
+	_watch_poll()
 	# The PADDLE page's check, read live while it's open.
 	if page == "paddle" and menu and not menu.row("check").is_empty():
 		var r: Dictionary = menu.row("check")
@@ -523,6 +534,9 @@ func _records_menu() -> Menu3D:
 
 
 func _on_pause() -> void:
+	if view.watch:
+		_watch_pause()
+		return
 	if view.sim.config.friendly:
 		_online_pause()
 		return
@@ -655,10 +669,12 @@ func friend_room() -> String:
 
 ## PLAY A FRIEND's changing lines, in place.
 func _friend_lines() -> void:
-	if menu == null or page != "friend":
+	if menu == null or (page != "friend" and page != "watch"):
 		return
 	if not menu.row("fjoin").is_empty():
 		menu.row("fjoin")["label"] = "JOIN ROOM %s" % friend_room()
+	if not menu.row("wjoin").is_empty():
+		menu.row("wjoin")["label"] = "WATCH ROOM %s" % friend_room()
 	if friend and not menu.row("info_room").is_empty():
 		var lines: Array
 		var room: String = friend.link.room if friend.link is RelayLink else ""
@@ -770,5 +786,123 @@ func _on_online_closed(reason: String) -> void:
 	m.add_row("info_best", "BEST RALLY %d" % view.sim.best_rally)
 	m.add_row("lobby", "MENU")
 	m.pressed.connect(_on_pressed)
+	view.show_menu(m)
+
+
+# --- COACH VIEW: watching a player (ADR-028) -------------------------------------------
+
+var watching: Watch                  ## the player's drill, replayed; null when not watching
+var _watch_link: RelayLink
+var _watch_asked := false            ## asked the player's headset for its stream
+## Tests: the relay to dial ("" the real one, RelayLink.address()).
+var relay_url := ""
+
+
+## WATCH A PLAYER: the room the player's COACH page shows (COACH FROM
+## ANYWHERE), by its letters; while it connects, how it's going and STOP.
+func _watch_menu() -> Menu3D:
+	var m := Menu3D.new()
+	m.title = "WATCH A PLAYER"
+	if watching:
+		m.add_row("info_room", "WATCHING ROOM %s" % friend_room())
+		m.add_row("info_wait", _watch_line())
+		m.add_row("wstop", "STOP")
+		return m
+	m.add_row("info_how", "THE PLAYER TURNS ON COACH")
+	m.add_row("info_how2", "FROM ANYWHERE: ITS ROOM HERE.")
+	var letters := Array(RelayLink.ALPHABET.split(""))
+	for i in RelayLink.ROOM_LEN:
+		m.add_row("letter_%d" % i, "ROOM LETTER %d" % (i + 1), letters, _letters[i])
+	m.add_row("wjoin", "WATCH ROOM %s" % friend_room())
+	if _friend_note != "":
+		m.add_row("info_note", _friend_note)
+	m.add_row("back", "BACK")
+	return m
+
+
+## Where watching stands, before a drill is on screen.
+func _watch_line() -> String:
+	if _watch_link and _watch_link.status() != NetLink.CONNECTED:
+		return "CONNECTING..."
+	if watching and bool(watching.info.get("online", false)):
+		return "PLAYING A FRIEND: NOT YET"
+	return "WAITING FOR THE PLAYER..."
+
+
+func _watch_join() -> void:
+	var l := RelayLink.new()
+	l.game = Coach.RELAY_GAME
+	if not l.join(friend_room(), relay_url if relay_url != "" else RelayLink.address()):
+		_friend_note = l.error
+		lobby.call_deferred("watch")
+		return
+	_watch_link = l
+	watching = Watch.new()
+	_watch_asked = false
+	_friend_note = ""
+	lobby.call_deferred("watch")
+
+
+## Let go of the player and back to WATCH A PLAYER.
+func _watch_stop() -> void:
+	if _watch_link:
+		_watch_link.close()
+	_watch_link = null
+	watching = null
+	lobby.call_deferred("watch")
+
+
+## Each frame while watching: the stream in, the state asked for (again
+## when the replay's out of step), a new drill on screen as it starts.
+func _watch_poll() -> void:
+	if watching == null or _watch_link == null:
+		return
+	_watch_link.poll()
+	var had: Sim = watching.sim
+	for m in _watch_link.receive():
+		if m[0] != "JSON":
+			watching.on_message(m)
+	if _watch_link.status() == NetLink.CLOSED:
+		var why := _watch_link.error
+		_friend_note = "THE PLAYER LEFT" if why == "THE OTHER PLAYER LEFT" or why == "" else why
+		_watch_link = null
+		watching = null
+		lobby.call_deferred("watch")
+		return
+	if _watch_link.status() == NetLink.CONNECTED and (not _watch_asked or watching.need_state):
+		_watch_asked = true
+		watching.need_state = false
+		_watch_link.send_json({"type": "watch"})
+	if watching.sim != had:
+		if watching.sim:
+			_start_watch()
+		elif view and view.watch:
+			lobby.call_deferred("watch")     # the player went online: nothing to watch
+	elif page == "watch" and menu and not menu.row("info_wait").is_empty() and (view == null or not view.watch):
+		menu.row("info_wait")["label"] = _watch_line()
+		menu.refresh()
+
+
+## The player's drill on screen, replayed.
+func _start_watch() -> void:
+	_new_view().setup(watching.sim.config, use_xr, true, true, null, watching)
+	_inherit()
+	view.pause_requested.connect(_on_pause)
+	if view.flat:
+		var who := String(watching.info.get("player", ""))
+		var what := "IN THE MENU" if bool(watching.info.get("lobby", false)) else String(watching.info.get("mode", ""))
+		view.flat.set_help("WATCHING %s: %s     1 BEHIND  2 SIDE  3 ACROSS  4 ABOVE     ESC MENU" % [who, what])
+
+
+## The menu while watching: the camera, and STOP WATCHING. The replay
+## plays on behind it.
+func _watch_pause() -> void:
+	var m := Menu3D.new()
+	m.title = "WATCHING"
+	m.add_row("wcam", "CAMERA", MatchView.CAMERAS, view.cam_view)
+	m.add_row("fresume", "BACK TO WATCHING")
+	m.add_row("wstop", "STOP WATCHING")
+	m.pressed.connect(_on_pressed)
+	m.changed.connect(func(_id: String, i: int) -> void: view.cam_view = i)
 	view.show_menu(m)
 

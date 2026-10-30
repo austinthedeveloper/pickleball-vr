@@ -31,6 +31,7 @@ const RELAY_KEEP := 60.0             ## a word to the relay this often, so a qui
 
 signal command(msg: Dictionary)      ## an authorised coach's message
 signal room_changed                  ## ANYWHERE's room opened, or closed
+signal watcher_joined(guest: int)    ## a coach's game asked to watch (COACH VIEW, ADR-028)
 
 var code := ""                       ## the four digits the headset shows
 var port := PORT
@@ -43,6 +44,7 @@ var relay := ""                      ## ANYWHERE: the relay's address, or "" for
 var room := ""                       ## the relay's room code, once it's open
 var _relay: WebSocketPeer
 var _guests := {}                    ## the relay's guest number -> authorised
+var _watchers := {}                  ## the relay's guests watching in a coach's game (ADR-028)
 var _relay_wait := 0.0               ## seconds until the next try
 var _relay_tries := 0
 var _relay_keep := 0.0
@@ -200,6 +202,8 @@ func _serve_relay(delta: float) -> void:
 			_relay_control(JSON.parse_string(bytes.get_string_from_utf8()))
 		elif bytes.size() > 1 and _guests.has(bytes[0]):
 			var g: int = bytes[0]
+			if _watch_asked(g, bytes.slice(1)):
+				continue
 			_guests[g] = _receive(bytes.slice(1), _guests[g], func(m: Dictionary) -> void: _send_guest(g, m))
 
 
@@ -221,6 +225,7 @@ func _relay_control(msg: Variant) -> void:
 			_send_guest(g, {"type": "welcome"})
 		"left":
 			_guests.erase(int(msg.get("guest", 0)))
+			_watchers.erase(int(msg.get("guest", 0)))
 
 
 func _relay_open() -> void:
@@ -241,20 +246,51 @@ func _relay_close() -> void:
 		_relay.close()
 	_relay = null
 	_guests.clear()
+	_watchers.clear()
 	_relay_keep = 0.0
 	if room != "":
 		room = ""
 		room_changed.emit()
 
 
-## To every authorised coach.
+## To every authorised coach (the phones; a watching game has its stream).
 func broadcast(msg: Dictionary) -> void:
 	for e in _peers:
 		if e[1]:
 			_send(e[0], msg)
 	for g in _guests:
-		if _guests[g]:
+		if _guests[g] and not _watchers.has(g):
 			_send_guest(g, msg)
+
+
+## COACH VIEW (ADR-028): a guest's {"type": "watch"} makes it a watcher
+## (asked again, it wants the state again). True if that's what this was,
+## or something no phone sends.
+func _watch_asked(g: int, bytes: PackedByteArray) -> bool:
+	if bytes.is_empty() or bytes[0] != 0x7b:
+		return true                      # not JSON: a watching game's line check, for no one here
+	var msg: Variant = JSON.parse_string(bytes.get_string_from_utf8())
+	if not msg is Dictionary or String(msg.get("type", "")) != "watch":
+		return false
+	_watchers[g] = true
+	watcher_joined.emit(g)
+	return true
+
+
+## Games watching (ADR-028).
+func watchers() -> Array:
+	return _watchers.keys()
+
+
+## A COACH VIEW message (Watch's Arrays) to one watcher, or to all (-1).
+func send_watch(msg: Array, g := -1) -> void:
+	if _relay == null or _relay.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		return
+	var body := var_to_bytes(msg)
+	for w in ([g] if g >= 0 else _watchers.keys()):
+		var out := PackedByteArray([w])
+		out.append_array(body)
+		_relay.send(out)
 
 
 ## To one of the relay's coaches: its number, then the JSON.

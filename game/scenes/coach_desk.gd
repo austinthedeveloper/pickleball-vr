@@ -43,6 +43,9 @@ const VOICE_RATES := [8000, 24000]   ## the clip's sample rate, at least and at 
 const VOICE_SECONDS := 8
 const FACE_BYTES := 200000
 var _t := 0.0
+## COACH VIEW (ADR-028): the view's ticks, batched for the coach's games
+## watching.
+var feed := Watch.Feed.new()
 
 
 func _init(owner_main: Node) -> void:
@@ -54,6 +57,7 @@ func set_on(on: bool) -> void:
 		coach = Coach.new()
 		add_child(coach)
 		coach.command.connect(handle)
+		coach.watcher_joined.connect(_on_watcher)
 	elif not on and coach != null:
 		coach.queue_free()
 		coach = null
@@ -61,6 +65,7 @@ func set_on(on: bool) -> void:
 
 
 func _process(delta: float) -> void:
+	_feed_watchers()
 	if coach == null or coach.coaches() == 0:
 		return
 	_t += delta
@@ -86,6 +91,7 @@ func _playing() -> bool:
 
 ## A new view (a drill, the lobby): the coach's marks go back down.
 func on_new_view(v: MatchView) -> void:
+	_watch_start(v)
 	if not v.spectate:
 		run_from = live.size()           # a new drill: its own court and numbers
 		pending = {}
@@ -98,6 +104,52 @@ func on_new_view(v: MatchView) -> void:
 	v.pranks.set_weather(prank["weather"])
 	if machine_on and v.sim.drill and not v.sim.drill.partner and not v.spectate:
 		v.command(machine_command(main.settings.coach_machine))
+
+
+# --- COACH VIEW (ADR-028) -------------------------------------------------------------
+
+## What a watching coach's game is told about the view, besides its state.
+func _watch_info(v: MatchView) -> Dictionary:
+	return {"version": RelayLink.version(), "lobby": v.spectate, "online": v.session != null,
+		"player": main.settings.player, "mode": v._mode() if not v.spectate else "MENU"}
+
+
+## A new view: its state to every watcher, and its ticks tapped from here.
+func _watch_start(v: MatchView) -> void:
+	v.tapping = coach != null and v.session == null
+	v.tap = []
+	if coach and not coach.watchers().is_empty():
+		coach.send_watch(feed.start(v.sim, _watch_info(v)))
+	else:
+		feed.start(v.sim, {})
+
+
+## A coach's game asked to watch: what's been stepped goes to the others,
+## then the state as it is now to this one.
+func _on_watcher(g: int) -> void:
+	var v := _view()
+	if v == null or v.sim == null:
+		return
+	_feed_watchers(true)                 # the others carry on from here, in step
+	coach.send_watch(feed.start(v.sim, _watch_info(v)), g)
+
+
+## The view's ticks since the last frame, in batches to the watchers.
+func _feed_watchers(all := false) -> void:
+	var v := _view()
+	if v == null or not v.tapping:
+		return
+	for e in v.tap:
+		feed.add(e)
+	v.tap = []
+	if coach == null or coach.watchers().is_empty():
+		feed.take(true)                  # nobody watching: let it go
+		return
+	while true:
+		var m := feed.take(all)
+		if m.is_empty():
+			break
+		coach.send_watch(m)
 
 
 ## The sim's command for the coach's machine settings (page units to um,

@@ -25,6 +25,8 @@ var spectate := false                ## fixed camera, the mouse free for menus
 var end := 1
 var click := false
 var pause_pressed := false
+var help: Label
+var _help_text := ""                 ## set_help's, kept till the label's made
 var nav := Vector2i.ZERO
 var _click_was := false
 var _keys_was := {}
@@ -49,7 +51,7 @@ func _ready() -> void:
 	add_child(ring)
 	var layer := CanvasLayer.new()
 	add_child(layer)
-	var help := Label.new()
+	help = Label.new()
 	help.text = "WASD MOVE   MOUSE AIM   SPACE SERVE   SHIFT SOFT   ESC PAUSE"
 	help.position = Vector2(16, 12)
 	help.add_theme_font_size_override("font_size", 18)
@@ -57,6 +59,8 @@ func _ready() -> void:
 	help.add_theme_constant_override("outline_size", 6)
 	help.visible = not demo and not spectate
 	layer.add_child(help)
+	if _help_text != "":
+		set_help(_help_text)
 
 
 func begin_frame(delta: float) -> void:
@@ -104,6 +108,14 @@ func _aim_from_mouse() -> void:
 	var hw := K.COURT_HALF_WIDTH / float(K.M)
 	var hl := K.COURT_HALF_LENGTH / float(K.M)
 	aim = Vector3(clampf(hit.x, -hw + 0.3, hw - 0.3), 0, -end * clampf(-hit.z * end, 0.3, hl - 0.3))
+
+
+## The help line along the top, shown with `text` (a watching coach's).
+func set_help(text: String) -> void:
+	_help_text = text
+	if help:
+		help.text = text
+		help.visible = true
 
 
 ## Fix the camera at `at`, looking at `look` (screenshots).

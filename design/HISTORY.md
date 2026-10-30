@@ -185,3 +185,16 @@ Things to look for:
 
 The menu button shows BACK TO THE GAME and LEAVE; the match doesn't stop
 behind it.
+
+**VR-79, ready to test: COACH VIEW (ADR-028).**
+1. On the Quest: COACH > COACH MODE ON, COACH FROM ANYWHERE ON. Note the
+   room (ANYWHERE   ROOM XXXX). Start a drill, PRACTICE PARTNER for one.
+2. On the Mac (`godot --path game`): MAIN > WATCH A PLAYER, set the four
+   letters, WATCH ROOM.
+3. You on court, about a quarter of a second behind. Keys 1 to 4 change
+   the camera: BEHIND, SIDE, ACROSS, ABOVE. Esc for the menu.
+4. Change drills on the Quest: the Mac follows. The phone page still
+   coaches as before, alongside.
+
+Look for: your swing as the coach sees it (does the body read as you?),
+and any hitch when a drill starts.

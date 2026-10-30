@@ -23,6 +23,9 @@ shot dink-partner-cross partner 420 cross
 shot lesson-dink lesson 200 x 3
 shot online-host online 900
 shot online-guest online_guest 900
+for v in 0 1 2 3; do
+  shot "watch-$v" watch 99999 "view=$v" tick=900
+done
 for v in PARK LAKESIDE SUNSET GYM SPACE; do
   shot "venue-$(echo $v | tr A-Z a-z)" demo 500 x "venue=$v"
 done

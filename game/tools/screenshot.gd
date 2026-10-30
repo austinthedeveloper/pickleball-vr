@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|online|online_guest> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|online|online_guest|watch> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti]
 extends SceneTree
 
 var frames := 240
@@ -12,6 +12,10 @@ var _prank_items := PackedStringArray()   ## put on once the scene is built
 ## online / online_guest (ADR-027): the other end, a Bot on its own session.
 var _other: OnlineSession
 var _other_bot: Bot
+## watch (ADR-028): the player's drill a Bot plays, streamed to the view.
+var _player: Sim
+var _player_bot: Bot
+var _feed: Watch.Feed
 
 
 func _initialize() -> void:
@@ -63,6 +67,18 @@ func _initialize() -> void:
 	view.passthrough = args.has("passthrough")      # the court-only world (no headset: black behind)
 	if mode == "online" or mode == "online_guest":
 		_online(view, mode == "online_guest", cfg.venue)
+	elif mode == "watch":
+		var st := Settings.new()
+		_player = Sim.new(st.partner_config())
+		_player_bot = Bot.new(_player, 0)
+		_feed = Watch.Feed.new()
+		var w := Watch.new()
+		w.on_message(_feed.start(_player, {"player": "ALEX"}))
+		view.setup(w.sim.config, false, true, true, null, w)
+		for a in args:
+			if a.begins_with("view="):
+				view.cam_view = int(a.trim_prefix("view="))
+		view.flat.set_help("WATCHING ALEX: DINKS     1 BEHIND  2 SIDE  3 ACROSS  4 ABOVE     ESC MENU")
 	else:
 		view.setup(cfg, false, demo or mode in ["machine", "lesson", "partner"])
 	if mode == "lesson":
@@ -144,6 +160,16 @@ static func _vec(args: PackedStringArray, key: String) -> Variant:
 
 func _process(_delta: float) -> bool:
 	n += 1
+	if _player:
+		# The player keeps a little ahead of the replay, as over the line.
+		while _player.tick < _view.sim.tick + Watch.LEAD + Watch.BATCH:
+			var h := _player_bot.input()
+			_player.step([h])
+			_feed.add([_player.tick, h.to_array(), [], _player.state_hash() if _player.tick % Watch.HASH_EVERY == 0 else 0])
+		var m := _feed.take()
+		while not m.is_empty():
+			_view.watch.on_message(m)
+			m = _feed.take()
 	if _other:
 		while _other.rollback.predicted < _view.session.rollback.predicted:
 			_other.tick(_other_bot.input())

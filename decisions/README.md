@@ -33,5 +33,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [025](ADR-025-pranks.md) | Pranks from the coach's phone |
 | [026](ADR-026-coach-anywhere.md) | COACH FROM ANYWHERE, through the relay |
 | [027](ADR-027-friendly-dink.md) | FRIENDLY DINK, and dinking online with a friend |
+| [028](ADR-028-coach-view.md) | COACH VIEW: watching a player's drill in a coach's game |
 
-Next: ADR-028.
+Next: ADR-029.
