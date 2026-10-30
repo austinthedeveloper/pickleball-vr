@@ -28,7 +28,7 @@ var pause_pressed := false
 var help: Label
 var _help_text := ""                 ## set_help's, kept till the label's made
 var nav := Vector2i.ZERO
-var _click_was := false
+var _clicked := false                ## a left press since the last frame
 var _keys_was := {}
 
 
@@ -63,10 +63,16 @@ func _ready() -> void:
 		set_help(_help_text)
 
 
+## A click is the press itself, not the button found down at a frame: a
+## quick click (a trackpad's tap) can be down and up between two frames.
+func _input(e: InputEvent) -> void:
+	if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+		_clicked = true
+
+
 func begin_frame(delta: float) -> void:
-	var c := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	click = c and not _click_was
-	_click_was = c
+	click = _clicked
+	_clicked = false
 	nav = Vector2i(int(_edge(KEY_RIGHT)) - int(_edge(KEY_LEFT)), int(_edge(KEY_DOWN)) - int(_edge(KEY_UP)))
 	if _edge(KEY_ENTER):
 		click = true

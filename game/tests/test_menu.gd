@@ -51,6 +51,23 @@ func test_pointing_picks_the_row() -> void:
 	m.queue_free()
 
 
+## A quick click, down and up between two frames, still clicks (once).
+func test_a_quick_click_counts() -> void:
+	var rig := FlatRig.new()
+	runner.root.add_child(rig)
+	rig.begin_frame(0.01)
+	for down in [true, false]:
+		var b := InputEventMouseButton.new()
+		b.button_index = MOUSE_BUTTON_LEFT
+		b.pressed = down
+		runner.root.push_input(b)
+	rig.begin_frame(0.01)
+	check(rig.click, "the click, though the button's up by the frame")
+	rig.begin_frame(0.01)
+	check(not rig.click, "and only once")
+	rig.queue_free()
+
+
 func test_settings_round_trip() -> void:
 	var s := Settings.new()
 	s.doubles = true

@@ -6,6 +6,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+### Fixed
+
+- On a computer, a quick mouse click (or a trackpad tap) on a menu row now
+  presses it; before, only a long press did.
+
 ## [0.7.0] - 2026-10-29
 
 The coach-view update. Your coach can watch you play in 3D from anywhere,
