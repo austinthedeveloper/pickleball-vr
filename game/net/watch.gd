@@ -8,6 +8,11 @@
 ## any angle. A hash every HASH_EVERY ticks checks it; one that differs
 ## (a TUNING change mid-drill, say) asks for the state again.
 ##
+## Instant replay (VR-81): the replay keeps the last HISTORY ticks' inputs
+## and a saved state every SNAP_EVERY, so any moment in them can be run
+## again (replay_from, replay_step) in a Sim of its own, at any speed,
+## from any angle. It notes the player's hits, for THE LAST SHOT.
+##
 ## Pure: no Nodes, no clock. The Coach node carries the messages.
 class_name Watch
 extends RefCounted
@@ -16,6 +21,8 @@ const BATCH := 8
 const HASH_EVERY := 120
 const LEAD := 24                 ## ticks kept in hand before stepping (200 ms)
 const CATCH_UP := 72             ## past this many in hand, step two a tick
+const HISTORY := 60 * K.TICK_HZ  ## a minute kept for replays
+const SNAP_EVERY := 2 * K.TICK_HZ
 
 var sim: Sim                     ## the player's drill, as replayed; null till a "W"
 var info := {}                   ## {version, lobby, online, player}
@@ -25,6 +32,10 @@ var _queue: Array = []           ## [PackedInt32Array input or empty, commands] 
 var _next := 0                   ## the tick the next queued input steps
 var _hashes := {}                ## tick -> the player's hash after it
 var _playing := false            ## the lead has filled once
+var hits: Array[int] = []        ## the ticks the player hit the ball, in the history
+var _hist := {}                  ## tick -> [human, commands] that stepped it on
+var _snaps := {}                 ## tick -> Sim.save_state() then
+var _from := 0                   ## the history's first tick
 
 
 ## A message from the player's headset.
@@ -39,6 +50,10 @@ func on_message(m: Array) -> void:
 			sim = Sim.new(cfg)
 			sim.load_state(m[2])
 			sim.drain_events()
+			_hist = {}
+			_snaps = {sim.tick: sim.save_state()}
+			_from = sim.tick
+			hits = []
 			_queue = []
 			_hashes = {}
 			_next = sim.tick
@@ -88,13 +103,75 @@ func step() -> Variant:
 	var p: PackedInt32Array = e[0]
 	if not p.is_empty():
 		human[0] = SimTypes.HumanInput.from_array(Array(p))
+	_hist[sim.tick] = [human, e[1]]
 	sim.step(human, e[1])
+	_remember()
 	if _hashes.has(sim.tick):
 		if _hashes[sim.tick] != sim.state_hash():
 			need_state = true
 			resyncs += 1
 		_hashes.erase(sim.tick)
 	return [human, e[1]]
+
+
+## The history after a step: a saved state now and then, the player's
+## hits, and what's older than HISTORY let go.
+func _remember() -> void:
+	for ev in sim.events:
+		if ev[0] == K.EVENT_HIT and ev[1] == 0 and ev[4] == sim.tick:
+			hits.append(sim.tick)
+	if sim.tick % SNAP_EVERY == 0:
+		_snaps[sim.tick] = sim.save_state()
+	while sim.tick - _from > HISTORY:
+		_hist.erase(_from)
+		_snaps.erase(_from)
+		_from += 1
+	while not hits.is_empty() and hits[0] < _from:
+		hits.pop_front()
+
+
+## The ticks a replay can show: [first, last].
+func replay_span() -> Array[int]:
+	var earliest := -1
+	for t in _snaps:
+		if earliest < 0 or t < earliest:
+			earliest = t
+	return [maxi(earliest, _from), sim.tick if sim else 0]
+
+
+## A Sim of its own at tick `t` (clamped to what's kept): from the last
+## saved state before it, stepped on to it.
+func replay_from(t: int) -> Sim:
+	if sim == null:
+		return null
+	var span := replay_span()
+	t = clampi(t, span[0], span[1])
+	var at := -1
+	for s in _snaps:
+		if s <= t and s > at:
+			at = s
+	if at < 0:
+		return null
+	var r := Sim.new(sim.config)
+	r.load_state(_snaps[at])
+	while r.tick < t and replay_step(r):
+		pass
+	r.drain_events()
+	return r
+
+
+## The replay one tick on, as it happened. False at the end of what's kept.
+func replay_step(r: Sim) -> bool:
+	if not _hist.has(r.tick):
+		return false
+	var e: Array = _hist[r.tick]
+	r.step(e[0], e[1])
+	return true
+
+
+## The player's last hit, or -1.
+func last_hit() -> int:
+	return hits[-1] if not hits.is_empty() else -1
 
 
 ## A MatchConfig whole, the CPUs' styles and a drill's settings with it

@@ -16,6 +16,7 @@ var _other_bot: Bot
 var _player: Sim
 var _player_bot: Bot
 var _feed: Watch.Feed
+var _replay_at := -1                 ## replay=N: THE LAST SHOT at sim tick N, shot on the contact
 
 
 func _initialize() -> void:
@@ -78,6 +79,8 @@ func _initialize() -> void:
 		for a in args:
 			if a.begins_with("view="):
 				view.cam_view = int(a.trim_prefix("view="))
+			if a.begins_with("replay="):
+				_replay_at = int(a.trim_prefix("replay="))
 		view.flat.set_help("WATCHING ALEX: DINKS     1-4 CAMERA   TAB PANEL   ESC MENU")
 		if args.has("panel"):
 			# The coach's controls (VR-80), as a player's headset would fill them.
@@ -183,6 +186,13 @@ func _process(_delta: float) -> bool:
 		while not m.is_empty():
 			_view.watch.on_message(m)
 			m = _feed.take()
+		if _replay_at >= 0 and _view.replay == null and _view.watch.sim.tick >= _replay_at:
+			_view.set_replay_speed(0)
+			_view.start_replay()
+			_replay_at = -2
+		if _replay_at == -2 and _view.replay and _view._replay_hold > 0.3 \
+				and _view.replay.tick == int(_view._replay["contact"]):
+			frames = n + 20                  # the contact, held: a moment for the picture to settle
 	if _other:
 		while _other.rollback.predicted < _view.session.rollback.predicted:
 			_other.tick(_other_bot.input())

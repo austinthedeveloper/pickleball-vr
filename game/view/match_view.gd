@@ -40,6 +40,22 @@ var cam_view := 0                    ## which of CAMERAS (flat mode; keys 1 to 4
 var _cam_at := Vector3.ZERO
 var _cam_look := Vector3.ZERO
 var _tab_was := false
+## Instant replay (VR-81): a Sim of its own, from Watch's history, drawn in
+## place of the live one while the live one steps on behind it.
+var replay: Sim
+const REPLAY_SPEEDS := [0.25, 0.5, 1.0]
+const SPEED_NAMES := ["1/4", "1/2", "FULL"]
+const REPLAY_BEFORE := K.TICK_HZ     ## the last shot: a second before the hit
+const REPLAY_AFTER := 90             ## and three quarters of one after
+const CONTACT_HOLD := 0.8            ## seconds held on the contact, slowed down
+const END_HOLD := 1.2                ## and at the end, before it runs again
+var replay_speed := 1                ## REPLAY_SPEEDS' index
+var replay_paused := false
+var _replay := {}                    ## {from, to, contact}
+var _replay_acc := 0.0
+var _replay_hold := 0.0
+var _keys_was := {}
+var _live_help := ""
 var xr: XrRig
 var flat: FlatRig
 var demo := false
@@ -652,6 +668,20 @@ func _process(delta: float) -> void:
 		if tab and not _tab_was and coach_panel:
 			coach_panel.show_overlay(coach_panel.overlay_share() == 0.0)
 		_tab_was = tab
+		if _key(KEY_R):
+			start_replay()
+		if replay:
+			if _key(KEY_SPACE):
+				replay_paused = not replay_paused
+				_replay_help()
+			if _key(KEY_RIGHT):
+				step_replay(1)
+			if _key(KEY_LEFT):
+				step_replay(-1)
+			if _key(KEY_S):
+				set_replay_speed(replay_speed + 1)
+			if _key(KEY_BACKSPACE):
+				end_replay()
 	var pause := xr.pause_pressed if xr else flat.pause_pressed
 	if pause and (not spectate or watch) and not paused:
 		pause_requested.emit()
@@ -794,10 +824,121 @@ func _fresh(e: Array) -> bool:
 func _tick_watch() -> void:
 	for k in watch.due():
 		if watch.step() == null:
+			break
+		if replay:
+			watch.sim.drain_events()     # live, unseen while the replay runs
+		else:
+			_after_step()
+			for e in sim.drain_events():
+				_on_event(e)
+	if replay:
+		_tick_replay()
+
+
+## THE LAST SHOT (VR-81): from a second before the player's last hit (or
+## the last two seconds, with none) to just after it. False if there's
+## nothing kept to show.
+func start_replay() -> bool:
+	if watch == null or watch.sim == null:
+		return false
+	var hit := watch.last_hit()
+	var at := hit if hit >= 0 else watch.sim.tick - REPLAY_BEFORE
+	var r := watch.replay_from(at - REPLAY_BEFORE)
+	if r == null:
+		return false
+	_replay = {"from": r.tick, "to": mini(at + REPLAY_AFTER, watch.sim.tick), "contact": hit}
+	_show_replay(r)
+	_replay_acc = 0.0
+	_replay_hold = 0.0
+	replay_paused = false
+	board.announce("REPLAY", Color(1, 0.45, 0.35), 1.5)
+	_replay_help()
+	return true
+
+
+## Back to the player, live.
+func end_replay() -> void:
+	if replay == null:
+		return
+	replay = null
+	sim = watch.sim
+	_last_phase = sim.phase
+	_path = []
+	if flat and _live_help != "":
+		flat.set_help(_live_help)
+
+
+func _show_replay(r: Sim) -> void:
+	replay = r
+	sim = r
+	_last_phase = sim.phase
+	_path = []
+
+
+## The replay's tick: on at its speed, held on the contact (slowed down)
+## and at the end, then round again.
+func _tick_replay() -> void:
+	if replay_paused:
+		return
+	if _replay_hold > 0.0:
+		_replay_hold -= DT
+		if _replay_hold <= 0.0 and replay.tick >= int(_replay["to"]):
+			var again := watch.replay_from(int(_replay["from"]))
+			if again == null:
+				end_replay()
+				return
+			_show_replay(again)
+		return
+	_replay_acc += REPLAY_SPEEDS[replay_speed]
+	while _replay_acc >= 1.0:
+		_replay_acc -= 1.0
+		if replay.tick >= int(_replay["to"]) or not watch.replay_step(replay):
+			_replay_hold = END_HOLD
 			return
 		_after_step()
-		for e in sim.drain_events():
+		for e in replay.drain_events():
 			_on_event(e)
+		if replay.tick == int(_replay["contact"]) and REPLAY_SPEEDS[replay_speed] < 1.0:
+			_replay_hold = CONTACT_HOLD
+			return
+
+
+## A tick at a time, either way (it pauses).
+func step_replay(dir: int) -> void:
+	if replay == null:
+		return
+	replay_paused = true
+	if dir > 0:
+		if replay.tick < int(_replay["to"]) and watch.replay_step(replay):
+			_after_step()
+			replay.drain_events()
+	else:
+		var back := watch.replay_from(maxi(replay.tick - 1, int(_replay["from"])))
+		if back:
+			_show_replay(back)
+	_replay_help()
+
+
+func set_replay_speed(i: int) -> void:
+	replay_speed = posmod(i, REPLAY_SPEEDS.size())
+	_replay_help()
+
+
+func _replay_help() -> void:
+	if not flat:
+		return
+	if _live_help == "" or not _live_help.begins_with("WATCHING"):
+		_live_help = flat.help.text if flat.help else ""
+	flat.set_help("REPLAY %s%s     SPACE PAUSE   LEFT RIGHT STEP   S SPEED   R AGAIN   BACKSPACE LIVE" % [
+		SPEED_NAMES[replay_speed], "  PAUSED" if replay_paused else ""])
+
+
+## A key's press, once (flat mode's watching keys).
+func _key(k: Key) -> bool:
+	var down := Input.is_physical_key_pressed(k)
+	var was: bool = _keys_was.get(k, false)
+	_keys_was[k] = down
+	return down and not was
 
 
 func _after_step() -> void:

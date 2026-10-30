@@ -224,3 +224,97 @@ func test_a_coach_watches_through_the_menus() -> void:
 	coach_main.queue_free()
 	player.queue_free()
 	relay.stop()
+
+
+## Instant replay (VR-81). A watched drill `ticks` long, its stream fed
+## straight in: [player sim, bot, feed, watch, the player's hash by tick].
+func _watched(ticks: int) -> Array:
+	var p := _player()
+	var sim: Sim = p[0]
+	var bot: Bot = p[1]
+	var feed := Watch.Feed.new()
+	var w := Watch.new()
+	w.on_message(feed.start(sim, {}))
+	var hashes := {sim.tick: sim.state_hash()}
+	for i in ticks:
+		feed.add(_tick(sim, bot))
+		hashes[sim.tick] = sim.state_hash()
+		var m := feed.take()
+		if not m.is_empty():
+			w.on_message(m)
+		while w.buffered() > 0:
+			w.step()
+	return [sim, bot, feed, w, hashes]
+
+
+func test_a_replay_is_the_drill_again() -> void:
+	var r := _watched(1500)
+	var w: Watch = r[3]
+	var hashes: Dictionary = r[4]
+	check(w.hits.size() >= 3, "the player's hits noted: %d" % w.hits.size())
+	for t in [0, 37, 240, 700, w.last_hit() - 60, w.sim.tick - 1]:
+		var rs := w.replay_from(t)
+		check(rs != null, "a replay from tick %d" % t)
+		if rs:
+			eq(rs.state_hash(), hashes[rs.tick], "tick %d, as it was" % rs.tick)
+	var rs := w.replay_from(w.last_hit() - 60)
+	var n := 0
+	while w.replay_step(rs):
+		n += 1
+	eq(rs.tick, w.sim.tick, "on to the present (%d ticks)" % n)
+	eq(rs.state_hash(), w.sim.state_hash(), "where the live one is")
+	check(w.sim != rs, "a Sim of its own")
+
+
+func test_a_minute_is_kept() -> void:
+	var r := _watched(Watch.HISTORY + 900)
+	var w: Watch = r[3]
+	var span := w.replay_span()
+	check(w.sim.tick - span[0] <= Watch.HISTORY + Watch.SNAP_EVERY, "no more than a minute: %d ticks" % (w.sim.tick - span[0]))
+	check(w.sim.tick - span[0] >= Watch.HISTORY - Watch.SNAP_EVERY, "and about that: %d" % (w.sim.tick - span[0]))
+	var old := w.replay_from(0)
+	eq(old.tick, span[0], "an older moment starts where the kept ones do")
+	eq(old.state_hash(), (r[4] as Dictionary)[old.tick], "and is right")
+	check(w.hits.is_empty() or w.hits[0] >= span[0], "the hits kept are in it")
+
+
+func test_the_view_replays_the_last_shot() -> void:
+	var r := _watched(900)
+	var sim: Sim = r[0]
+	var bot: Bot = r[1]
+	var feed: Watch.Feed = r[2]
+	var w: Watch = r[3]
+	var v := MatchView.new()
+	runner.root.add_child(v)
+	v.setup(w.sim.config, false, true, true, null, w)
+	var hit := w.last_hit()
+	check(v.start_replay(), "THE LAST SHOT")
+	check(v.replay != null and v.sim == v.replay and v.sim != w.sim, "drawn in place of the live one")
+	eq(v.sim.tick, hit - MatchView.REPLAY_BEFORE, "from a second before the hit")
+	# The player plays on; the coach's live replay keeps up behind it.
+	var live0 := w.sim.tick
+	var held := 0
+	var last := -1
+	v.set_replay_speed(1)                    # 1/2: it holds on the contact
+	for i in 600:
+		feed.add(_tick(sim, bot))
+		var m := feed.take()
+		if not m.is_empty():
+			w.on_message(m)
+		v._process(MatchView.DT)
+		if v.replay and v.replay.tick == hit and last == hit:
+			held += 1
+		last = v.replay.tick if v.replay else -1
+	check(w.sim.tick > live0 + 400, "the live one stepped on behind it: %d ticks" % (w.sim.tick - live0))
+	check(held >= int(MatchView.CONTACT_HOLD * K.TICK_HZ) - 2, "held on the contact: %d ticks" % held)
+	check(v.replay.tick <= hit + MatchView.REPLAY_AFTER, "never past the shot")
+	# A tick at a time, either way.
+	var t := v.replay.tick
+	v.step_replay(-1)
+	check(v.replay_paused and v.replay.tick == maxi(t - 1, hit - MatchView.REPLAY_BEFORE), "a tick back, paused")
+	v.step_replay(1)
+	v.step_replay(1)
+	eq(v.replay.tick, mini(t + 1, hit + MatchView.REPLAY_AFTER), "and on")
+	v.end_replay()
+	check(v.replay == null and v.sim == w.sim, "back to live")
+	v.queue_free()

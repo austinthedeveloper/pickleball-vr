@@ -34,6 +34,9 @@ const BACKSWING := 0.42              ## seconds before contact the backswing sta
 const FORWARD := 0.12                ## ...and the forward swing
 const FOLLOW := 0.3
 const RECOVER := 0.35
+const CROUCH_FROM := 0.7             ## a human's paddle below this (m), their hips come down
+const CROUCH_MAX := 0.28
+const GRIP_TO_FACE := 0.185          ## the grip's middle to the face's centre, along the handle
 const MASK_AT := Vector3(0, 0.075, 0.13)   ## a prank's face photo, from the head bone
 
 var slot := 2
@@ -321,6 +324,10 @@ func show_from(sim: Sim, delta: float) -> void:
 			bob = maxf(bob, sin(_step_t[i] * PI))
 	var hips_h: float = (READY_HIPS if ready or speed > 1.0 else TALL_HIPS) + 0.06 * sin(_hop * PI) \
 		- (0.04 if _swing and _until < 0.2 else 0.0) - 0.03 * bob
+	if human:
+		# A human's paddle down low: they bent their knees to get it there,
+		# so the hips come down with it (the arm can reach it).
+		hips_h -= clampf((CROUCH_FROM - p.py / float(K.M)) * 0.6, 0.0, CROUCH_MAX)
 	var pelvis := Vector3(feet_mid.x, hips_h, feet_mid.z) + ahead + _face * 0.03
 	var fun := _antic_pose(delta, pelvis, _face, _face.cross(Vector3.UP).normalized())
 	if fun.has("pelvis"):
@@ -336,6 +343,8 @@ func show_from(sim: Sim, delta: float) -> void:
 	var t_face := _face.rotated(Vector3.UP, _coil)
 	var t_right := t_face.cross(Vector3.UP).normalized()
 	var lean := 0.18 if ready else 0.08
+	if human:
+		lean += clampf((CROUCH_FROM - p.py / float(K.M)) * 1.6, 0.0, 0.9)   # and bent at the waist
 	var spine := (Vector3.UP + t_face * lean + (_vel * Vector3(1, 0, 1) * 0.05).limit_length(0.2)).normalized()
 	# The body: hips, a spine that bends and coils, the neck.
 	figure.begin()
@@ -359,9 +368,17 @@ func show_from(sim: Sim, delta: float) -> void:
 	var hand_want: Vector3 = fun.get("hand", _paddle_target(pelvis, t_face, t_right, ball))
 	var rate := 22.0 if _swing else 9.0
 	if human:
-		# Their paddle, exactly: the hand goes to its grip.
-		paddle.pose(World.m(p.px, p.py, p.pz), Vector3(p.normal[0], p.normal[1], p.normal[2]) / float(K.Q14))
-		hand_want = paddle.transform * Vector3(0, 0, PaddleMesh.FACE_CENTER.z + PaddleMesh.FACE_H / 2 + PaddleMesh.HANDLE / 2 - 0.01)
+		# Their paddle's face, exactly where it is in the sim; its handle
+		# back toward the shoulder (low dinks hang the face below the hand),
+		# and the hand on the grip.
+		var face := World.m(p.px, p.py, p.pz)
+		var n := Vector3(p.normal[0], p.normal[1], p.normal[2]) / float(K.Q14)
+		var shoulder := pelvis + Vector3(0, 0.5, 0) + t_right * 0.2
+		var along := face - shoulder
+		along -= n * along.dot(n)
+		along = along.normalized() if along.length() > 0.05 else Vector3.UP
+		hand_want = face - along * GRIP_TO_FACE
+		paddle.pose_grip(hand_want, along, n)
 		rate = 30.0
 	_hand = _hand.lerp(hand_want, clampf(delta * rate, 0.0, 1.0))
 	var off_want := pelvis + t_face * (0.32 + 0.12 * sin(_gait) * clampf(speed / 2.5, 0.0, 1.0)) \

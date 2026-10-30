@@ -305,6 +305,12 @@ func _on_pressed(id: String) -> void:
 			_friend_note = ""
 			lobby.call_deferred("watch")
 		"wjoin": _watch_join()
+		"wreplay":
+			view.hide_menu()
+			view.start_replay()
+		"wlive":
+			view.hide_menu()
+			view.end_replay()
 		"wstop":
 			_friend_note = ""
 			_watch_stop()
@@ -908,11 +914,19 @@ func _start_watch() -> void:
 func _watch_pause() -> void:
 	var m := Menu3D.new()
 	m.title = "WATCHING"
+	m.add_row("wreplay", "REPLAY THE LAST SHOT")
+	m.add_row("wspeed", "REPLAY SPEED", MatchView.SPEED_NAMES, view.replay_speed)
+	if view.replay:
+		m.add_row("wlive", "BACK TO LIVE")
 	m.add_row("wcam", "CAMERA", MatchView.CAMERAS, view.cam_view)
 	m.add_row("fresume", "BACK TO WATCHING")
 	m.add_row("wstop", "STOP WATCHING")
 	m.pressed.connect(_on_pressed)
-	m.changed.connect(func(_id: String, i: int) -> void: view.cam_view = i)
+	m.changed.connect(func(id: String, i: int) -> void:
+		if id == "wcam":
+			view.cam_view = i
+		elif id == "wspeed":
+			view.set_replay_speed(i))
 	view.show_menu(m)
 	if view.xr:
 		view.show_tablet(remote_coach)   # the controls beside it, as when you pause

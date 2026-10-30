@@ -26,6 +26,7 @@ shot online-guest online_guest 900
 for v in 0 1 2 3; do
   shot "watch-$v" watch 99999 "view=$v" tick=900
 done
+shot watch-replay watch 99999 view=1 replay=1500
 for v in PARK LAKESIDE SUNSET GYM SPACE; do
   shot "venue-$(echo $v | tr A-Z a-z)" demo 500 x "venue=$v"
 done

@@ -14,6 +14,9 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
   your room. They coach from the panel on their screen: the drill and
   level, start and pause, cues, the target, the partner's next ball,
   the ball machine and the numbers. The phone page still works too.
+- **Instant replay for the coach:** THE LAST SHOT again, from any camera,
+  at full speed, half or a quarter, held on the contact, a frame at a
+  time if they like. Any moment from the last minute.
 
 ## [0.6.0] - 2026-10-29
 

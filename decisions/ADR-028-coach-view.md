@@ -1,8 +1,7 @@
 # ADR-028: COACH VIEW, watching a player's drill in a coach's game
 
-**Status:** Accepted (2026-10-29). Watching (VR-79) and the coach's
-controls on their screen (VR-80) are built. Instant replay (VR-81) is
-planned.
+**Status:** Accepted (2026-10-29). Built: watching (VR-79), the coach's
+controls on their screen (VR-80) and instant replay (VR-81).
 
 ## Context
 
@@ -79,6 +78,35 @@ replay plays on behind it.
   does beside PAUSED.
 - The phone page still works alongside, in the same room.
 
+**Instant replay (VR-81).** The coach's game already holds every input,
+so a replay is the drill run again.
+
+- **What's kept.** `Watch` keeps the last minute (`HISTORY`): each tick's
+  inputs, a saved state every 2 s, and the ticks the player hit the ball.
+- **Running it again.** `replay_from(t)` builds a Sim of its own at any
+  kept tick, from the saved state before it, and `replay_step` runs it on
+  as it happened. It's exact: the tests compare it with the player's own
+  state, tick for tick.
+- **THE LAST SHOT** (R on the Mac, REPLAY on the panel or in the menu)
+  runs from a second before the player's last hit to 0.75 s after it. It
+  plays at FULL, 1/2 or 1/4 (S, or REPLAY SPEED), from any of the
+  cameras.
+- **Slowed down,** it holds 0.8 s on the contact, then runs to the end,
+  holds there, and goes round again.
+- **Stepping.** Space pauses; Left and Right step a tick either way.
+  Backspace (LIVE, BACK TO LIVE) returns to the player.
+- **Live carries on.** While the replay is on screen, the live replay
+  steps on behind it unseen, so the coach comes back to the present, not
+  to where they left it.
+
+**The body for a human, at a low paddle.** Replays held on the contact
+showed it: a low dink's paddle hung on the floor beside the body, out of
+reach. Now a human's hips come down and their back bends toward a low
+paddle (`Avatar.CROUCH_FROM`). The handle points back toward the
+shoulder, as a real low dink's does, so the hand holds the grip. The face
+stays exactly where the sim has it. This changes the friend's body in
+PLAY A FRIEND too (ADR-027).
+
 A fix to VR-79 came with it. The watching menu (Esc) stands at the
 lobby's spot, which a following camera may not see, so on a Mac the
 camera turns to it while it's open.
@@ -98,6 +126,8 @@ player's inputs aren't on the headset in time. The coach's page says so.
   picked; RESUME with the coach's target took 61 ms; the target showed in
   the coach's replay 235 ms later, still in step.
 - **Cheap:** one guest's stream is a few KB a second through the relay.
+  The replay's minute is about 30 saved states and 7,200 ticks of inputs
+  in the coach's game.
 - **Exact, not a video:** the coach's game can show any angle. Because it
   holds the inputs, instant replay (VR-81) is a matter of keeping them and
   stepping a saved state again.
@@ -113,5 +143,9 @@ player's inputs aren't on the headset in time. The coach's page says so.
   STOP. VR-80 adds, in the same game: the panel on the screen, its
   state from the player's headset, the level, PAUSE and RESUME, a cue
   and a target from the panel reaching the player, the target then in
-  the coach's replay, and the camera turning to the menu. The stand-in
+  the coach's replay, and the camera turning to the menu. VR-81 adds a
+  replay exact from any kept tick, the minute's limit, and the view
+  replaying THE LAST SHOT: drawn in place of the live one while that
+  steps on, held on the contact at 1/2, stepping both ways, and back to
+  live. The stand-in
   relay moved to `tests/stand_in_relay.gd`.

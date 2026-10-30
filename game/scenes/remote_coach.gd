@@ -59,3 +59,13 @@ func machine_settings() -> Dictionary:
 
 func current_view() -> MatchView:
 	return main.view if main else null
+
+
+## THE LAST SHOT again, on this screen (VR-81): the coach's own, not the player's.
+func replay() -> void:
+	var v := current_view()
+	if v and v.watch:
+		if v.replay:
+			v.end_replay()
+		else:
+			v.start_replay()

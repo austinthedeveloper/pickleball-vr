@@ -275,7 +275,7 @@ func _build_session(root: VBoxContainer) -> void:
 	var go := HBoxContainer.new()
 	go.add_theme_constant_override("separation", 8)
 	root.add_child(go)
-	for k in [["s_start", "START"], ["s_pause", "PAUSE"], ["s_restart", "RESTART"], ["s_menu", "MENU"]]:
+	for k in [["s_start", "START"], ["s_pause", "PAUSE"], ["s_restart", "RESTART"], ["s_menu", "MENU"], ["s_replay", "REPLAY"]]:
 		var key: String = k[0]
 		var b := _button(k[1], 24, func() -> void: _session(key))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -305,6 +305,7 @@ func _session(key: String) -> void:
 		"s_pause": desk.handle({"type": "resume" if String(_state.get("where", "")) == "paused" else "pause"})
 		"s_restart": desk.handle({"type": "restart"})
 		"s_menu": desk.handle({"type": "menu"})
+		"s_replay": desk.replay()
 
 
 func _label(key: String, text: String, size: int, c: Color) -> Label:
@@ -523,6 +524,8 @@ func refresh() -> void:
 		(_labels["s_pause"] as Button).text = "RESUME" if where == "paused" else "PAUSE"
 		(_labels["s_pause"] as Button).disabled = where == "lobby"
 		(_labels["s_restart"] as Button).disabled = where == "lobby"
+		var v: MatchView = desk.current_view()
+		(_labels["s_replay"] as Button).text = "LIVE" if v and v.replay else "REPLAY"
 	_show_context()
 	_court.queue_redraw()
 

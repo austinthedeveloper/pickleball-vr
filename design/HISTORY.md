@@ -198,6 +198,11 @@ behind it.
    hides it): pick the drill and level, START, PAUSE, a cue, and click the
    court for the target or the partner's next ball. The Quest should do
    it at once. The phone page still works alongside.
+6. **Instant replay (VR-81):** after a shot, R on the Mac (or REPLAY on
+   the panel): THE LAST SHOT, held on the contact at 1/2. S changes the
+   speed, Space pauses, Left and Right step a frame, 1 to 4 the camera,
+   Backspace back to live. Does the paddle face at contact look like the
+   one you hit with?
 
 Look for: your swing as the coach sees it (does the body read as you?),
 and any hitch when a drill starts.
