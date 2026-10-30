@@ -47,6 +47,20 @@ class Status(unittest.TestCase):
         self.assertEqual(release.changed_files(out), ["CHANGELOG.md", "design/ROADMAP.md", "game/x.gd"])
 
 
+class Desktop(unittest.TestCase):
+    def test_every_attached_file_is_explained(self):
+        notes = release.INSTALL.format(v="1.2.3")
+        self.assertIn(Path(release.APK.format(v="1.2.3")).name, notes)
+        for preset, out, z in release.DESKTOP:
+            self.assertIn(Path(z.format(v="1.2.3")).name, notes, preset)
+
+    def test_every_preset_exists(self):
+        presets = (ROOT / "game/export_presets.cfg").read_text()
+        for preset, out, z in release.DESKTOP:
+            self.assertIn('name="%s"' % preset, presets)
+            self.assertIn('export_path="../%s"' % out, presets)
+
+
 class Changelog(unittest.TestCase):
     TEXT = ("# Changelog\n\n## [0.2.0] - 2026-11-01\n\nNew things.\n\n### Added\n- A\n\n"
             "## [0.1.0] - 2026-10-27\n\nFirst.\n")

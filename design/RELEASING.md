@@ -55,10 +55,13 @@ python3 game/tools/version.py set 0.2.0
    3. Commits "Release X.Y.Z" (the version files, the CHANGELOG and the
       roadmap) and tags `vX.Y.Z`, annotated with the entry's first
       paragraph.
-   4. Builds `build/pickleball-vr-X.Y.Z.apk`.
+   4. Builds `build/pickleball-vr-X.Y.Z.apk`, and the Mac and Windows
+      games (the `macOS` and `Windows` presets) zipped as
+      `build/Pickleball94VR-X.Y.Z-macos.zip` and `-windows.zip`. The
+      Windows zip holds the .exe and the OpenXR library it loads.
    5. Fast-forwards `main`, pushes `main` and the tag.
-   6. Creates the GitHub release with the APK attached and the CHANGELOG
-      entry as its notes.
+   6. Creates the GitHub release with the APK and both zips attached, and
+      the CHANGELOG entry and how to install each as its notes.
 
    Without `--push`, everything stays local, and it prints the commands
    to publish.
@@ -76,6 +79,17 @@ with the pinned, hash-checked Godot 4.7.2
 (`.github/actions/setup-godot`), and takes about half a minute. Check that
 `main` is green before cutting a release. CI has no OpenXR plugin, so the
 tests must not need it.
+
+## The computer builds
+
+The Mac and Windows games are flat mode (ADR-001): for a coach watching
+(ADR-028, 029) or a friend to dink with (ADR-027), with no Godot to
+install. Neither is signed by a developer account, so each asks once:
+right-click > Open on a Mac, More info > Run anyway on Windows. The Mac
+app is ad-hoc signed with the microphone entitlement and its reason, for
+HOLD TO TALK. The Windows build is untested on Windows itself: the lead's
+first try is its check. On a PC with a headset on Link or Air Link, OpenXR
+may start the game in VR.
 
 ## Why the APK is built on the Mac
 

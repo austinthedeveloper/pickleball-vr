@@ -146,6 +146,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-80 | COACH VIEW: the coach's controls on their screen, as on the phone (ADR-028) | `feature/cld-vr-coach-view` | Ready to test: coached through the live relay on the Mac |
 | VR-81 | COACH VIEW: instant replay, any angle, slow (ADR-028) | `feature/cld-vr-coach-view` | Ready to test: THE LAST SHOT on the Mac (screenshots) |
 | VR-82 | COACH VIEW: PRANKS on the Mac's panel, HOLD TO TALK (or T) through its microphone (ADR-029) | `feature/cld-vr-mac-pranks` | Released in v0.8.0: a prank and an 8 s voice through the live relay |
+| VR-83 | Releases: the Mac and Windows games beside the APK, built by release.py (design/RELEASING.md) | `feature/cld-vr-desktop-builds` | Ready to test: the Mac app boots; Windows unchecked on Windows |
 
 ## Next
 

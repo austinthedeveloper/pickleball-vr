@@ -6,6 +6,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+### Added
+
+- Mac and Windows downloads on each release, to coach, watch or play a
+  friend from a computer without installing Godot.
+
 ## [0.8.0] - 2026-10-30
 
 The talk-to-them update. A coach watching from a computer can now talk to

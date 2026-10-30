@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Cuts a release (design/RELEASING.md): checks, a release branch, the
 version bump, tests, the release commit and the annotated tag vX.Y.Z, and
-the Quest APK; with --push, main and the tag go to GitHub and a GitHub
-release is made with the APK attached.
+the Quest APK and the Mac and Windows games (zips); with --push, main and
+the tag go to GitHub and a GitHub release is made with all three attached.
     python3 game/tools/release.py X.Y.Z --dry-run   # the plan, and what would stop it
     python3 game/tools/release.py X.Y.Z             # everything local, nothing pushed
     python3 game/tools/release.py X.Y.Z --push      # and publish
@@ -27,6 +27,9 @@ CHANGELOG = "CHANGELOG.md"
 ROADMAP = "design/ROADMAP.md"
 MAY_BE_DIRTY = {CHANGELOG, ROADMAP}
 APK = "build/pickleball-vr-{v}.apk"
+## The computer builds: preset, where it exports, the zip that's attached.
+DESKTOP = [("macOS", "build/macos/Pickleball94VR.zip", "build/Pickleball94VR-{v}-macos.zip"),
+           ("Windows", "build/windows/Pickleball94VR.exe", "build/Pickleball94VR-{v}-windows.zip")]
 TRAILER = "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 
@@ -107,10 +110,11 @@ def release(version, push, dry):
         "game/tools/test.sh",
         "commit 'Release %s' and tag v%s" % (version, version),
         "build %s (debug-signed, for sideloading)" % APK.format(v=version),
+        "build %s" % ", ".join(z.format(v=version) for _, _, z in DESKTOP),
     ]
     if push:
         plan += ["fast-forward main to the release, push main and the tag",
-                 "gh release create v%s with the APK and the CHANGELOG entry" % version]
+                 "gh release create v%s with the APK, the zips and the CHANGELOG entry" % version]
     print("Release %s:" % version)
     for step in plan:
         print("  - " + step)
@@ -142,19 +146,60 @@ def release(version, push, dry):
         raise Stop("the APK build failed (the release commit and tag are made; fix and run "
                    "`godot --headless --path game --export-debug Quest ../%s`):\n%s" % (apk, out.stderr[-2000:]))
     print("  built %s (%.0f MB)" % (apk, (ROOT / apk).stat().st_size / 1e6))
+    zips = desktop(version)
     if not push:
         print("Not pushed. To publish: git checkout main && git merge --ff-only %s && "
-              "git push origin main v%s && gh release create v%s %s --title ... --notes-file ..." % (rel, version, version, apk))
+              "git push origin main v%s && gh release create v%s %s %s --title ... --notes-file ..." % (rel, version, version, apk, " ".join(zips)))
         return
     run("git", "checkout", "-q", "main")
     run("git", "merge", "-q", "--ff-only", rel)
     run("git", "push", "-q", "origin", "main", "v" + version)
     notes = ROOT / "build" / ("notes-%s.md" % version)
-    notes.write_text(entry(version) + "\n\nInstall on a Quest in developer mode: "
-                     "`adb install -r pickleball-vr-%s.apk`, then Library > Unknown Sources.\n" % version)
-    url = run("gh", "release", "create", "v" + version, str(ROOT / apk), "--title",
+    notes.write_text(entry(version) + "\n\n" + INSTALL.format(v=version))
+    url = run("gh", "release", "create", "v" + version, str(ROOT / apk), *[str(ROOT / z) for z in zips], "--title",
               "Pickleball '94 VR %s" % version, "--notes-file", str(notes), "--latest")
     print("  published " + url)
+
+
+INSTALL = """## Install
+
+- **Quest** (developer mode): `adb install -r pickleball-vr-{v}.apk`, then
+  Library > Unknown Sources.
+- **Mac** (to coach, watch or play a friend): unzip
+  `Pickleball94VR-{v}-macos.zip`, right-click the app > Open the first time
+  (it isn't from the App Store). It asks for the microphone the first time
+  you HOLD TO TALK.
+- **Windows:** unzip `Pickleball94VR-{v}-windows.zip` and keep its two
+  files together; run `Pickleball94VR.exe` (More info > Run anyway the
+  first time).
+"""
+
+
+## The Mac and Windows games, exported and zipped: the zips' paths.
+def desktop(version):
+    import shutil
+    import zipfile
+    zips = []
+    for preset, out, z in DESKTOP:
+        where = ROOT / out
+        shutil.rmtree(where.parent, ignore_errors=True)
+        where.parent.mkdir(parents=True)
+        res = run("godot", "--headless", "--path", "game", "--export-release", preset, "../" + out,
+                  check=False, quiet=True)
+        if not where.is_file():
+            raise Stop("the %s build failed (the release commit and tag are made; fix and run "
+                       "`godot --headless --path game --export-release %s ../%s`):\n%s"
+                       % (preset, preset, out, res.stderr[-2000:]))
+        z = z.format(v=version)
+        if where.suffix == ".zip":
+            shutil.copyfile(where, ROOT / z)
+        else:                            # the .exe and the OpenXR library beside it
+            with zipfile.ZipFile(ROOT / z, "w", zipfile.ZIP_DEFLATED) as f:
+                for path in sorted(where.parent.iterdir()):
+                    f.write(path, path.name)
+        print("  built %s (%.0f MB)" % (z, (ROOT / z).stat().st_size / 1e6))
+        zips.append(z)
+    return zips
 
 
 def main(argv):
