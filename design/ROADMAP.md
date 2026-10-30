@@ -134,8 +134,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-74 | FRIENDLY DINK in the sim: two humans from the kitchen lines, rallies counted, no score (ADR-027) | `feature/cld-vr-friend-dink` | Done (tests); nothing to play yet |
 | VR-75 | Online netcode: the port kit's net/ over the relay, the sim's state saved and restored for rollback (ADR-027) | `feature/cld-vr-friend-dink` | Done (tests; two Bots through the live relay); nothing to play yet |
 | VR-76 | The friend on court: body, head and paddle from their inputs; their hits eased in (ADR-027) | `feature/cld-vr-friend-dink` | Done (tests, screenshots of both ends); nothing to play yet |
-| VR-77 | PLAY A FRIEND: HOST shows the room, JOIN picks four letters (ADR-027) | — | Next |
-| VR-78 | Playtest: the Quest against the Mac's flat mode, then two houses (ADR-027) | — | Planned |
+| VR-77 | PLAY A FRIEND: HOST shows the room, JOIN picks four letters (ADR-027) | `feature/cld-vr-friend-dink` | Ready to test: two games through the menus and the live relay on the Mac |
+| VR-78 | Playtest: the Quest against the Mac's flat mode, then two houses (ADR-027) | — | Next: yours (design/HISTORY.md, phase 7) |
 
 ## Next
 
@@ -144,7 +144,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 - **THIRD SHOT DROPS:** the one kitchen drill not built yet
   (`design/KITCHEN_DRILLS.md`).
 - **VR-17:** more venues (DINOSAUR, UNDERSEA, TIME of day).
-- **Dinking online with a friend (ADR-027):** VR-77 the menu, then VR-78 a playtest.
+- **Dinking online with a friend (ADR-027):** VR-78, your playtest: the Quest against the Mac, then two houses.
 
 ## For you
 

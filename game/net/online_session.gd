@@ -82,8 +82,7 @@ func _on(m: Array) -> void:
 			if int(peer_hello.get("protocol", 0)) != PROTOCOL \
 					or String(peer_hello.get("version", "")) != String(my_hello.get("version", "")):
 				link.send(["QUIT", "VERSION"])
-				_close("VERSIONS DIFFER: %s AND %s" % [my_hello.get("version", "?"),
-					peer_hello.get("version", "?")])
+				_close("YOUR FRIEND HAS %s" % peer_hello.get("version", "?"))
 				return
 			if state == WAITING:
 				state = CONNECTED

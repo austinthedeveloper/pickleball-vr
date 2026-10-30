@@ -598,6 +598,7 @@ func _process(delta: float) -> void:
 		if session.closed():
 			var why := session.reason
 			session = null
+			paused = true                # the match is over: nothing steps it alone
 			online_closed.emit(why)
 			return
 	var t0 := Time.get_ticks_usec()

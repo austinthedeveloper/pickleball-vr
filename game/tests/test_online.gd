@@ -169,7 +169,8 @@ func test_versions_must_match() -> void:
 		host.poll()
 		guest.poll()
 	check(host.closed() and guest.closed(), "both close")
-	check(host.reason.begins_with("VERSIONS DIFFER"), host.reason)
+	eq(guest.reason, "YOUR FRIEND HAS %s" % RelayLink.version(), "the friend's version, so you know who updates")
+	eq(host.reason, "VERSIONS DIFFER", "and the friend is told")
 
 
 ## The relay's side of one room, as pickleball-relay frames it: the first

@@ -1,8 +1,8 @@
 # ADR-027: FRIENDLY DINK, and dinking online with a friend
 
-**Status:** Accepted (2026-10-29). The sim's part (VR-74), the netcode
-(VR-75) and the friend on court (VR-76) are built; the menu and a
-playtest are planned (VR-77, VR-78).
+**Status:** Accepted (2026-10-29). Built: the sim's part (VR-74), the
+netcode (VR-75), the friend on court (VR-76) and PLAY A FRIEND (VR-77).
+A playtest (VR-78) is next.
 
 ## Context
 
@@ -108,7 +108,28 @@ Voice isn't part of it: a phone call or Discord at first.
 - The screenshot tool's `online` and `online_guest` show either end, the
   other a Bot on its own session.
 
-## Consequences
+**PLAY A FRIEND, as built (VR-77):**
+
+- **MAIN > PLAY A FRIEND.** HOST: OPEN A ROOM, then four ROOM LETTER rows
+  (the relay's 20 letters, stepped with the stick or the < and >) and
+  JOIN ROOM BXKM, which spells them out. A list of rows rather than a
+  keypad: a Menu3D page, so the laser, the sticks and the mouse all work
+  as everywhere else.
+- **While the room opens or joins:** OPENING A ROOM... (UP TO 20
+  SECONDS IF IT'S ASLEEP), then YOUR ROOM: BXKM and WAITING FOR YOUR
+  FRIEND..., or JOINING ROOM BXKM...; CANCEL lets go. A refusal or a lost
+  line comes back to the page in the game's words (NO SUCH ROOM, YOUR
+  FRIEND HAS 0.6.0).
+- **The host starts the match as the friend arrives** (no START to
+  press): FRIENDLY DINK at the host's venue, with the host's SHOT ASSIST
+  for both (the sim has one).
+- **The menu button doesn't pause** an online match: BACK TO THE GAME and
+  LEAVE, with the match playing on behind. When the friend leaves or the
+  line goes, the match stops and says why, with the best rally, and MENU
+  goes back to PLAY A FRIEND.
+- `main.friend_links` lets tests hand main loopback links instead of
+  dialling the relay.
+
 
 - Two friends can dink online in the code; there's no screen yet.
 - **Measured (VR-75):**
@@ -129,7 +150,14 @@ Voice isn't part of it: a phone call or Discord at first.
   which the view must hide. Only a playtest can say if it's good enough.
 - Golden traces are unchanged: every rule change checks `config.friendly`,
   and the snapshot only grows when it's on.
-- Tests: `test_online_view` covers two MatchViews dinking over a
+- **Measured (VR-77):** two games on the Mac through the menus and the
+  live relay: the room in 24 s (the relay asleep), both playing 0.3 s
+  after JOIN, a 91 ms round trip, 30 s in sync, and the host told YOUR
+  FRIEND LEFT when the guest left.
+- Tests: `test_friend_menu` covers the page and its letters, HOST and
+  CANCEL, two mains from HOST and JOIN to the match on both, the menu in
+  it, the guest leaving, a refusal said on the page, and every line
+  fitting the panel. `test_online_view` covers two MatchViews dinking over a
   loopback (in sync, rallies, the friend's paddle where theirs is, the
   logged inputs replaying to the confirmed match), each end and its
   rig, the friend's body, an event playing once, the ball easing, and

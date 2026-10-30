@@ -173,6 +173,8 @@ func _page(id: String) -> Menu3D:
 			m.add_row("back", "BACK")
 		"records":
 			m = _records_menu()
+		"friend":
+			m = _friend_menu()
 		"coach":
 			m.title = "COACH"
 			m.add_row("coach", "COACH MODE", OFF_ON, 1 if settings.coach else 0)
@@ -197,6 +199,7 @@ func _page(id: String) -> Menu3D:
 		_:
 			m.title = "PICKLEBALL '94 VR"
 			m.add_row("to_match", "PLAY A MATCH")
+			m.add_row("to_friend", "PLAY A FRIEND")
 			m.add_row("to_partner", "PRACTICE PARTNER")
 			m.add_row("to_machine", "BALL MACHINE")
 			m.add_row("to_lessons", "HOW TO PLAY")
@@ -211,6 +214,10 @@ func _page(id: String) -> Menu3D:
 
 
 func _on_changed(id: String, index: int) -> void:
+	if id.begins_with("letter_"):
+		_letters[int(id.trim_prefix("letter_"))] = index
+		_friend_lines()
+		return
 	if id.begins_with("tune:"):
 		var t := id.trim_prefix("tune:")
 		Tune.set_value(t, _tune_steps[t][index])
@@ -282,6 +289,15 @@ func _on_pressed(id: String) -> void:
 		return
 	match id:
 		"to_match": lobby.call_deferred("match")
+		"to_friend":
+			_friend_note = ""
+			lobby.call_deferred("friend")
+		"fhost": _friend_host()
+		"fjoin": _friend_join()
+		"fcancel":
+			_friend_note = ""
+			_friend_drop()
+		"fresume": view.hide_menu()
 		"to_machine": lobby.call_deferred("machine")
 		"to_partner": lobby.call_deferred("partner")
 		"pstart": _start.call_deferred(settings.partner_config(), false)
@@ -355,6 +371,8 @@ func _inherit() -> void:
 func _back_page() -> String:
 	if lesson >= 0:
 		return "lessons"
+	if view.sim.config.friendly:
+		return "friend"
 	if view.sim.drill:
 		return "partner" if view.sim.drill.partner else "machine"
 	return "main"
@@ -406,6 +424,7 @@ func _paddle_check_text() -> String:
 
 
 func _process(_delta: float) -> void:
+	_friend_poll()
 	# The PADDLE page's check, read live while it's open.
 	if page == "paddle" and menu and not menu.row("check").is_empty():
 		var r: Dictionary = menu.row("check")
@@ -504,6 +523,9 @@ func _records_menu() -> Menu3D:
 
 
 func _on_pause() -> void:
+	if view.sim.config.friendly:
+		_online_pause()
+		return
 	view.paused = true
 	var m := Menu3D.new()
 	m.title = "PAUSED"
@@ -585,3 +607,168 @@ func _tune_pressed(id: String) -> void:
 
 static func _degrees(values: Array) -> Array:
 	return values.map(func(d: int) -> String: return str(d))
+
+
+# --- Dinking online with a friend (ADR-027) -----------------------------------------
+
+var friend: OnlineSession            ## the session being set up, till its match starts
+var _letters := [0, 0, 0, 0]         ## JOIN's room, as RelayLink.ALPHABET indices
+var _friend_note := ""               ## why the last try ended ("" none)
+## Tests: links to use instead of dialling the relay (LoopbackLink ends).
+var friend_links: Array = []
+
+
+## PLAY A FRIEND: HOST opens a room; the four letters and JOIN take your
+## friend's. While a room is opening or joining, how it's going and CANCEL.
+func _friend_menu() -> Menu3D:
+	var m := Menu3D.new()
+	m.title = "PLAY A FRIEND"
+	if friend:
+		m.add_row("info_room", "")
+		m.add_row("info_tell", "")
+		m.add_row("info_wait", "")
+		m.add_row("fcancel", "CANCEL")
+		menu = m
+		_friend_lines()
+		return m
+	m.add_row("info_how", "ONE OF YOU HOSTS, ONE JOINS.")
+	m.add_row("fhost", "HOST: OPEN A ROOM")
+	var letters := Array(RelayLink.ALPHABET.split(""))
+	for i in RelayLink.ROOM_LEN:
+		m.add_row("letter_%d" % i, "ROOM LETTER %d" % (i + 1), letters, _letters[i])
+	m.add_row("fjoin", "")
+	if _friend_note != "":
+		m.add_row("info_note", _friend_note)
+	m.add_row("back", "BACK")
+	menu = m
+	_friend_lines()
+	return m
+
+
+## The room the letters spell.
+func friend_room() -> String:
+	var r := ""
+	for i in _letters:
+		r += RelayLink.ALPHABET[i]
+	return r
+
+
+## PLAY A FRIEND's changing lines, in place.
+func _friend_lines() -> void:
+	if menu == null or page != "friend":
+		return
+	if not menu.row("fjoin").is_empty():
+		menu.row("fjoin")["label"] = "JOIN ROOM %s" % friend_room()
+	if friend and not menu.row("info_room").is_empty():
+		var lines: Array
+		var room: String = friend.link.room if friend.link is RelayLink else ""
+		if not friend.host:
+			lines = ["JOINING ROOM %s..." % room, "", ""]
+		elif room == "":
+			lines = ["OPENING A ROOM...", "UP TO 20 SECONDS IF IT'S ASLEEP.", ""]
+		else:
+			lines = ["YOUR ROOM:  %s" % room, "YOUR FRIEND JOINS ROOM %s" % room, "WAITING FOR YOUR FRIEND..."]
+		for i in 3:
+			menu.row(["info_room", "info_tell", "info_wait"][i])["label"] = lines[i]
+	menu.refresh()
+
+
+func _friend_link() -> NetLink:
+	if not friend_links.is_empty():
+		return friend_links.pop_front()
+	return RelayLink.new()
+
+
+func _friend_host() -> void:
+	var l := _friend_link()
+	if l is RelayLink and not (l as RelayLink).host():
+		_friend_failed(l.error)
+		return
+	_friend_open(l, true)
+
+
+func _friend_join() -> void:
+	var l := _friend_link()
+	if l is RelayLink:
+		var rl := l as RelayLink
+		if not rl.join(friend_room()):
+			_friend_failed(rl.error)
+			return
+	_friend_open(l, false)
+
+
+func _friend_open(l: NetLink, host: bool) -> void:
+	friend = OnlineSession.new(l, host)
+	friend.my_hello = OnlineSession.hello()
+	_friend_note = ""
+	lobby.call_deferred("friend")
+
+
+func _friend_failed(why: String) -> void:
+	_friend_note = why
+	lobby.call_deferred("friend")
+
+
+## Back to PLAY A FRIEND, the session (if any) let go.
+func _friend_drop() -> void:
+	if friend:
+		friend.quit()
+		friend = null
+	lobby.call_deferred("friend")
+
+
+## Each frame while a room opens or joins: the host starts the match as
+## the friend arrives (the host's venue and shot assist); the guest plays
+## it as START comes. A refusal or a lost line is said on the page.
+func _friend_poll() -> void:
+	if friend == null:
+		return
+	friend.poll()
+	if friend.closed():
+		_friend_note = friend.reason if friend.reason != "" else "CONNECTION LOST"
+		friend = null
+		lobby.call_deferred("friend")
+		return
+	if friend.host and friend.state == OnlineSession.CONNECTED:
+		var mc := settings.match_config()
+		var cfg := OnlineSession.friendly_config(mc.seed)
+		cfg.venue = mc.venue
+		cfg.assist = mc.assist
+		friend.begin({"cfg": OnlineSession.config_to_dict(cfg)})
+	if friend.state == OnlineSession.PLAYING:
+		_start_online(friend)
+		return
+	_friend_lines()
+
+
+## FRIENDLY DINK with your friend: the view plays the session from here.
+func _start_online(s: OnlineSession) -> void:
+	friend = null
+	lesson = -1
+	_new_view().setup(s.rollback.pred.config, use_xr, false, false, s)
+	desk.on_new_view(view)
+	_inherit()
+	view.pause_requested.connect(_on_pause)
+	view.online_closed.connect(_on_online_closed)
+
+
+## The menu in an online match: the match can't wait for you, so it plays
+## on behind it.
+func _online_pause() -> void:
+	var m := Menu3D.new()
+	m.title = "PLAYING A FRIEND   BEST %d" % view.sim.best_rally
+	m.add_row("fresume", "BACK TO THE GAME")
+	m.add_row("lobby", "LEAVE")
+	m.pressed.connect(_on_pressed)
+	view.show_menu(m)
+
+
+## The friend left or the line went: why, the best rally, and back.
+func _on_online_closed(reason: String) -> void:
+	var m := Menu3D.new()
+	m.title = reason if reason != "" else "THE GAME ENDED"
+	m.add_row("info_best", "BEST RALLY %d" % view.sim.best_rally)
+	m.add_row("lobby", "MENU")
+	m.pressed.connect(_on_pressed)
+	view.show_menu(m)
+

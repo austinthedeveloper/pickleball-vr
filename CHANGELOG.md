@@ -6,6 +6,13 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+### Added
+- **PLAY A FRIEND:** dink with a friend anywhere with the internet, one
+  on one. One of you hosts and gets a room (four letters); the other
+  picks those letters and joins. FRIENDLY DINK has no serves to worry
+  about and no score: drop the ball, dink, and the board counts the
+  rally and keeps your best. The Mac version can play a headset too.
+
 ## [0.5.0] - 2026-10-29
 
 The coach-from-anywhere update. Your coach can watch and talk to you from

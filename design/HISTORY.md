@@ -158,3 +158,28 @@ moves to their kitchen, and soft returns should count.
 **VR-16, ready to test.** MATCH SETUP > VENUE: try each one, and HOME
 against different teams (the GOTH CLUB play in SPACE). In the headset,
 does the SUNSET's low sun get in your eyes too much?
+
+## Phase 7: sharing and online
+
+**VR-74..77, ready to test: dinking online with a friend (ADR-027).**
+Both of you install the same version (0.6.0 or later; the headset says
+YOUR FRIEND HAS ... if not).
+1. One picks MAIN > PLAY A FRIEND > HOST: OPEN A ROOM. The page shows
+   YOUR ROOM: and four letters. The first room after a quiet spell takes
+   up to 25 seconds (the relay waking up).
+2. The other picks PLAY A FRIEND, sets ROOM LETTER 1 to 4 to those
+   letters (the stick left and right, or click the < and >), and JOIN.
+3. The match starts on both: FRIENDLY DINK. You stand at your kitchen
+   lines (the guest at the far end); whoever has the ball drops it and
+   dinks; the board counts the rally and keeps the BEST. Whoever misses
+   starts the next one.
+
+Without a second headset: the Mac's flat mode (`godot --path game`)
+plays a friend too. The mouse aims, dinks are soft and Shift drives.
+Things to look for:
+- Does your friend's ball arrive smoothly, or jump?
+- Does their body and paddle look like them?
+- Does anything ever freeze?
+
+The menu button shows BACK TO THE GAME and LEAVE; the match doesn't stop
+behind it.
