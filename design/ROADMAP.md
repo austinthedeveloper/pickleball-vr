@@ -38,6 +38,8 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 
 ## Releases
 
+- **v0.8.0** (2026-10-30): PRANKS and HOLD TO TALK on a watching
+  computer's coach panel; a quick click presses a menu row.
 - **v0.7.0** (2026-10-29): COACH VIEW: WATCH A PLAYER in 3D, the coach's
   controls on their screen, instant replay.
 - **v0.6.0** (2026-10-29): PLAY A FRIEND, dinking online with a friend
@@ -143,7 +145,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-79 | COACH VIEW: WATCH A PLAYER replays the player's drill from their stream, four cameras (ADR-028) | `feature/cld-vr-coach-view` | Ready to test: watched through the live relay on the Mac |
 | VR-80 | COACH VIEW: the coach's controls on their screen, as on the phone (ADR-028) | `feature/cld-vr-coach-view` | Ready to test: coached through the live relay on the Mac |
 | VR-81 | COACH VIEW: instant replay, any angle, slow (ADR-028) | `feature/cld-vr-coach-view` | Ready to test: THE LAST SHOT on the Mac (screenshots) |
-| VR-82 | COACH VIEW: PRANKS on the Mac's panel, HOLD TO TALK (or T) through its microphone (ADR-029) | `feature/cld-vr-mac-pranks` | Ready to test: a prank and an 8 s voice through the live relay |
+| VR-82 | COACH VIEW: PRANKS on the Mac's panel, HOLD TO TALK (or T) through its microphone (ADR-029) | `feature/cld-vr-mac-pranks` | Released in v0.8.0: a prank and an 8 s voice through the live relay |
 
 ## Next
 

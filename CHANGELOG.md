@@ -6,6 +6,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-30
+
+The talk-to-them update. A coach watching from a computer can now talk to
+you and prank you, as from the phone.
+
 ### Added
 
 - COACH VIEW's panel on a computer has the phone's PRANKS tab: the sounds,
