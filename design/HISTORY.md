@@ -159,6 +159,27 @@ moves to their kitchen, and soft returns should count.
 against different teams (the GOTH CLUB play in SPACE). In the headset,
 does the SUNSET's low sun get in your eyes too much?
 
+**VR-84, ready to test: BRICK BREAK (ADR-030).** MAIN > BRICK BREAK, then
+START. A ball shows in the ring in the middle of the wall and comes to
+you. Hit it at the bricks:
+- Low hits come back short; high hits come back deep.
+- The angle you hit at carries on off the wall, mirrored.
+- Try a bank shot off the glass.
+
+Try each DIFFICULTY, and START AT LEVEL 5 for steel and gold bricks.
+
+Things to look for:
+- Is the wall's return easy to read and to get to, or too fast or too
+  short? Its pace and depth are first guesses.
+- With SHOT ASSIST OFF, can you reach the wall at all? Does MID feel
+  like your own shot, or like it's being aimed for you?
+- Do the bricks read at a glance: which take more hits, and which are
+  steel?
+- Is a broken brick's sound and burst satisfying?
+
+On the Mac (`godot --path game`): the mouse puts the crosshair on their
+court, and further away aims higher up the wall.
+
 ## Phase 7: sharing and online
 
 **VR-74..77, played (2026-10-29): the Quest against the Mac through the

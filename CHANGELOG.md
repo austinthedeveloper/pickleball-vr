@@ -10,6 +10,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 - Mac and Windows downloads on each release, to coach, watch or play a
   friend from a computer without installing Godot.
+- BRICK BREAK on MAIN: breakout on the court. A wall of bricks stands
+  across the far court, and every ball you get to it comes back over the
+  net, off the brick it broke, at the angle you hit it. Five levels,
+  with silver, gold and steel bricks. You have three balls, and your best
+  score is kept (ADR-030).
 
 ## [0.8.0] - 2026-10-30
 

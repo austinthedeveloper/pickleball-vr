@@ -37,6 +37,7 @@ var last_contact: Array[int] = []
 var rng := 1
 var events: Array = []
 var drill: Drill                     ## practice (ADR-007); null in a match
+var breakout: Breakout               ## BRICK BREAK (ADR-030); null in a match
 
 
 func _init(cfg: SimTypes.MatchConfig = null) -> void:
@@ -44,6 +45,9 @@ func _init(cfg: SimTypes.MatchConfig = null) -> void:
 	if config.drill:
 		drill = Drill.new()
 		drill.copy_settings_from(config.drill)
+	if config.breakout:
+		breakout = Breakout.new()
+		breakout.copy_settings_from(config.breakout)
 	for i in K.MAX_PLAYERS:
 		var p := SimTypes.Player.new()
 		p.slot = i
@@ -54,6 +58,8 @@ func _init(cfg: SimTypes.MatchConfig = null) -> void:
 
 ## The active slots: singles plays 0 and 2, doubles all four.
 func active_slots() -> Array[int]:
+	if breakout:
+		return [0]
 	if drill:
 		return [0, 2] if drill.partner else [0]
 	if config.doubles:
@@ -62,6 +68,8 @@ func active_slots() -> Array[int]:
 
 
 func is_active(slot: int) -> bool:
+	if breakout:
+		return slot == 0
 	if drill:
 		return slot == 0 or (drill.partner and slot == 2)
 	return config.doubles or slot == 0 or slot == 2
@@ -90,6 +98,10 @@ func new_match() -> void:
 		p.swing_tick = -1
 	if drill:
 		drill.reset(self)
+		return
+	if breakout:
+		shots = 0
+		breakout.reset(self)
 		return
 	_serve_setup()
 
@@ -470,6 +482,8 @@ const SOFT_PACE := 50000
 ## The shot assist (ADR-003): the human's shot pulled `config.assist`
 ## percent of the way to the same shot landed safely in.
 func _assist(team: int, v: Array[int]) -> Array[int]:
+	if breakout:
+		return breakout.assist(self, v)
 	if config.assist <= 0:
 		return v
 	var probe := ball.copy()
@@ -761,6 +775,9 @@ func step(human: Array = [], commands: Array = []) -> void:
 	if drill:
 		drill.update(self, tossed)
 		return
+	if breakout:
+		breakout.update(self)
+		return
 	match phase:
 		K.PHASE_SERVE_SETUP:
 			if phase_timer >= K.SETUP_TICKS:
@@ -890,6 +907,8 @@ func snapshot(without_pose := -1) -> Array:
 			1 if p.court_right else 0, 1 if p.let_go else 0])
 	if drill:
 		a.append_array(drill.snapshot())
+	if breakout:
+		a.append_array(breakout.snapshot())
 	if config.friendly:
 		a.append(best_rally)
 	return a
@@ -905,8 +924,8 @@ func save_state() -> Array:
 	var ps := []
 	for p in players:
 		ps.append(object_vars(p))
-	return [object_vars(self, ["config", "ball", "players", "drill"]), object_vars(ball), ps,
-		object_vars(drill) if drill else {}]
+	return [object_vars(self, ["config", "ball", "players", "drill", "breakout"]), object_vars(ball), ps,
+		object_vars(drill) if drill else {}, object_vars(breakout) if breakout else {}]
 
 
 func load_state(state: Array) -> void:
@@ -916,6 +935,8 @@ func load_state(state: Array) -> void:
 		set_object_vars(players[i], state[2][i])
 	if drill:
 		set_object_vars(drill, state[3])
+	if breakout:
+		set_object_vars(breakout, state[4])
 
 
 static var _names := {}              ## script -> its variables' names

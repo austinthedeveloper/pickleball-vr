@@ -95,6 +95,8 @@ class MatchConfig:
 	var friendly := false
 	## Practice (ADR-007): a Drill's settings; null plays a match.
 	var drill: Drill = null
+	## BRICK BREAK (ADR-030): its settings; null plays a match.
+	var breakout: Breakout = null
 	## The venue, for the view only (ADR-008).
 	var venue := 0
 

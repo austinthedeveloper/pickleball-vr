@@ -35,5 +35,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [027](ADR-027-friendly-dink.md) | FRIENDLY DINK, and dinking online with a friend |
 | [028](ADR-028-coach-view.md) | COACH VIEW: watching a player's drill in a coach's game |
 | [029](ADR-029-coach-view-pranks.md) | PRANKS, and the coach's voice, from a watching computer |
+| [030](ADR-030-brick-break.md) | BRICK BREAK: breakout on the court |
 
-Next: ADR-030.
+Next: ADR-031.

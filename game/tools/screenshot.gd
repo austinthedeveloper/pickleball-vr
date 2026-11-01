@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|online|online_guest|watch> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT...] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti] [panel [pranks] (watch)]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|breakout|online|online_guest|watch> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT... | level=N (breakout)] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti] [panel [pranks] (watch)]
 extends SceneTree
 
 var frames := 240
@@ -64,6 +64,11 @@ func _initialize() -> void:
 		cfg.drill.zone = Drill.ZONE_DEEP
 	elif mode == "lesson":
 		cfg.drill = Lessons.drill(int(args[3]) if args.size() > 3 else 0)
+	elif mode == "breakout":
+		cfg.breakout = Breakout.new()
+		for a in args:
+			if a.begins_with("level="):
+				cfg.breakout.start_level = int(a.trim_prefix("level=")) - 1
 	view.partner_model = "rb_male_01" if args.has("rocketbox") else ("rb_female_12" if args.has("rocketbox_f") else "")
 	view.passthrough = args.has("passthrough")      # the court-only world (no headset: black behind)
 	if mode == "online" or mode == "online_guest":
@@ -100,7 +105,7 @@ func _initialize() -> void:
 				view.coach_panel.show_tab("pranks")
 				view.coach_panel.refresh()
 	else:
-		view.setup(cfg, false, demo or mode in ["machine", "lesson", "partner"])
+		view.setup(cfg, false, demo or mode in ["machine", "lesson", "partner", "breakout"])
 	if mode == "lesson":
 		var l := Lessons.lesson(int(args[3]) if args.size() > 3 else 0)
 		view.show_lesson(String(l["title"]), l["lines"])

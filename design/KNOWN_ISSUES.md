@@ -42,3 +42,9 @@
     host.
 12. **Flat mode's help line says SHIFT SOFT** in FRIENDLY DINK, where soft
     is the default and Shift drives (ADR-027).
+13. **BRICK BREAK isn't coached or watched** (ADR-030). The coach's phone,
+    the tablet and COACH VIEW know matches and drills, not BRICK BREAK. A
+    watcher can't follow it, and the coach's controls do nothing in it.
+14. **BRICK BREAK's wall is tuned on the bot only** (ADR-030). The return's
+    pace and depth, the glass's give and the assist toward the wall are
+    first guesses. They want a human in the headset.

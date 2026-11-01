@@ -12,7 +12,7 @@ game/tools/test.sh                                   # all tests, headless (must
 godot --path game                                    # play (flat mode without a headset)
 godot --path game -- demo                            # DEMO: bot vs CPU
 godot --headless --path game -s res://tests/golden.gd   # regenerate golden traces (play changes only)
-godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner> <frames> <out.png> [doubles | lesson] [drill=CALL_THE_SPOT...] [venue=NAME] [tick=N] [cam=x,y,z look=x,y,z] [prank=ball:duck,antic:dance,face...]
+godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|breakout> <frames> <out.png> [doubles | lesson | level=N] [drill=CALL_THE_SPOT...] [venue=NAME] [tick=N] [cam=x,y,z look=x,y,z] [prank=ball:duck,antic:dance,face...]
 python3 game/tools/version.py [set X.Y.Z]            # the version, everywhere (design/RELEASING.md)
 python3 game/tools/release.py X.Y.Z --dry-run         # cut a release: checks, bump, tests, tag, APK (--push: GitHub release)
 python3 game/tools/test_release.py                    # the release tools' self-test
@@ -38,7 +38,7 @@ plugin-free). Godot's version and SHA-512s are pinned in
 status. `design/ROADMAP.md` is the milestone sheet (phases, releases,
 every task's status, next, "For you"): keep it current with each branch.
 What to try for each task goes in `design/HISTORY.md`. `design/KNOWN_ISSUES.md` lists the defects, and
-`decisions/README.md` the ADRs (next: ADR-030). `design/QUEST_SETUP.md`
+`decisions/README.md` the ADRs (next: ADR-031). `design/QUEST_SETUP.md`
 covers the headset build. `design/TEST_CHANNEL.md` is the plan for
 sharing builds with friends on Meta's ALPHA channel.
 

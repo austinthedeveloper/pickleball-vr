@@ -15,7 +15,8 @@ signal drill_done
 signal time_up(score: int, good: int, best: int)   ## a timed run's clock ran out (ADR-022)
 signal shot_done(info: Dictionary)   ## a practice shot of yours and how it ended (the coach, ADR-023)
 signal pause_requested
-signal online_closed(reason: String)   ## the friend left or the line went (ADR-027)
+signal online_closed(reason: String)
+signal breakout_over(score: int, level: int)   ## BRICK BREAK: the last ball's gone (ADR-030)   ## the friend left or the line went (ADR-027)
 
 var sim: Sim
 var bot: Bot
@@ -90,6 +91,7 @@ var _last_phase := -1
 var _quip := RandomNumberGenerator.new()     # display only: which quip
 var machine: Machine
 var floor_target: FloorTarget
+var brick_wall: BrickWall            ## BRICK BREAK (ADR-030)
 var partner_avatar: Avatar
 var lesson_label: Label3D
 var cue_label: Label3D               ## a coach's cue, over the net (C-7)
@@ -220,6 +222,8 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	add_child(announcer)
 	if sim.drill:
 		_practice_court()
+	if sim.breakout:
+		_brick_court()
 	pranks = Pranks.new()
 	pranks.view = self
 	add_child(pranks)
@@ -305,6 +309,18 @@ func _practice_court() -> void:
 		popup_line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		popup_line.position = Vector3(0, d.popup_y() / float(K.M), 0)
 		add_child(popup_line)
+
+
+## BRICK BREAK (ADR-030): the wall and its glass, no crowd.
+func _brick_court() -> void:
+	brick_wall = BrickWall.new()
+	add_child(brick_wall)
+	crowd.visible = false
+	crowd.process_mode = Node.PROCESS_MODE_DISABLED
+	board.breakout = true
+	if flat and not demo:
+		# The crosshair on their court picks the spot on the wall: further is higher.
+		flat.set_help("WASD MOVE   MOUSE AIM (FURTHER = HIGHER)   SHIFT SOFT   ESC PAUSE")
 
 
 ## A lesson's title and instructions, standing over the far court.
@@ -402,6 +418,8 @@ func show_lesson(title: String, lines: Array) -> void:
 
 
 func _start_spot() -> Vector3:
+	if sim.breakout:
+		return World.m(0, 0, Breakout.SPOT_Z)
 	if sim.drill:
 		return World.m(sim.drill.spot_x, 0, sim.drill.spot_z)
 	return _spot(me)
@@ -953,7 +971,7 @@ func _after_step() -> void:
 
 
 func _on_phase(p: int) -> void:
-	if p == K.PHASE_SERVE and not spectate and not sim.drill and not sim.config.friendly:
+	if p == K.PHASE_SERVE and not spectate and not sim.drill and not sim.config.friendly and not sim.breakout:
 		if sim.score[0] + sim.score[1] == 0 and announcer.said.is_empty():
 			announcer.say(["match_begin", "match_doubles" if sim.config.doubles else "match_singles"], Announcer.TOP)
 		else:
@@ -963,7 +981,7 @@ func _on_phase(p: int) -> void:
 				if sim.score_wins(sim.score[t] + 1, sim.score[1 - t]):
 					announcer.say(["match_point"], Announcer.HIGH, true)
 					break
-	if p == K.PHASE_SERVE_SETUP and not sim.config.friendly:   # FRIENDLY DINK: stay where you are
+	if p == K.PHASE_SERVE_SETUP and not sim.config.friendly and not sim.breakout:   # FRIENDLY DINK: stay where you are
 		if xr:
 			if _placed and not spectate:
 				xr.recenter(_spot(me))     # to your serve or return spot (the lobby stays put)
@@ -974,6 +992,8 @@ func _on_phase(p: int) -> void:
 func _on_event(e: Array) -> void:
 	var at := World.m(sim.ball.x, sim.ball.y, sim.ball.z)
 	match int(e[0]):
+		K.EVENT_LAUNCH, K.EVENT_BRICK, K.EVENT_WALL, K.EVENT_LOST, K.EVENT_LEVEL, K.EVENT_GAME_OVER:
+			_on_brick_event(e, at)
 		K.EVENT_FEED:
 			machine.kick()
 			_play("0_hit_soft", machine.global_position + Vector3(0, 0.9, 0), 0.8, -3.0)
@@ -1102,6 +1122,51 @@ func _on_event(e: Array) -> void:
 				command([K.CMD_NEW_MATCH])       # the lobby's demo plays on
 
 
+## BRICK BREAK's events (ADR-030): bricks ring higher up the wall, steel
+## clanks, a lost ball's call, a level's applause.
+func _on_brick_event(e: Array, at: Vector3) -> void:
+	match int(e[0]):
+		K.EVENT_LAUNCH:
+			_play("0_hit_soft", World.m(0, Breakout.LAUNCH_Y, Breakout.WALL_Z), 0.8, -3.0)
+		K.EVENT_BRICK:
+			var i: int = e[1]
+			var left: int = e[2]
+			brick_wall.hit(i, left)
+			if left == Breakout.STEEL:
+				_play("0_hit_smash", at, 0.55, -4.0)
+			elif left == 0:
+				_play("5_ding", at, 1.0 + 0.1 * (i / Breakout.COLS), -1.0)
+				_play("0_hit_drive", at, 0.7, -6.0)
+			else:
+				_play("0_hit", at, 0.75, -2.0)
+		K.EVENT_WALL:
+			_play("1_bounce", World.m(e[1], e[2], Breakout.WALL_Z), 0.8, -4.0)
+			if e[3] == 1:
+				brick_wall.glass_hit(signi(e[1]))
+		K.EVENT_LOST:
+			var why: int = e[1]
+			_play("3_whistle", Vector3(0, 2, 0), 1.0, -6.0)
+			var left: int = e[2]
+			var line: String = Breakout.LOST_TEXT[why] + ("   %d LEFT" % left if left > 0 else "")
+			board.announce(line, Color(1, 0.45, 0.35), 1.4)
+			const CALLS := {Breakout.LOST_OUT: "out", Breakout.LOST_NET: "net"}
+			if not spectate and CALLS.has(why):
+				announcer.say([CALLS[why]], Announcer.MID)
+		K.EVENT_LEVEL:
+			_play("4_applause", Vector3(0, 2, -3))
+			board.announce("LEVEL %d CLEAR!" % e[1], Color(1, 0.9, 0.2), 3.0)
+			if not spectate:
+				announcer.say(["winner"], Announcer.TOP)
+		K.EVENT_GAME_OVER:
+			board.announce("GAME OVER", Color(1, 0.9, 0.2), 3.5)
+			if Perf.on and not demo:
+				_log_line("BRICK BREAK | score %d | level %d | bricks %d" % [e[1], e[2], e[3]])
+			if demo:
+				command([K.CMD_NEW_MATCH])       # the lobby's demo plays on
+			else:
+				breakout_over.emit(e[1], e[2])
+
+
 func _draw(delta: float) -> void:
 	var b := World.m(sim.ball.x, sim.ball.y, sim.ball.z)
 	var held_by_you := not sim.players[me].cpu and sim.server_slot == me \
@@ -1131,6 +1196,8 @@ func _draw(delta: float) -> void:
 		floor_target.set_face(pranks.face)
 	if floor_target:
 		floor_target.show_from(sim, delta)
+	if brick_wall:
+		brick_wall.show_from(sim, delta)
 	_cue_fade(delta)
 	if zone_mesh and sim.drill and sim.drill.lanes:
 		zone_mesh.position.x = sim.drill.target_x / float(K.M)
@@ -1247,6 +1314,8 @@ func _log_swing() -> void:
 
 ## The mode this is: the drill and its level, or a match.
 func _mode() -> String:
+	if sim.breakout:
+		return "BRICK BREAK"
 	if sim.drill:
 		return Settings.run_name(sim.drill) if sim.drill.time_limit > 0 else sim.drill.mode_name()
 	return "DOUBLES" if sim.config.doubles else "SINGLES"

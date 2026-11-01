@@ -60,6 +60,8 @@ func _init(s: Sim, which := 0) -> void:
 	var spot := sim.serve_spot(slot)
 	if sim.drill:
 		spot = [sim.drill.spot_x, sim.drill.spot_z]
+	if sim.breakout:
+		spot = [0, Breakout.SPOT_Z]
 	head_x = spot[0]
 	head_z = spot[1]
 
@@ -130,6 +132,8 @@ func _home_z() -> int:
 	var side := K.side_sign(_team())
 	if sim.config.friendly:
 		return side * (K.KITCHEN_DEPTH + Sim.FRIENDLY_BACK)
+	if sim.breakout:
+		return Breakout.SPOT_Z
 	return side * (K.COURT_HALF_LENGTH - 300000)
 
 
@@ -172,7 +176,7 @@ func _move() -> void:
 		gz = _goal_z
 	elif sim.phase != K.PHASE_LIVE:
 		return
-	elif sim.required_bounce == K.REQUIRED_BOUNCE_NONE and sim.shots >= 3 and not sim.drill:
+	elif sim.required_bounce == K.REQUIRED_BOUNCE_NONE and sim.shots >= 3 and not sim.drill and not sim.breakout:
 		gz = side * (K.KITCHEN_DEPTH + 400000)
 	if sim.drill:
 		# Practice: step to the ball, but stay near your spot (a learner
@@ -233,21 +237,33 @@ func _maybe_plan() -> void:
 	for t in i:
 		b.step()
 	var target := _target(b)
-	if error > 0 and not has_aim:
+	var v: Array[int]
+	var brush := 26000 if target[2] >= 80000 else -9000
+	if sim.breakout:
+		# BRICK BREAK (ADR-030): through a brick on the wall, flat (no brush).
+		var at := sim.breakout.bot_target(b.x)
+		if has_aim:
+			at = Breakout.wall_from_floor(aim_x, aim_z)
+		elif error > 0:
+			at[0] += _scatter(error)
+			at[1] += _scatter(error / 3)
+		v = Aim.through(b.x, b.y, b.z, at[0], at[1], Breakout.WALL_Z, maxi(pace, 70000))
+		brush = 0
+	elif error > 0 and not has_aim:
 		target[0] += _scatter(error)
 		target[1] += _scatter(error)
 		if sim.phase == K.PHASE_LIVE and _scatter(50) + 50 < miss:
 			# Wide, by enough that the assist (which saves depth, ADR-003)
 			# can't pull it back in.
 			target[0] = signi(target[0] + _scatter(1) + 1) * (K.COURT_HALF_WIDTH + 2600000)
-	var v := Aim.shot(b.x, b.y, b.z, target[0], target[1], target[2])
+	if not sim.breakout:
+		v = Aim.shot(b.x, b.y, b.z, target[0], target[1], target[2])
 	var dx: int = v[0] - b.vx
 	var dy: int = v[1] - b.vy
 	var dz: int = v[2] - b.vz
 	# Brush up the back of a drive (topspin), down under a dink (backspin),
 	# across the face. The face grips (ADR-003): the brush also carries the
 	# ball PADDLE_GRIP of its way, so the normal swing makes up the rest.
-	var brush := 26000 if target[2] >= 80000 else -9000
 	var n0 := Fx.unit_q14(dx, dy, dz)
 	var bt := _across_up(n0, brush)
 	dx -= bt[0] * K.PADDLE_GRIP_256 / 256

@@ -7,6 +7,7 @@ const BOARD := Color(0.08, 0.1, 0.16)
 
 var them := "CPU"
 var drill := false                   ## practice: the streak, or the lesson's count
+var breakout := false                ## BRICK BREAK: the score, the level and the balls left
 ## Online (ADR-027): the board and the call turned to whoever plays the far
 ## end, so the guest reads them as the host does.
 var far := false
@@ -61,6 +62,12 @@ func _label(parent: Node3D, at: Vector3, size: int, c: Color) -> Label3D:
 
 ## Scores read server first, as the umpire calls them.
 func show_from(sim: Sim, delta: float) -> void:
+	if breakout:
+		var bo := sim.breakout
+		score_label.text = "%d" % bo.score
+		info_label.text = "LEVEL %d   BALLS %d" % [bo.level + 1, maxi(bo.lives, 0)] if bo.stage != Breakout.OVER else "GAME OVER"
+		_fade(delta)
+		return
 	if drill:
 		var d := sim.drill
 		var tgt := "   POINTS %d" % d.points if d.targets or d.spots else ""

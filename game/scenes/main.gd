@@ -1,6 +1,6 @@
 ## The first scene: starts the headset if there is one (else flat mode,
 ## ADR-001), then the lobby: a demo to watch and a menu beside you (MAIN,
-## MATCH SETUP, BALL MACHINE, HOW TO PLAY). A match, a drill or a lesson
+## MATCH SETUP, BALL MACHINE, HOW TO PLAY, BRICK BREAK). A match, a drill or a lesson
 ## then plays; the menu button (Esc) pauses it. On the command line,
 ## `-- play`, `-- doubles` and `-- demo` skip the lobby.
 extends Node3D
@@ -85,6 +85,8 @@ func lobby(to := "") -> void:
 		demo_cfg = settings.machine_config()
 	elif page == "partner":
 		demo_cfg = settings.partner_config()
+	elif page == "breakout":
+		demo_cfg = settings.breakout_config()
 	if demo_cfg.drill:
 		demo_cfg.drill.time_limit = 0    # the lobby's demo plays on (ADR-022)
 	_new_view().setup(demo_cfg, use_xr, true, true)
@@ -141,6 +143,15 @@ func _page(id: String) -> Menu3D:
 			m.add_row("plook", "PARTNER LOOK", Settings.PARTNER_LOOKS, settings.partner_look)
 			m.add_row("pstart", "START")
 			m.add_row("to_records", "RECORDS")
+			m.add_row("back", "BACK")
+		"breakout":
+			# BRICK BREAK (ADR-030): the demo behind plays the level you pick.
+			m.title = "BRICK BREAK   BEST %d" % settings.breakout_best
+			m.add_row("blevel", "START AT LEVEL", range(1, Breakout.LEVELS.size() + 1).map(func(n: int) -> String: return str(n)),
+				clampi(settings.breakout_level, 0, Breakout.LEVELS.size() - 1))
+			m.add_row("difficulty", "DIFFICULTY", DIFFICULTIES, settings.difficulty)
+			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
+			m.add_row("bstart", "START")
 			m.add_row("back", "BACK")
 		"paddle":
 			# Paddle profiles (ADR-015): DEFAULT is the angle you had; the
@@ -206,6 +217,7 @@ func _page(id: String) -> Menu3D:
 			m.add_row("to_partner", "PRACTICE PARTNER")
 			m.add_row("to_machine", "BALL MACHINE")
 			m.add_row("to_lessons", "HOW TO PLAY")
+			m.add_row("to_breakout", "BRICK BREAK")
 			m.add_row("to_paddle", "PADDLE")
 			m.add_row("passthrough", "PASSTHROUGH", OFF_ON, 1 if settings.passthrough else 0)
 			m.add_row("to_coach", "COACH")
@@ -277,9 +289,10 @@ func _on_changed(id: String, index: int) -> void:
 		"ptime": settings.partner_time = index
 		"plook": settings.partner_look = index
 		"mtime": settings.machine_time = index
+		"blevel": settings.breakout_level = index
 	settings.save()
 	if id in ["mode", "vs", "venue", "hand", "passthrough", "angle", "profile", "twist", "turn", "reach", "shot", "target", "zone", "machine_at", "speed",
-			"targets", "level", "ptargets", "side", "spread", "drill", "lane", "plook"]:
+			"targets", "level", "ptargets", "side", "spread", "drill", "lane", "plook", "blevel"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
 
@@ -318,6 +331,8 @@ func _on_pressed(id: String) -> void:
 		"to_partner": lobby.call_deferred("partner")
 		"pstart": _start.call_deferred(settings.partner_config(), false)
 		"to_lessons": lobby.call_deferred("lessons")
+		"to_breakout": lobby.call_deferred("breakout")
+		"bstart": _start.call_deferred(settings.breakout_config(), false)
 		"to_paddle": lobby.call_deferred("paddle")
 		"to_coach": lobby.call_deferred("coach")
 		"check":
@@ -349,6 +364,7 @@ func _on_pressed(id: String) -> void:
 			view.hide_menu()
 			view.paused = false
 		"rematch", "again":
+			_keep_best()
 			view.hide_menu()
 			view.paused = false
 			view.command([K.CMD_NEW_MATCH])
@@ -367,6 +383,7 @@ func _start(cfg: SimTypes.MatchConfig, demo: bool) -> void:
 	view.time_up.connect(_on_time_up)
 	view.time_up.connect(desk.on_time_up)
 	view.pause_requested.connect(_on_pause)
+	view.breakout_over.connect(_on_breakout_over)
 
 
 func _start_lesson(i: int) -> void:
@@ -389,13 +406,20 @@ func _back_page() -> String:
 		return "lessons"
 	if view.sim.config.friendly:
 		return "friend"
+	if view.sim.breakout:
+		return "breakout"
 	if view.sim.drill:
 		return "partner" if view.sim.drill.partner else "machine"
 	return "main"
 
 
-## The ball machine's best streak and the partner's best rally, kept.
+## The ball machine's best streak and the partner's best rally, kept;
+## BRICK BREAK's best score.
 func _keep_best() -> void:
+	if view and view.sim.breakout and view.sim.breakout.score > settings.breakout_best:
+		settings.breakout_best = view.sim.breakout.score
+		settings.save()
+		return
 	if view == null or view.sim.drill == null or view.sim.drill.goal > 0:
 		return
 	var d := view.sim.drill
@@ -410,6 +434,19 @@ func _on_match_over(winner: int) -> void:
 	var m := Menu3D.new()
 	m.title = "YOU WIN!" if winner == 0 else "%s WIN" % view.them
 	m.add_row("rematch", "REMATCH")
+	m.add_row("lobby", "MENU")
+	m.pressed.connect(_on_pressed)
+	view.show_menu(m)
+
+
+## BRICK BREAK's last ball (ADR-030): the score, a new best, again.
+func _on_breakout_over(score: int, level: int) -> void:
+	var best := score > settings.breakout_best
+	_keep_best()
+	var m := Menu3D.new()
+	m.title = ("NEW BEST!   %d" if best else "GAME OVER   %d") % score
+	m.add_row("info_level", "LEVEL %d   BEST %d" % [level, settings.breakout_best])
+	m.add_row("again", "PLAY AGAIN")
 	m.add_row("lobby", "MENU")
 	m.pressed.connect(_on_pressed)
 	view.show_menu(m)
