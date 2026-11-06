@@ -143,6 +143,13 @@ const EVENT_DRILL := 9               ## a drill's result: result, streak, finish
 const EVENT_TARGET := 10             ## a floor target hit: x, z, ring
 const EVENT_TIME_UP := 11            ## a timed drill's clock ran out: score, good, best streak
 const EVENT_RALLY := 12              ## FRIENDLY DINK's rally ended: returns, best, the team that missed
+# BRICK BREAK (ADR-030)
+const EVENT_LAUNCH := 13             ## the wall's launcher fed: target x
+const EVENT_BRICK := 14              ## a brick hit: index, hits left (0 broken, -1 steel), score
+const EVENT_WALL := 15               ## off the wall behind the bricks (0) or the glass (1): x, y, which
+const EVENT_LOST := 16               ## a ball lost: why (Breakout.LOST_*), balls left, score
+const EVENT_LEVEL := 17              ## a level cleared: its number (from 1), score
+const EVENT_GAME_OVER := 18          ## no balls left: score, level reached, bricks broken
 
 
 static func fault_text(f: int) -> String:

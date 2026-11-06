@@ -76,6 +76,9 @@ var partner_hands: bool:
 	get: return partner_drill == 1
 	set(v): partner_drill = 1 if v else 0
 var partner_best := 0
+## BRICK BREAK (ADR-030): the level it starts at, the best score.
+var breakout_level := 0
+var breakout_best := 0
 ## Timed runs (ADR-022): MODE, an index into Drill.TIMES (0 free play).
 var partner_time := 0
 var machine_time := 0
@@ -146,6 +149,8 @@ func load_settings() -> void:
 	partner_lane = c.get_value("partner", "lane", partner_lane)
 	partner_time = c.get_value("partner", "time", partner_time)
 	machine_time = c.get_value("machine", "time", machine_time)
+	breakout_level = c.get_value("breakout", "level", breakout_level)
+	breakout_best = c.get_value("breakout", "best", breakout_best)
 	player = c.get_value("player", "name", player)
 	players = c.get_value("player", "names", players)
 	records_by = c.get_value("records", "by_player", {})
@@ -186,6 +191,8 @@ func save() -> void:
 	c.set_value("partner", "level", partner_level)
 	c.set_value("partner", "time", partner_time)
 	c.set_value("machine", "time", machine_time)
+	c.set_value("breakout", "level", breakout_level)
+	c.set_value("breakout", "best", breakout_best)
 	c.set_value("player", "name", player)
 	c.set_value("player", "names", players)
 	c.set_value("records", "by_player", records_by)
@@ -286,6 +293,19 @@ func partner_config() -> SimTypes.MatchConfig:
 	if d.lanes:
 		d.cross = false
 	cfg.drill = d
+	return cfg
+
+
+## BRICK BREAK (ADR-030): the wall at the match's DIFFICULTY, from the
+## chosen level.
+func breakout_config() -> SimTypes.MatchConfig:
+	var cfg := match_config()
+	var b := Breakout.new()
+	b.difficulty = difficulty
+	b.start_level = clampi(breakout_level, 0, Breakout.LEVELS.size() - 1)
+	cfg.breakout = b
+	cfg.doubles = false
+	cfg.opponent = -1                    # no team across the net: no intro
 	return cfg
 
 

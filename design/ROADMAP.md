@@ -147,9 +147,12 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-81 | COACH VIEW: instant replay, any angle, slow (ADR-028) | `feature/cld-vr-coach-view` | Ready to test: THE LAST SHOT on the Mac (screenshots) |
 | VR-82 | COACH VIEW: PRANKS on the Mac's panel, HOLD TO TALK (or T) through its microphone (ADR-029) | `feature/cld-vr-mac-pranks` | Released in v0.8.0: a prank and an 8 s voice through the live relay |
 | VR-83 | Releases: the Mac and Windows games beside the APK, built by release.py (design/RELEASING.md) | `feature/cld-vr-desktop-builds` | Ready to test: the Mac app boots; Windows unchecked on Windows |
+| VR-84 | BRICK BREAK: breakout on the court, five levels, three balls (ADR-030) | `feature/cld-vr-brick-break` | Ready to test: the bot clears levels; a human in the headset next |
 
 ## Next
 
+- **BRICK BREAK (VR-84):** your session in the headset. Tune the wall's
+  return (pace, depth) and the assist on what you find.
 - **VR-65:** friends on Meta's ALPHA channel. It waits on your Meta
   developer account (`design/TEST_CHANNEL.md`).
 - **THIRD SHOT DROPS:** the one kitchen drill not built yet
