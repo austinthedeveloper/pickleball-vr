@@ -38,6 +38,9 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 
 ## Releases
 
+- **v0.9.0** (2026-11-05): BRICK BREAK, breakout on the court (five
+  levels, three balls, a best score); Mac and Windows downloads beside
+  the APK.
 - **v0.8.0** (2026-10-30): PRANKS and HOLD TO TALK on a watching
   computer's coach panel; a quick click presses a menu row.
 - **v0.7.0** (2026-10-29): COACH VIEW: WATCH A PLAYER in 3D, the coach's

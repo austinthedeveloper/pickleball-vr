@@ -6,6 +6,11 @@ follows [Keep a Changelog](https://keepachangelog.com); versions follow
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-05
+
+The brick-breaking update. Your paddle takes on a wall of bricks, and the
+game now comes to computers without installing anything.
+
 ### Added
 
 - Mac and Windows downloads on each release, to coach, watch or play a
