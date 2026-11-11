@@ -48,3 +48,7 @@
 14. **BRICK BREAK's wall is tuned on the bot only** (ADR-030). The return's
     pace and depth, the glass's give and the assist toward the wall are
     first guesses. They want a human in the headset.
+15. **ZEN is unheard and unseen in the headset** (ADR-031). The melody,
+    the drone and the void are first guesses from the Mac. The depth fog
+    now runs in every venue (out of sight until DRIFT) and wants a PERF
+    check on the Quest.

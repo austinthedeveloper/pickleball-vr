@@ -112,6 +112,7 @@ var _ready_y := -1.0                 ## your paddle's height when the other side
 var _ball_z_was := 0                 ## the ball's z last tick, to catch it crossing the net
 var paused := false                  ## the sim isn't stepped while a pause menu is up
 var focus := 0.0                     ## FOCUS (ADR-013): how dim the world is now
+var zen: Zen                         ## ...and past it, HUSH and DRIFT (ADR-031)
 var _placed := false                 ## XR: turned to the court and moved to the start, once tracked
 var _inherited := false              ## XR: the play space came over from the last view
 var _stay := false                   ## ...and you're on the same spot (the lobby, rebuilt)
@@ -220,6 +221,11 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		crowd.process_mode = Node.PROCESS_MODE_DISABLED
 	announcer = Announcer.new()
 	add_child(announcer)
+	zen = Zen.new()
+	zen.world = world
+	zen.passthrough = passthrough
+	add_child(zen)
+	sound["4_applause"].bus = Zen.BUS    # the crowd hushes with the world
 	if sim.drill:
 		_practice_court()
 	if sim.breakout:
@@ -542,6 +548,7 @@ static var HAPTIC_MS := 50
 
 
 func _sounds() -> void:
+	Zen.bus()                            # the world's sound goes through ZEN's bus
 	for n in FAMILIES:
 		var p := AudioStreamPlayer3D.new()
 		var variants: Array[AudioStream] = []
@@ -558,6 +565,7 @@ func _sounds() -> void:
 	stream.loop = true
 	amb.stream = stream
 	amb.volume_db = -10.0
+	amb.bus = Zen.BUS                    # HUSH muffles and fades it (ADR-031)
 	add_child(amb)
 	if not DisplayServer.get_name() == "headless":
 		amb.play.call_deferred()
@@ -1025,7 +1033,7 @@ func _on_event(e: Array) -> void:
 				const COUNT_CALLS := {10: "rally_10_1", 15: "rally_15_1", 20: "rally_20_1",
 					25: "rally_25", 30: "rally_30_1"}
 				var n: int = e[2]                # the streak
-				if COUNT_CALLS.has(n):
+				if COUNT_CALLS.has(n) and not zen.quiet():     # HUSH: no counting aloud
 					announcer.say([COUNT_CALLS[n]], Announcer.HIGH)
 				if sim.drill.spots and sim.drill.last_ring > 0:
 					board.announce(Drill.RING_TEXT[sim.drill.last_ring], Color(0.5, 1, 0.5), 1.0)
@@ -1041,7 +1049,7 @@ func _on_event(e: Array) -> void:
 				announcer.say(["winner"], Announcer.TOP)
 				board.announce("LESSON COMPLETE!", Color(1, 0.9, 0.2), 4.0)
 				drill_done.emit()
-			elif r == Drill.RESULT_GOOD and e[2] in [10, 20, 30]:
+			elif r == Drill.RESULT_GOOD and e[2] in [10, 20, 30] and not zen.quiet():
 				announcer.say(["rally_%d_1" % e[2]], Announcer.HIGH)
 		K.EVENT_HIT:
 			var speed: int = e[2]
@@ -1055,7 +1063,8 @@ func _on_event(e: Array) -> void:
 			_path = [[snappedf(sim.ball.x / 1e6, 0.01), snappedf(sim.ball.y / 1e6, 0.01), snappedf(sim.ball.z / 1e6, 0.01)]]
 			if mine and Perf.on and not demo:          # your swings, not the lobby's bot
 				_log_swing()
-			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf())
+			_play(_hit_sound(speed), at, 0.96 + 0.08 * _quip.randf(), zen.hit_cut())
+			zen.on_hit(at, mine)
 			pranks.on_hit(at, mine)
 			if xr and mine:
 				# Crisp from the sweet spot, a duller, longer buzz off the rim.
@@ -1063,7 +1072,8 @@ func _on_event(e: Array) -> void:
 				var strength := (HAPTIC_BASE + HAPTIC_GAIN * speed / 83333.0) / 100.0
 				xr.pulse(strength * (1.0 - 0.4 * off), HAPTIC_MS / 1000.0 + 0.06 * off)
 		K.EVENT_BOUNCE:
-			_play("1_bounce", World.m(e[1], 0, e[2]), 1.0, -4.0)
+			_play("1_bounce", World.m(e[1], 0, e[2]), 1.0, -4.0 + zen.hit_cut())
+			zen.on_bounce(World.m(e[1], 0, e[2]))
 			pranks.on_bounce(World.m(e[1], 0, e[2]))
 			if not _shot.is_empty() and not _shot.has("x") and e[2] * K.side_sign(me >> 1) < 0:
 				_shot["x"] = snappedf(e[1] / 1e6, 0.01)       # where your ball landed on their side
@@ -1270,14 +1280,16 @@ func _trail_draw(b: Vector3, delta: float) -> void:
 	_trail_at.push_front(b)
 	if _trail_at.size() > TRAIL + 1:
 		_trail_at.pop_back()
-	var fast := sim.ball.speed() * K.TICK_HZ / float(K.M) > TRAIL_SPEED and not sim.ball.held
+	var glow := zen.trail_glow() if zen else 0.0     # DRIFT: a trail of light at any speed
+	var fast := (sim.ball.speed() * K.TICK_HZ / float(K.M) > TRAIL_SPEED or glow > 0.2) and not sim.ball.held
 	var mm := _trail.multimesh
+	var tint := Look.BALL.lerp(Color(0.75, 0.95, 1.0), glow)
 	for i in TRAIL:
 		var show := fast and i + 1 < _trail_at.size()
 		var f := 1.0 - float(i + 1) / (TRAIL + 1)
 		var at: Vector3 = _trail_at[i + 1] if show else Vector3(0, -10, 0)
 		mm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3.ONE * (0.4 + 0.5 * f)), at))
-		mm.set_instance_color(i, Color(Look.BALL, 0.45 * f))
+		mm.set_instance_color(i, Color(tint, (0.45 + 0.35 * glow) * f))
 
 
 ## Debug builds: one line per human hit, for tuning the paddle to real
@@ -1345,7 +1357,9 @@ func _where(l: Array[int]) -> String:
 
 ## FOCUS (ADR-013): ease toward the rally's darkness; not in the lobby.
 func _focus(delta: float) -> void:
-	var want := 0.0 if spectate else Focus.amount(Focus.shots_of(sim))
+	var shots := 0 if spectate else Focus.shots_of(sim)
+	zen.update(shots, delta)
+	var want := Focus.amount(shots)
 	var rate := Focus.EASE_IN if want > focus else Focus.EASE_OUT
 	var was := focus
 	focus = move_toward(focus, want, rate * delta * Focus.MAX)

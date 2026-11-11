@@ -43,6 +43,14 @@ var _sky_mat: ProceduralSkyMaterial
 var _sky_base: Array[Color] = []
 var _bg_base := Color.BLACK
 var _ambient_base := 1.0
+## ZEN's DRIFT (ADR-031): the court's paint (dims a little) and its lines
+## (glow), each [material, base colour]; how dim FOCUS has the world.
+var _paint: Array = []
+var _lines: Array[StandardMaterial3D] = []
+var _line_base: Array[Color] = []
+var _focus_k := 1.0
+var _drift := 0.0
+var _void := Color.BLACK
 
 
 ## um to metres, in Godot's axes (the sim's are the same).
@@ -76,9 +84,9 @@ func _ready() -> void:
 		_grain(_box(Vector3(0, 0.0, 0), Vector3(hw * 2 + 6, 0.02, hl * 2 + 8), c8(SURROUNDS[d["surround"]])), grain_texture(), 0.6)
 	_scenery = false                     # the court stays bright under FOCUS
 	# The court: acrylic over the slab, its sand grain in the paint.
-	_grain(_box(Vector3(0, 0.012, 0), Vector3(hw * 2, 0.004, hl * 2), c8(SURFACES[d["surface"]])), grain_texture(), 0.6)
+	_paint_of(_grain(_box(Vector3(0, 0.012, 0), Vector3(hw * 2, 0.004, hl * 2), c8(SURFACES[d["surface"]])), grain_texture(), 0.6))
 	for s in [-1, 1]:
-		_grain(_box(Vector3(0, 0.014, s * kd / 2), Vector3(hw * 2, 0.004, kd), c8(SURFACES[d["kitchen"]])), grain_texture(), 0.6)
+		_paint_of(_grain(_box(Vector3(0, 0.014, s * kd / 2), Vector3(hw * 2, 0.004, kd), c8(SURFACES[d["kitchen"]])), grain_texture(), 0.6))
 	# Lines (measured to their outside edges, so inset half a width).
 	var y := 0.017
 	for s in [-1, 1]:
@@ -86,7 +94,12 @@ func _ready() -> void:
 				[Vector3(0, y, s * (hl - lw / 2)), Vector3(hw * 2, 0.003, lw)],
 				[Vector3(0, y, s * (kd - lw / 2)), Vector3(hw * 2, 0.003, lw)],
 				[Vector3(0, y, s * (kd + hl) / 2), Vector3(lw, 0.003, hl - kd)]]:
-			_grain(_box(b[0], b[1], line_color), grain_texture(), 0.6)
+			var lm := _grain(_box(b[0], b[1], line_color), grain_texture(), 0.6).material_override as StandardMaterial3D
+			lm.emission_enabled = true       # dark until DRIFT: no new shader mid-rally
+			lm.emission = Color(0.45, 0.85, 1.0)
+			lm.emission_energy_multiplier = 0.0
+			_lines.append(lm)
+			_line_base.append(lm.albedo_color)
 	_net()
 	_scenery = true
 	if passthrough:
@@ -176,6 +189,14 @@ func _sky(kind: String) -> void:
 		e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 		e.ambient_light_color = (mat.sky_top_color + mat.sky_horizon_color * 2.0 + mat.ground_horizon_color) / 4.0
 		e.ambient_light_energy = 0.55
+	# ZEN's void (ADR-031) is depth fog past the court. It's on from the
+	# start, pushed out of sight, so DRIFT never compiles a shader mid-rally.
+	if kind != "passthrough":
+		e.fog_enabled = true
+		e.fog_mode = Environment.FOG_MODE_DEPTH
+		e.fog_depth_begin = 1000.0
+		e.fog_depth_end = 2000.0
+		e.fog_sky_affect = 0.0
 	env.environment = e
 	add_child(env)
 	_env = e
@@ -331,8 +352,42 @@ func set_focus(a: float) -> void:
 		_sky_mat.sky_horizon_color = _sky_base[1] * k
 		_sky_mat.ground_horizon_color = _sky_base[2] * k
 		_sky_mat.ground_bottom_color = _sky_base[3] * k
-	elif not passthrough:
-		_env.background_color = _bg_base * k
+	_focus_k = k
+	_background()
+
+
+## ZEN's DRIFT (ADR-031), `a` 0..1: the venue fades into `void` past the
+## court (fog from `begin` m, solid at `end`), the sky with it; the court's
+## paint dims a little and its lines glow. `fog` false (passthrough): only
+## the court's part.
+func set_drift(a: float, void_color: Color, begin: float, end: float, fog := true) -> void:
+	_drift = a
+	_void = void_color
+	if fog and _env and _env.fog_enabled:
+		_env.fog_light_color = void_color
+		_env.fog_light_energy = 1.0
+		_env.fog_depth_begin = lerpf(1000.0, begin, a)
+		_env.fog_depth_end = lerpf(2000.0, end, a)
+		_env.fog_sky_affect = a
+	for pair in _paint:
+		var c: Color = pair[1]
+		var k := 1.0 - 0.4 * a
+		(pair[0] as StandardMaterial3D).albedo_color = Color(c.r * k, c.g * k, c.b * k, c.a)
+	for i in _lines.size():
+		var c := _line_base[i]
+		_lines[i].albedo_color = Color(c.r, c.g, c.b, c.a).darkened(0.85 * a)   # the glow's colour shows
+		_lines[i].emission_energy_multiplier = 0.8 * a
+	_background()
+
+
+func _background() -> void:
+	if _sky_mat == null and not passthrough and _env:
+		_env.background_color = (_bg_base * _focus_k).lerp(_void, _drift)
+
+
+func _paint_of(mi: MeshInstance3D) -> void:
+	var m := mi.material_override as StandardMaterial3D
+	_paint.append([m, m.albedo_color])
 
 
 ## The net (a real one's parts): square-mesh cord sagging to the

@@ -1,11 +1,12 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|breakout|online|online_guest|watch> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT... | level=N (breakout)] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti] [panel [pranks] (watch)]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|breakout|online|online_guest|watch> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT... | level=N (breakout)] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [zen=0..1] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti] [panel [pranks] (watch)]
 extends SceneTree
 
 var frames := 240
 var out := "shot.png"
 var n := 0
 var _focus := -1.0
+var _zen := -1.0                     ## zen=0..1: HUSH and DRIFT held there (ADR-031)
 var _tick := -1                      ## tick=N: shoot when the sim reaches it
 var _view: MatchView
 var _prank_items := PackedStringArray()   ## put on once the scene is built
@@ -114,6 +115,8 @@ func _initialize() -> void:
 			_tick = int(a.trim_prefix("tick="))
 		if a.begins_with("focus="):
 			_focus = float(a.trim_prefix("focus="))
+		if a.begins_with("zen="):
+			_zen = float(a.trim_prefix("zen="))
 	_view = view
 	for a in args:
 		if a.begins_with("prank="):
@@ -211,6 +214,10 @@ func _process(_delta: float) -> bool:
 	if n == 5 and _focus >= 0.0 and _view:
 		_view.world.set_focus(_focus)       # once the scene is built
 		_view.crowd.set_focus(_focus)
+	if n == 5 and _zen >= 0.0 and _view:
+		_view.zen.forced = _zen              # and a few rings, as if bounces had just landed
+		for r in [[0.6, -2.4, 0.15], [-1.2, -3.2, 0.45], [0.4, 2.2, 0.3], [-0.8, 1.6, 0.7]]:
+			_view.zen.ripple(Vector3(r[0], 0, r[1]), r[2] * Zen.RIPPLE_S)
 	if _tick >= 0:
 		if _view == null or _view.sim.tick < _tick:
 			return false

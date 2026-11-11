@@ -10,7 +10,7 @@ class_name Tune
 extends RefCounted
 
 static var path := "user://tuning.cfg"   ## tests point it elsewhere
-const GROUPS := ["TARGETS", "KITCHEN", "DINKS", "HANDS", "RESETS", "VOLLEYS", "ATTACK", "PADDLE"]
+const GROUPS := ["TARGETS", "KITCHEN", "DINKS", "HANDS", "RESETS", "VOLLEYS", "ATTACK", "PADDLE", "ZEN"]
 const LEVELS := ["EASY", "MEDIUM", "HARD"]
 ## Units: how a raw value reads.
 const M := "m"                       ## um, as metres
@@ -55,6 +55,14 @@ const ALL := [
 	["buzz", "PADDLE", "HIT VIBRATION", "res://view/match_view.gd", "HAPTIC_BASE", -1, PCT, 5, 0, 100],
 	["buzz_gain", "PADDLE", "VIBRATION PER 10 M/S", "res://view/match_view.gd", "HAPTIC_GAIN", -1, PCT, 5, 0, 100],
 	["buzz_ms", "PADDLE", "VIBRATION LENGTH", "res://view/match_view.gd", "HAPTIC_MS", -1, MS, 5, 10, 200],
+	# ZEN (ADR-031): in the shots FOCUS counts (practice: twice the streak).
+	["zen_hush", "ZEN", "HUSH AT (SHOTS)", "res://view/zen.gd", "HUSH_AT", -1, RAW, 2, 0, 200],
+	["zen_hush_span", "ZEN", "HUSH FILLS IN", "res://view/zen.gd", "HUSH_SPAN", -1, RAW, 2, 2, 100],
+	["zen_drift", "ZEN", "DRIFT AT (SHOTS)", "res://view/zen.gd", "DRIFT_AT", -1, RAW, 2, 0, 200],
+	["zen_drift_span", "ZEN", "DRIFT FILLS IN", "res://view/zen.gd", "DRIFT_SPAN", -1, RAW, 2, 2, 100],
+	["zen_drone", "ZEN", "DRONE LEVEL", "res://view/zen.gd", "DRONE_PCT", -1, PCT, 5, 0, 100],
+	["zen_tone", "ZEN", "NOTE LEVEL", "res://view/zen.gd", "TONE_PCT", -1, PCT, 5, 0, 100],
+	["zen_cut", "ZEN", "HIT SOUND DROP (DB)", "res://view/zen.gd", "HIT_CUT_DB", -1, RAW, 1, 0, 30],
 ]
 
 static var _defaults := {}           ## id -> the source's value, read before any override
