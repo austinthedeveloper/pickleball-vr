@@ -227,3 +227,18 @@ behind it.
 
 Look for: your swing as the coach sees it (does the body read as you?),
 and any hitch when a drill starts.
+
+**VR-162, ready to test: ZEN, HUSH and DRIFT (ADR-031).**
+1. PRACTICE PARTNER, DINKS, any level. Rally.
+2. At 5 in a row FOCUS starts darkening; by 13 it's nearly black.
+3. **HUSH** from 15 in a row: the birds and the crowd fade and go muffled,
+   a low drone comes in, and each hit rings a note: yours high, the
+   partner's low, a slow melody. The announcer stops counting.
+4. **DRIFT** from 20 in a row: past the court the park fades into deep
+   blue, motes of light hang out there, each bounce sends a ring of light
+   over the court, the lines glow cyan, and the ball leaves a pale trail.
+5. Miss: a low bell, and the world comes back over a few seconds.
+
+Look for: does the melody soothe or grate? Is the void calm or eerie, and
+is anything uncomfortable? Should it start sooner or later (TUNING > ZEN,
+debug builds)? Any hitch at 15 or 20 in a row?

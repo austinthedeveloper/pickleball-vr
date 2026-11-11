@@ -246,9 +246,13 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
 | VR-159 | Crash and error reports | [#76](https://github.com/austinthedeveloper/pickleball-vr/issues/76) | Planned (v1.0) |
 | VR-160 | BETA with a wider circle | [#77](https://github.com/austinthedeveloper/pickleball-vr/issues/77) | Planned (v1.0) |
 | VR-161 | v1.0 | [#78](https://github.com/austinthedeveloper/pickleball-vr/issues/78) | Planned (v1.0) |
+| VR-162 | ZEN: HUSH and DRIFT, past FOCUS (ADR-031) | `feature/cld-vr-zen` | Ready to test: tests and screenshots; a long dink rally in the headset next |
 
 ## Next
 
+- **ZEN (VR-162):** a long dink rally in the headset. Past 15 in a row the
+  world hushes, past 20 it drifts into a void. Say what soothes and what
+  grates; TUNING > ZEN moves the thresholds.
 - **BRICK BREAK (VR-84):** your session in the headset. Tune the wall's
   return (pace, depth) and the assist on what you find.
 - **VR-65:** friends on Meta's ALPHA channel. It waits on your Meta
