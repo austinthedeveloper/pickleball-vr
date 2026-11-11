@@ -130,3 +130,11 @@ func test_the_friend_leaving_ends_it() -> void:
 		a._process(MatchView.DT)
 	eq(why, ["YOUR FRIEND LEFT"], "the host hears it once")
 	a.queue_free()
+
+
+func test_flat_help_says_shift_drives() -> void:
+	var s := _sessions()
+	var v := _view(s[0])
+	eq(v.flat.help.text, MatchView.FRIENDLY_HELP, "FRIENDLY DINK's help (known issue 12)")
+	check("SHIFT DRIVE" in v.flat.help.text, "Shift drives: soft is the default")
+	v.queue_free()

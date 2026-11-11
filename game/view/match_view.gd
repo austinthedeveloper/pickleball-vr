@@ -238,6 +238,8 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 			flat.recenter(SPECTATE)
 	elif flat:
 		flat.recenter(_start_spot())
+	if flat and not demo and sim.config.friendly:
+		flat.set_help(FRIENDLY_HELP)     # soft by default; Shift drives (known issue 12)
 	if cfg.opponent >= 0 and not spectate:
 		board.announce(String(Opponents.team(cfg.opponent)["intro"]), Color(1, 0.9, 0.5), 3.5)
 
@@ -315,6 +317,10 @@ func _practice_court() -> void:
 		popup_line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		popup_line.position = Vector3(0, d.popup_y() / float(K.M), 0)
 		add_child(popup_line)
+
+
+## Flat mode's help in FRIENDLY DINK: every ball a dink unless you drive.
+const FRIENDLY_HELP := "WASD MOVE   MOUSE AIM   SHIFT DRIVE   ESC PAUSE"
 
 
 ## BRICK BREAK (ADR-030): the wall and its glass, no crowd.

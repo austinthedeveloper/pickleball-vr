@@ -1,6 +1,7 @@
 ## The tests' stand-in for pickleball-relay: one room, as the relay frames
-## it. The first to dial is the host (room BXKM), the second the guest
-## (number 0).
+## it. The first to dial is the host (room BXKM); each one after is a guest,
+## numbered from 0 as they come. The host's frames go to the guest their
+## first byte names (255: all of them).
 class_name StandInRelay
 extends RefCounted
 
@@ -27,16 +28,18 @@ func pump() -> void:
 			if i == 0:
 				ws.send_text(JSON.stringify({"op": "room", "code": "BXKM"}))
 			else:
-				ws.send_text(JSON.stringify({"op": "welcome", "you": 0, "ver": ""}))
-				(peers[0][0] as WebSocketPeer).send_text(JSON.stringify({"op": "joined", "guest": 0, "ver": ""}))
+				ws.send_text(JSON.stringify({"op": "welcome", "you": i - 1, "ver": ""}))
+				(peers[0][0] as WebSocketPeer).send_text(JSON.stringify({"op": "joined", "guest": i - 1, "ver": ""}))
 		while ws.get_available_packet_count() > 0:
 			var b := ws.get_packet()
 			if ws.was_string_packet() or peers.size() < 2:
 				continue
 			if i == 0:
-				(peers[1][0] as WebSocketPeer).send(b.slice(1))
+				for g in range(1, peers.size()):
+					if b[0] == 255 or b[0] == g - 1:
+						(peers[g][0] as WebSocketPeer).send(b.slice(1))
 			else:
-				var out := PackedByteArray([0])
+				var out := PackedByteArray([i - 1])
 				out.append_array(b)
 				(peers[0][0] as WebSocketPeer).send(out)
 

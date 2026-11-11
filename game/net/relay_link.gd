@@ -20,6 +20,7 @@ const PING_MS := 2000
 const KEEP_MS := 60000           ## a host waiting tells the relay it's still there
 const PING := "~PING"
 const PONG := "~PONG"
+const FULL := "~FULL"             ## the host to a guest it can't take: one friend at a time
 ## The relay's reasons, as the screen says them; others pass as they are.
 const REASONS := {"HOST LEFT": "THE OTHER PLAYER LEFT", "IDLE": "THE ROOM CLOSED: IDLE",
 	"TIME UP": "THE ROOM CLOSED: TIME UP", "NO SUCH ROOM": "NO SUCH ROOM",
@@ -175,8 +176,15 @@ func _control(msg: Variant) -> void:
 		"welcome":
 			_welcomed = true
 		"joined":
+			var g := int(msg.get("guest", 0))
 			if _guest < 0:
-				_guest = int(msg.get("guest", 0))
+				_guest = g
+			elif g != _guest and game == GAME:
+				# A second friend: the relay would let them wait for good, so
+				# the host says it's full (known issue 11).
+				var out := PackedByteArray([g])
+				out.append_array(var_to_bytes([FULL]))
+				ws.send(out)
 		"left":
 			if int(msg.get("guest", -1)) == _guest:
 				error = "THE OTHER PLAYER LEFT"
@@ -192,6 +200,9 @@ func _message(v: Variant, now: int) -> void:
 	var m: Array = v
 	if m[0] == PING:
 		_send([PONG, m[1]])
+	elif m[0] == FULL and not _hosting:
+		error = String(REASONS["ROOM FULL"])
+		close()
 	elif m[0] == PONG:
 		var took := now - int(m[1])
 		_rtt = took if _rtt == 0 else (_rtt * 3 + took) / 4
