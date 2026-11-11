@@ -63,6 +63,24 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 - **v0.1.0** (2026-10-27): the first release. Singles and doubles against
   the ladder, DINK PARTNER, the BALL MACHINE, HOW TO PLAY, five venues.
 
+## The year ahead (2026-11 to 2027-11)
+
+Eight milestones, about six weeks each, from v0.10 to the store's v1.0. Each
+task is a GitHub issue (story, acceptance criteria) in its milestone; the
+issue number is in the index's Branch column until a branch is cut.
+Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocked`.
+
+| Milestone | Due | Tasks | What |
+|---|---|---|---|
+| [M1 · v0.10 Close the loop](https://github.com/austinthedeveloper/pickleball-vr/milestone/1) | 2026-12-18 | VR-85..VR-96 | Pay down the playtest debt: BRICK BREAK tuned, the last kitchen drill, the open known issues, release builds on Meta's ALPHA channel. |
+| [M2 · v0.11 Venues and lights](https://github.com/austinthedeveloper/pickleball-vr/milestone/2) | 2027-02-05 | VR-97..VR-106 | The canon's six venues, DAY / DUSK / NIGHT under lights, each venue's sounds and critters, court colours. |
+| [M3 · v0.12 Career](https://github.com/austinthedeveloper/pickleball-vr/milestone/3) | 2027-03-19 | VR-107..VR-116 | Career save slots, your own look, the four paddles and thirteen hats, unlocks, the Hat Museum, lifetime records. |
+| [M4 · v0.13 STORY: Save the park](https://github.com/austinthedeveloper/pickleball-vr/milestone/4) | 2027-05-07 | VR-117..VR-125 | The canon's story mode in VR: Pepper, the petition, eight chapters, Grimsby only ever in text. |
+| [M5 · v0.14 OPEN PLAY, tournaments, modifiers](https://github.com/austinthedeveloper/pickleball-vr/milestone/5) | 2027-06-25 | VR-126..VR-134 | The park with three courts and a paddle rack, park points, the clubhouse, a tournament bracket, the eight modifiers. |
+| [M6 · v0.15 Feel and rules](https://github.com/austinthedeveloper/pickleball-vr/milestone/6) | 2027-08-13 | VR-135..VR-143 | The physics and rules still simple: sidespin, net-cord rollovers, serve form, the smash, the momentum rule, side-out scoring. |
+| [M7 · v0.16 Online 2](https://github.com/austinthedeveloper/pickleball-vr/milestone/7) | 2027-09-24 | VR-144..VR-152 | From friendly dinking to real online matches: singles, doubles, voice, invites, spectators, a hardened relay. |
+| [M8 · v1.0 Store launch](https://github.com/austinthedeveloper/pickleball-vr/milestone/8) | 2027-11-05 | VR-153..VR-161 | Comfort, accessibility, onboarding, Quest 2 / 3S, Meta's VRC checks, the store page, BETA, then 1.0. |
+
 ## Index
 
 | Task | What | Branch | Status |
@@ -83,7 +101,7 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-14 | HOW TO PLAY: seven lessons (ADR-007) | `feature/cld-vr-practice` | Ready to test |
 | VR-15 | Menu pages and pause (ADR-007) | `feature/cld-vr-practice` | Ready to test |
 | VR-16 | Venues: PARK, LAKESIDE, SUNSET, GYM, SPACE (ADR-008) | `feature/cld-vr-practice` | Ready to test |
-| VR-17 | More venues: DINOSAUR, UNDERSEA, TIME of day | | Planned |
+| VR-17 | More venues: DINOSAUR, UNDERSEA, TIME of day | | Planned: split into VR-97..99 (M2) |
 | VR-18 | Quest performance: CPU spikes fixed, PERF timing (ADR-009) | `feature/cld-vr-quest-device` | Done (measured on the Quest 3) |
 | VR-19 | Ball machine 2: volley feeds, SPEED, MACHINE AT, real dinks (ADR-007) | `feature/cld-vr-machine-2` | Done (played) |
 | VR-20 | DINK PARTNER: a cooperative dinking CPU (ADR-010) | `feature/cld-vr-dink-partner` | Done (played) |
@@ -151,6 +169,83 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
 | VR-82 | COACH VIEW: PRANKS on the Mac's panel, HOLD TO TALK (or T) through its microphone (ADR-029) | `feature/cld-vr-mac-pranks` | Released in v0.8.0: a prank and an 8 s voice through the live relay |
 | VR-83 | Releases: the Mac and Windows games beside the APK, built by release.py (design/RELEASING.md) | `feature/cld-vr-desktop-builds` | Ready to test: the Mac app boots; Windows unchecked on Windows |
 | VR-84 | BRICK BREAK: breakout on the court, five levels, three balls (ADR-030) | `feature/cld-vr-brick-break` | Ready to test: the bot clears levels; a human in the headset next |
+| VR-85 | BRICK BREAK tuned in the headset | [#2](https://github.com/austinthedeveloper/pickleball-vr/issues/2) | Planned (v0.10) |
+| VR-86 | Coach and watch BRICK BREAK | [#3](https://github.com/austinthedeveloper/pickleball-vr/issues/3) | Planned (v0.10) |
+| VR-87 | THIRD SHOT DROPS drill | [#4](https://github.com/austinthedeveloper/pickleball-vr/issues/4) | Planned (v0.10) |
+| VR-88 | Online: a third player is refused | [#5](https://github.com/austinthedeveloper/pickleball-vr/issues/5) | Planned (v0.10) |
+| VR-89 | Flat mode's FRIENDLY DINK help line says SHIFT DRIVE | [#6](https://github.com/austinthedeveloper/pickleball-vr/issues/6) | Planned (v0.10) |
+| VR-90 | Release builds on Meta's ALPHA channel | [#7](https://github.com/austinthedeveloper/pickleball-vr/issues/7) | Planned (v0.10) |
+| VR-91 | Playtest from two houses: PLAY A FRIEND and COACH VIEW | [#8](https://github.com/austinthedeveloper/pickleball-vr/issues/8) | Planned (v0.10) |
+| VR-92 | A matches session in the headset | [#9](https://github.com/austinthedeveloper/pickleball-vr/issues/9) | Planned (v0.10) |
+| VR-93 | Ready-to-test sweep | [#10](https://github.com/austinthedeveloper/pickleball-vr/issues/10) | Planned (v0.10) |
+| VR-94 | Saved sessions keep their replays | [#11](https://github.com/austinthedeveloper/pickleball-vr/issues/11) | Planned (v0.10) |
+| VR-95 | Coach sliders: SAVE AS DEFAULT | [#12](https://github.com/austinthedeveloper/pickleball-vr/issues/12) | Planned (v0.10) |
+| VR-96 | The Windows game checked on Windows | [#13](https://github.com/austinthedeveloper/pickleball-vr/issues/13) | Planned (v0.10) |
+| VR-97 | DINOSAUR venue | [#14](https://github.com/austinthedeveloper/pickleball-vr/issues/14) | Planned (v0.11) |
+| VR-98 | UNDERSEA venue | [#15](https://github.com/austinthedeveloper/pickleball-vr/issues/15) | Planned (v0.11) |
+| VR-99 | TIME OF DAY: DAY, DUSK, NIGHT | [#16](https://github.com/austinthedeveloper/pickleball-vr/issues/16) | Planned (v0.11) |
+| VR-100 | Each venue's ambience | [#17](https://github.com/austinthedeveloper/pickleball-vr/issues/17) | Planned (v0.11) |
+| VR-101 | Critters cross the sky | [#18](https://github.com/austinthedeveloper/pickleball-vr/issues/18) | Planned (v0.11) |
+| VR-102 | COURT page: four court colours | [#19](https://github.com/austinthedeveloper/pickleball-vr/issues/19) | Planned (v0.11) |
+| VR-103 | Passthrough: the court anchored to your room | [#20](https://github.com/austinthedeveloper/pickleball-vr/issues/20) | Planned (v0.11) |
+| VR-104 | Venue performance budget | [#21](https://github.com/austinthedeveloper/pickleball-vr/issues/21) | Planned (v0.11) |
+| VR-105 | Screenshots of every venue | [#22](https://github.com/austinthedeveloper/pickleball-vr/issues/22) | Planned (v0.11) |
+| VR-106 | Close-up of a ball's bounce at night | [#23](https://github.com/austinthedeveloper/pickleball-vr/issues/23) | Planned (v0.11) |
+| VR-107 | Career: three save slots and a name | [#24](https://github.com/austinthedeveloper/pickleball-vr/issues/24) | Planned (v0.12) |
+| VR-108 | Your look, in a mirror | [#25](https://github.com/austinthedeveloper/pickleball-vr/issues/25) | Planned (v0.12) |
+| VR-109 | The four paddles: Wood, Blue, Red, Gold | [#26](https://github.com/austinthedeveloper/pickleball-vr/issues/26) | Planned (v0.12) |
+| VR-110 | Thirteen hats | [#27](https://github.com/austinthedeveloper/pickleball-vr/issues/27) | Planned (v0.12) |
+| VR-111 | Unlocks and NEXT: | [#28](https://github.com/austinthedeveloper/pickleball-vr/issues/28) | Planned (v0.12) |
+| VR-112 | The Hat Museum | [#29](https://github.com/austinthedeveloper/pickleball-vr/issues/29) | Planned (v0.12) |
+| VR-113 | RECORDS board with initials | [#30](https://github.com/austinthedeveloper/pickleball-vr/issues/30) | Planned (v0.12) |
+| VR-114 | The ladder kept per slot: CHAMPION! | [#31](https://github.com/austinthedeveloper/pickleball-vr/issues/31) | Planned (v0.12) |
+| VR-115 | Save versions and migrations | [#32](https://github.com/austinthedeveloper/pickleball-vr/issues/32) | Planned (v0.12) |
+| VR-116 | Career stats on the coach's phone | [#33](https://github.com/austinthedeveloper/pickleball-vr/issues/33) | Planned (v0.12) |
+| VR-117 | STORY mode: chapters and progress | [#34](https://github.com/austinthedeveloper/pickleball-vr/issues/34) | Planned (v0.13) |
+| VR-118 | Pepper, your partner | [#35](https://github.com/austinthedeveloper/pickleball-vr/issues/35) | Planned (v0.13) |
+| VR-119 | Scenes before each match, and the petition | [#36](https://github.com/austinthedeveloper/pickleball-vr/issues/36) | Planned (v0.13) |
+| VR-120 | Team intros, taunts and concessions | [#37](https://github.com/austinthedeveloper/pickleball-vr/issues/37) | Planned (v0.13) |
+| VR-121 | The captain's partner in the stands | [#38](https://github.com/austinthedeveloper/pickleball-vr/issues/38) | Planned (v0.13) |
+| VR-122 | Celebrations on court | [#39](https://github.com/austinthedeveloper/pickleball-vr/issues/39) | Planned (v0.13) |
+| VR-123 | The ending | [#40](https://github.com/austinthedeveloper/pickleball-vr/issues/40) | Planned (v0.13) |
+| VR-124 | Story balance | [#41](https://github.com/austinthedeveloper/pickleball-vr/issues/41) | Planned (v0.13) |
+| VR-125 | Canon review of the VR story | [#42](https://github.com/austinthedeveloper/pickleball-vr/issues/42) | Planned (v0.13) |
+| VR-126 | OPEN PLAY: a park with three courts | [#43](https://github.com/austinthedeveloper/pickleball-vr/issues/43) | Planned (v0.14) |
+| VR-127 | The paddle rack and winners stay | [#44](https://github.com/austinthedeveloper/pickleball-vr/issues/44) | Planned (v0.14) |
+| VR-128 | Park points | [#45](https://github.com/austinthedeveloper/pickleball-vr/issues/45) | Planned (v0.14) |
+| VR-129 | Pick your partner at the rack | [#46](https://github.com/austinthedeveloper/pickleball-vr/issues/46) | Planned (v0.14) |
+| VR-130 | The clubhouse | [#47](https://github.com/austinthedeveloper/pickleball-vr/issues/47) | Planned (v0.14) |
+| VR-131 | TOURNAMENT: an eight-team bracket | [#48](https://github.com/austinthedeveloper/pickleball-vr/issues/48) | Planned (v0.14) |
+| VR-132 | MODIFIERS: BIG, FAST, POPCORN, GHOST | [#49](https://github.com/austinthedeveloper/pickleball-vr/issues/49) | Planned (v0.14) |
+| VR-133 | MODIFIERS: LAVA, ICE, GLOW, INVERSE | [#50](https://github.com/austinthedeveloper/pickleball-vr/issues/50) | Planned (v0.14) |
+| VR-134 | KID difficulty | [#51](https://github.com/austinthedeveloper/pickleball-vr/issues/51) | Planned (v0.14) |
+| VR-135 | Sidespin bends the shot | [#52](https://github.com/austinthedeveloper/pickleball-vr/issues/52) | Planned (v0.15) |
+| VR-136 | Net cords that roll over | [#53](https://github.com/austinthedeveloper/pickleball-vr/issues/53) | Planned (v0.15) |
+| VR-137 | The serve's form checked | [#54](https://github.com/austinthedeveloper/pickleball-vr/issues/54) | Planned (v0.15) |
+| VR-138 | The overhead smash | [#55](https://github.com/austinthedeveloper/pickleball-vr/issues/55) | Planned (v0.15) |
+| VR-139 | The momentum rule | [#56](https://github.com/austinthedeveloper/pickleball-vr/issues/56) | Planned (v0.15) |
+| VR-140 | Side-out scoring | [#57](https://github.com/austinthedeveloper/pickleball-vr/issues/57) | Planned (v0.15) |
+| VR-141 | Close-call replay | [#58](https://github.com/austinthedeveloper/pickleball-vr/issues/58) | Planned (v0.15) |
+| VR-142 | Two-handed backhand | [#59](https://github.com/austinthedeveloper/pickleball-vr/issues/59) | Planned (v0.15) |
+| VR-143 | Paddle tuning pass on a season of swings | [#60](https://github.com/austinthedeveloper/pickleball-vr/issues/60) | Planned (v0.15) |
+| VR-144 | Online singles: a full match | [#61](https://github.com/austinthedeveloper/pickleball-vr/issues/61) | Planned (v0.16) |
+| VR-145 | Online doubles | [#62](https://github.com/austinthedeveloper/pickleball-vr/issues/62) | Planned (v0.16) |
+| VR-146 | Voice between friends | [#63](https://github.com/austinthedeveloper/pickleball-vr/issues/63) | Planned (v0.16) |
+| VR-147 | Invites and presence on the Quest | [#64](https://github.com/austinthedeveloper/pickleball-vr/issues/64) | Planned (v0.16) |
+| VR-148 | Rematch, name tags, quick emotes | [#65](https://github.com/austinthedeveloper/pickleball-vr/issues/65) | Planned (v0.16) |
+| VR-149 | Network quality shown | [#66](https://github.com/austinthedeveloper/pickleball-vr/issues/66) | Planned (v0.16) |
+| VR-150 | Spectate an online match | [#67](https://github.com/austinthedeveloper/pickleball-vr/issues/67) | Planned (v0.16) |
+| VR-151 | Relay hardening | [#68](https://github.com/austinthedeveloper/pickleball-vr/issues/68) | Planned (v0.16) |
+| VR-152 | Cross-play polish: Quest and desktop | [#69](https://github.com/austinthedeveloper/pickleball-vr/issues/69) | Planned (v0.16) |
+| VR-153 | Comfort options | [#70](https://github.com/austinthedeveloper/pickleball-vr/issues/70) | Planned (v1.0) |
+| VR-154 | Accessibility | [#71](https://github.com/austinthedeveloper/pickleball-vr/issues/71) | Planned (v1.0) |
+| VR-155 | First run | [#72](https://github.com/austinthedeveloper/pickleball-vr/issues/72) | Planned (v1.0) |
+| VR-156 | Quest 2 and 3S | [#73](https://github.com/austinthedeveloper/pickleball-vr/issues/73) | Planned (v1.0) |
+| VR-157 | Meta's VRC checks | [#74](https://github.com/austinthedeveloper/pickleball-vr/issues/74) | Planned (v1.0) |
+| VR-158 | Store page and trailer | [#75](https://github.com/austinthedeveloper/pickleball-vr/issues/75) | Planned (v1.0) |
+| VR-159 | Crash and error reports | [#76](https://github.com/austinthedeveloper/pickleball-vr/issues/76) | Planned (v1.0) |
+| VR-160 | BETA with a wider circle | [#77](https://github.com/austinthedeveloper/pickleball-vr/issues/77) | Planned (v1.0) |
+| VR-161 | v1.0 | [#78](https://github.com/austinthedeveloper/pickleball-vr/issues/78) | Planned (v1.0) |
 
 ## Next
 
@@ -158,9 +253,12 @@ visual; `design/KNOWN_ISSUES.md` and the ADRs are up to date.
   return (pace, depth) and the assist on what you find.
 - **VR-65:** friends on Meta's ALPHA channel. It waits on your Meta
   developer account (`design/TEST_CHANNEL.md`).
-- **THIRD SHOT DROPS:** the one kitchen drill not built yet
+- **THIRD SHOT DROPS (VR-87):** the one kitchen drill not built yet
   (`design/KITCHEN_DRILLS.md`).
-- **VR-17:** more venues (DINOSAUR, UNDERSEA, TIME of day).
+- **The rest of M1 (v0.10):** the open known issues (VR-86, 88, 89), saved
+  replays (VR-94), SAVE AS DEFAULT (VR-95), Windows checked (VR-96).
+- **VR-17:** more venues (DINOSAUR, UNDERSEA, TIME of day), now VR-97..99
+  in M2.
 - **Dinking online with a friend (ADR-027):** a playtest from two houses, with a friend in a headset or on a Mac.
 - **COACH VIEW (ADR-028):** your playtest: the Quest player, the Mac coach (design/HISTORY.md).
 
