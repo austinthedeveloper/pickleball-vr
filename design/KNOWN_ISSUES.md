@@ -36,12 +36,12 @@
     didn't, you hear a hit that didn't happen; the ball then eases to
     where it really is. Rare: a guess carries their swing on for only
     8 ticks.
-11. **Online, a third player waits forever** (ADR-027). The relay lets a
-    `pb94-vr` room take 3 guests, but the host talks only to the first.
-    The fix is the relay's `GAMES` entry (1 guest) or a refusal from the
-    host.
-12. **Flat mode's help line says SHIFT SOFT** in FRIENDLY DINK, where soft
-    is the default and Shift drives (ADR-027).
+11. ~~Online, a third player waited forever~~ (ADR-027). Fixed (VR-88):
+    the host tells a second guest THAT ROOM IS FULL, and
+    `test_a_third_player_hears_the_room_is_full` checks the two friends
+    play on. The relay still holds 3 guest places for `pb94-vr`.
+12. ~~Flat mode's help line said SHIFT SOFT in FRIENDLY DINK~~. Fixed
+    (VR-89): it says SHIFT DRIVE.
 13. **BRICK BREAK isn't coached or watched** (ADR-030). The coach's phone,
     the tablet and COACH VIEW know matches and drills, not BRICK BREAK. A
     watcher can't follow it, and the coach's controls do nothing in it.

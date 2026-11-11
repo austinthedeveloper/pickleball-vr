@@ -172,8 +172,8 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
 | VR-85 | BRICK BREAK tuned in the headset | [#2](https://github.com/austinthedeveloper/pickleball-vr/issues/2) | Planned (v0.10) |
 | VR-86 | Coach and watch BRICK BREAK | [#3](https://github.com/austinthedeveloper/pickleball-vr/issues/3) | Planned (v0.10) |
 | VR-87 | THIRD SHOT DROPS drill | [#4](https://github.com/austinthedeveloper/pickleball-vr/issues/4) | Planned (v0.10) |
-| VR-88 | Online: a third player is refused | [#5](https://github.com/austinthedeveloper/pickleball-vr/issues/5) | Planned (v0.10) |
-| VR-89 | Flat mode's FRIENDLY DINK help line says SHIFT DRIVE | [#6](https://github.com/austinthedeveloper/pickleball-vr/issues/6) | Planned (v0.10) |
+| VR-88 | Online: a third player is refused | `feature/cld-vr-online-fixes` ([#5](https://github.com/austinthedeveloper/pickleball-vr/issues/5)) | Done (test) |
+| VR-89 | Flat mode's FRIENDLY DINK help line says SHIFT DRIVE | `feature/cld-vr-online-fixes` ([#6](https://github.com/austinthedeveloper/pickleball-vr/issues/6)) | Done (test) |
 | VR-90 | Release builds on Meta's ALPHA channel | [#7](https://github.com/austinthedeveloper/pickleball-vr/issues/7) | Planned (v0.10) |
 | VR-91 | Playtest from two houses: PLAY A FRIEND and COACH VIEW | [#8](https://github.com/austinthedeveloper/pickleball-vr/issues/8) | Planned (v0.10) |
 | VR-92 | A matches session in the headset | [#9](https://github.com/austinthedeveloper/pickleball-vr/issues/9) | Planned (v0.10) |
@@ -259,7 +259,7 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
   developer account (`design/TEST_CHANNEL.md`).
 - **THIRD SHOT DROPS (VR-87):** the one kitchen drill not built yet
   (`design/KITCHEN_DRILLS.md`).
-- **The rest of M1 (v0.10):** the open known issues (VR-86, 88, 89), saved
+- **The rest of M1 (v0.10):** coaching BRICK BREAK (VR-86), saved
   replays (VR-94), SAVE AS DEFAULT (VR-95), Windows checked (VR-96).
 - **VR-17:** more venues (DINOSAUR, UNDERSEA, TIME of day), now VR-97..99
   in M2.

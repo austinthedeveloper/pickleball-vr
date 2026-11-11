@@ -169,3 +169,11 @@ Voice isn't part of it: a phone call or Discord at first.
   counted and no score; the start; who starts next; the kitchen with the
   lean; determinism). Ten minutes of two Bots: 53 rallies, an average of 7
   returns, a best of 63, and every bounce in the dink zone.
+
+## Amendment (2026-11-11): one friend at a time
+
+The relay keeps three guest places in a `pb94-vr` room, so a third player
+who joined used to wait forever (known issue 11). Now the host, hearing a
+second guest join, sends that guest `~FULL` and the guest's link closes
+with THAT ROOM IS FULL. The friend already in plays on. Online doubles
+(VR-145) will lift this per mode.

@@ -244,6 +244,37 @@ func test_two_friends_through_a_relay() -> void:
 	relay.stop()
 
 
+func test_a_third_player_hears_the_room_is_full() -> void:
+	var relay := StandInRelay.new(FAKE_PORT)
+	var url := "ws://127.0.0.1:%d" % FAKE_PORT
+	var r := _through(url, K.TICK_HZ, relay)
+	var host: OnlineSession = r[0]
+	var guest: OnlineSession = r[1]
+	var third := RelayLink.new()
+	check(third.join("BXKM", url), "a third player dials the room")
+	var n := 0
+	while third.error == "" and n < 2000:
+		relay.pump()
+		host.poll()
+		guest.poll()
+		third.poll()
+		OS.delay_msec(2)
+		n += 1
+	eq(third.error, "THAT ROOM IS FULL", "told, not left waiting (known issue 11)")
+	for i in 60:
+		host.tick(Bot.new(host.rollback.pred, 0).input())
+		guest.tick(Bot.new(guest.rollback.pred, 2).input())
+		relay.pump()
+		host.poll()
+		guest.poll()
+		OS.delay_msec(2)
+	eq([host.state, guest.state], [OnlineSession.PLAYING, OnlineSession.PLAYING], "the two friends play on")
+	eq([host.rollback.desync, guest.rollback.desync], [-1, -1], "in sync")
+	host.quit()
+	guest.quit()
+	relay.stop()
+
+
 ## pickleball-relay's server.js, beside the VR game ("" if it isn't there
 ## or Node isn't installed).
 func _relay_server() -> String:
