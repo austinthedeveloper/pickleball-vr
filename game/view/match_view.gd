@@ -1022,7 +1022,9 @@ func _on_event(e: Array) -> void:
 		K.EVENT_TARGET:
 			if floor_target:
 				floor_target.flare()
-			board.announce(Drill.RING_TEXT[clampi(e[3], 1, 3)], Color(1, 0.85, 0.2), 1.0)
+			# THIRD SHOT DROPS: you made it to your line for their dink back (ADR-032).
+			var text: String = "AT THE LINE +1" if sim.drill.drops else Drill.RING_TEXT[clampi(e[3], 1, 3)]
+			board.announce(text, Color(1, 0.85, 0.2), 1.0)
 			_ding(e[3], World.m(e[1], 0, e[2]))
 		K.EVENT_DRILL:
 			var r: int = e[1]

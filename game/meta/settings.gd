@@ -286,6 +286,8 @@ func partner_config() -> SimTypes.MatchConfig:
 	if d.kind == Drill.KIND_VOLLEYS:
 		d.rules = Drill.RULE_VOLLEY | Drill.RULE_KITCHEN
 	d.spot_z = Drill.RESET_SPOT_Z if d.resets else K.KITCHEN_DEPTH + 300000
+	if d.drops:
+		d.spot_z = Drill.DROP_SPOT_Z     # THIRD SHOT DROPS: from your baseline (ADR-032)
 	if partner_cross or d.lanes:
 		# Your right court; the partner diagonal, or (LINE AND CROSS) across,
 		# so the line and the cross are each half their kitchen.
