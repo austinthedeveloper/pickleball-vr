@@ -165,3 +165,13 @@ build's TUNING overrides. A slider back at the source's value is
 forgotten; RESET puts every value back and forgets them all. In a debug
 build, TUNING sees the saved values as overrides, so `tune.sh sync`
 would make them the source's defaults too.
+
+## Amendment (2026-11-11): saved sessions keep their replays (VR-94)
+
+A saved session's shots now keep their replay. The paths are packed as
+`"rp"`: ticks per point, how many points lead to you, then x, y, z in
+whole cm, flat. Only every other point is kept (6 ticks apart; the last
+always). `Sessions.read` unpacks them, so a past session's "Last shots"
+replay as the live ones do, at the right speed. A 300-shot session
+stays under 300 KB (`test_saved_replays_stay_small`), so the newest 60
+fit in about 15 MB. Files from before keep their numbers, with no replay.

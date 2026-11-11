@@ -1,14 +1,16 @@
 ## Saved coaching sessions (design/COACHING.md C-10): every practice shot,
 ## kept on the headset, one file per session, so a coach can look back and
 ## see the trend. A session is a player's shots from the first one after
-## the game starts (or the player changes) until it stops. Replay paths
-## stay live only: the files keep the numbers.
+## the game starts (or the player changes) until it stops. The files keep
+## each shot's replay too (C-17, VR-94), packed small: every other point
+## of its paths (6 ticks apart), in whole centimetres.
 class_name Sessions
 extends RefCounted
 
 const KEEP := 60                     ## the newest sessions kept; older files go
 const SAVE_EVERY := 5                ## shots between writes (and at every run's end)
-const LIVE_ONLY := ["path", "in_path", "type"]
+const LIVE_ONLY := ["type"]
+const PACK_EVERY := 2                ## keep every 2nd path point (3 ticks apart live: 6 saved)
 
 static var dir := "user://sessions/"  ## tests point it elsewhere
 static var _count := 0
@@ -37,7 +39,7 @@ static func start(who: String) -> Sessions:
 
 
 func add_shot(info: Dictionary) -> void:
-	var keep := info.duplicate()
+	var keep := pack(info)
 	for k in LIVE_ONLY:
 		keep.erase(k)
 	shots.append(keep)
@@ -112,9 +114,62 @@ static func list(who := "") -> Array:
 	return out
 
 
-## One session in full: {summary, shots, runs}, or {} if it's gone.
+## One session in full: {summary, shots, runs}, or {} if it's gone. Its
+## shots' replays come unpacked, as the live ones are.
 static func read(session_id: String) -> Dictionary:
 	if not session_id.is_valid_filename():
 		return {}
 	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir + session_id + ".json"))
-	return d if d is Dictionary else {}
+	if not d is Dictionary:
+		return {}
+	var shots_in: Array = d.get("shots", [])
+	d["shots"] = shots_in.map(func(s: Variant) -> Variant: return unpack(s) if s is Dictionary else s)
+	return d
+
+
+## A shot to keep: its replay paths ([[x, y, z] m, every 3 ticks], the ball
+## to you and from you) become "rp": [ticks per point, points to you, then
+## x, y, z in cm, flat].
+static func pack(info: Dictionary) -> Dictionary:
+	var keep := info.duplicate()
+	var into: Array = keep.get("in_path", [])
+	var out: Array = keep.get("path", [])
+	keep.erase("in_path")
+	keep.erase("path")
+	if out.is_empty():
+		return keep
+	var a := _thin(into)
+	var b := _thin(out)
+	var rp: Array = [3 * PACK_EVERY, a.size()]
+	for p in a + b:
+		for v in p:
+			rp.append(roundi(float(v) * 100))
+	keep["rp"] = rp
+	return keep
+
+
+## Every PACK_EVERY'th point, and always the last (the bounce, the hit).
+static func _thin(path: Array) -> Array:
+	var out: Array = []
+	for i in path.size():
+		if i % PACK_EVERY == 0 or i == path.size() - 1:
+			out.append(path[i])
+	return out
+
+
+## A saved shot with its replay paths back as the live ones are, plus
+## "every": ticks per point.
+static func unpack(shot: Dictionary) -> Dictionary:
+	if not shot.has("rp"):
+		return shot
+	var s := shot.duplicate()
+	var rp: Array = s["rp"]
+	s.erase("rp")
+	var n_in := int(rp[1])
+	var pts: Array = []
+	for i in range(2, rp.size() - 2, 3):
+		pts.append([rp[i] / 100.0, rp[i + 1] / 100.0, rp[i + 2] / 100.0])
+	s["in_path"] = pts.slice(0, n_in)
+	s["path"] = pts.slice(n_in)
+	s["every"] = int(rp[0])
+	return s

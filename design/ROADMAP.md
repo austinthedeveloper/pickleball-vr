@@ -178,7 +178,7 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
 | VR-91 | Playtest from two houses: PLAY A FRIEND and COACH VIEW | [#8](https://github.com/austinthedeveloper/pickleball-vr/issues/8) | Planned (v0.10) |
 | VR-92 | A matches session in the headset | [#9](https://github.com/austinthedeveloper/pickleball-vr/issues/9) | Planned (v0.10) |
 | VR-93 | Ready-to-test sweep | [#10](https://github.com/austinthedeveloper/pickleball-vr/issues/10) | Planned (v0.10) |
-| VR-94 | Saved sessions keep their replays | [#11](https://github.com/austinthedeveloper/pickleball-vr/issues/11) | Planned (v0.10) |
+| VR-94 | Saved sessions keep their replays (ADR-024) | `feature/cld-vr-saved-replays` ([#11](https://github.com/austinthedeveloper/pickleball-vr/issues/11)) | Ready to test: tests; open a past session on a phone |
 | VR-95 | Coach sliders: SAVE AS DEFAULT (ADR-024) | `feature/cld-vr-coach-defaults` ([#12](https://github.com/austinthedeveloper/pickleball-vr/issues/12)) | Ready to test: tests; try it from a phone |
 | VR-96 | The Windows game checked on Windows | [#13](https://github.com/austinthedeveloper/pickleball-vr/issues/13) | Planned (v0.10) |
 | VR-97 | DINOSAUR venue | [#14](https://github.com/austinthedeveloper/pickleball-vr/issues/14) | Planned (v0.11) |

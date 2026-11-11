@@ -801,13 +801,14 @@ function drawSummary(list) {
 }
 
 function drawShots() {
-  const last = shots.map((s, i) => [s, i]).slice(-12).reverse();
+  const list = past ? past.shots : shots;      // a past session's replays too (VR-94)
+  const last = list.map((s, i) => [s, i]).slice(-12).reverse();
   $("shots").innerHTML = last.map(([s, i]) => {
     const where = s.ring > 0 ? `ring ${s.ring}, ${s.off.toFixed(2)} m off` : s.off >= 0 ? `${s.off.toFixed(2)} m off` : "";
     const detail = [s.side, s.speed ? `${s.speed} m/s` : "", s.clear !== undefined ? `${cm(s.clear)} cm over` : "", s.volley ? "volley" : "", where].filter(Boolean).join(" · ");
     return `<li class="${s.path ? "tap" : ""}" data-i="${i}"><span class="${s.good ? "r-good" : "r-bad"}">${esc(title(s.result))}</span><span class="muted">${esc(detail)}</span></li>`;
   }).join("") || `<li class="muted">No shots yet.</li>`;
-  $("shots").querySelectorAll("li.tap").forEach((li) => li.onclick = () => openReplay(shots[parseInt(li.dataset.i, 10)]));
+  $("shots").querySelectorAll("li.tap").forEach((li) => li.onclick = () => openReplay(list[parseInt(li.dataset.i, 10)]));
 }
 
 function drawRecords(r) {
@@ -836,7 +837,7 @@ function openPast(data) {
   past = data;
   $("pastText").textContent = `Viewing ${data.summary.started}: ${data.summary.shots} shots`;
   $("pastBanner").classList.remove("hidden");
-  drawAnalysis(); drawCourt();
+  drawAnalysis(); drawCourt(); drawShots();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -878,7 +879,7 @@ function openReplay(s) {
       (cur ? `<circle cx="${SZ(cur[2])}" cy="${SY(cur[1])}" r="0.08" fill="#d8ff3a"/>` : "");
     if (n >= pts.length) clearInterval(replayTimer);
   };
-  replayTimer = setInterval(frame, 25);   // each point is 3 ticks: about real time
+  replayTimer = setInterval(frame, 25 * (s.every || 3) / 3);   // 3 ticks a point live, 6 saved: about real time
   $("bReplayAgain").onclick = () => openReplay(s);
 }
 
@@ -1172,7 +1173,7 @@ $("bRunSteps").onclick = () => send({ type: "workout_run", name: $("wName").valu
 $("bStopWorkout").onclick = () => send({ type: "workout_stop" });
 $("bSaveWorkout").onclick = () => { send({ type: "workout_save", name: $("wName").value, steps }); };
 $("bHistory").onclick = () => send({ type: "sessions" });
-$("bLive").onclick = () => { past = null; $("pastBanner").classList.add("hidden"); drawAnalysis(); drawCourt(); };
+$("bLive").onclick = () => { past = null; $("pastBanner").classList.add("hidden"); drawAnalysis(); drawCourt(); drawShots(); };
 $("bPrint").onclick = printReport;
 $("bCopy").onclick = async () => {
   try { await navigator.clipboard.writeText(summaryText()); $("copyNote").textContent = "Copied."; }

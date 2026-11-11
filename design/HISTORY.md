@@ -261,3 +261,9 @@ that floats high over the net count?
    reads "(saved)".
 3. Quit the game and start it again: the drill plays at the saved value.
 4. RESET: everything back to the game's own values.
+
+**VR-94, ready to test: saved sessions keep their replays (ADR-024 amended).**
+1. Play a few minutes of any drill with the phone connected.
+2. Quit the game, start it again, and on the phone open HISTORY, then
+   that session.
+3. Under "Last shots", tap one: it replays as it did live.
