@@ -151,7 +151,7 @@ func _move() -> void:
 	var gz := _home_z()
 	if sim.drill:
 		gx = sim.drill.spot_x               # practice: back to your spot
-		gz = sim.drill.spot_z
+		gz = sim.drill.home_z()
 	if _incoming() and sim.phase == K.PHASE_LIVE:
 		# Replan now and then, as the CPUs do (the plan costs a flight's prediction).
 		var key := sim.shots * 4 + sim.bounce_count
@@ -165,7 +165,7 @@ func _move() -> void:
 				# Nothing to plan yet (the ball's not on its way): home, not a
 				# stale goal (it used to walk to (0, 0), the middle of the net).
 				_goal_x = sim.drill.spot_x if sim.drill else _lane_x()
-				_goal_z = sim.drill.spot_z if sim.drill else _home_z()
+				_goal_z = sim.drill.home_z() if sim.drill else _home_z()
 			elif sim.covers(slot, plan[1]):
 				_goal_x = plan[4]
 				_goal_z = plan[5]
@@ -181,12 +181,13 @@ func _move() -> void:
 	if sim.drill:
 		# Practice: step to the ball, but stay near your spot (a learner
 		# doesn't charge the net to volley the machine).
+		var hz := sim.drill.home_z()
 		var ox := gx - sim.drill.spot_x
-		var oz := gz - sim.drill.spot_z
+		var oz := gz - hz
 		var od := Fx.length(ox, 0, oz)
 		if od > DRILL_ROAM:
 			gx = sim.drill.spot_x + ox * DRILL_ROAM / od
-			gz = sim.drill.spot_z + oz * DRILL_ROAM / od
+			gz = hz + oz * DRILL_ROAM / od
 	var dx := gx - head_x
 	var dz := gz - head_z
 	var d := Fx.length(dx, 0, dz)
@@ -354,6 +355,9 @@ func _target(b: Ball) -> Array[int]:
 			return [sim.drill.target_x, sim.drill.target_z, soft_pace if soft else pace]
 		if sim.drill.resets:
 			return [0, os * K.KITCHEN_DEPTH * 8 / 10, soft_pace]
+		if sim.drill.drops and not sim.drill.following:
+			# THIRD SHOT DROPS: a soft, lofted ball from the baseline into their kitchen.
+			return [0, os * K.KITCHEN_DEPTH * 6 / 10, 60000]
 		match sim.drill.zone:
 			Drill.ZONE_KITCHEN: return [0, os * K.KITCHEN_DEPTH * 6 / 10, 40000]
 			Drill.ZONE_LEFT: return [-K.COURT_HALF_WIDTH / 2, os * (K.COURT_HALF_LENGTH - 1500000), pace]

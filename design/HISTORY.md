@@ -242,3 +242,15 @@ and any hitch when a drill starts.
 Look for: does the melody soothe or grate? Is the void calm or eerie, and
 is anything uncomfortable? Should it start sooner or later (TUNING > ZEN,
 debug builds)? Any hitch at 15 or 20 in a row?
+
+**VR-87, ready to test: THIRD SHOT DROPS (ADR-032).**
+1. PRACTICE PARTNER, DRILL THIRD SHOT DROPS. You start at your baseline.
+2. The partner feeds a deep return. Let it bounce (a volley is LET IT
+   BOUNCE), then drop it soft into their kitchen: DROPS IN A ROW counts it.
+3. Walk in. They dink one back to wherever you are; at your kitchen line
+   in time, AT THE LINE +1.
+4. Walk back to the baseline: the next return waits for you.
+
+Look for: is the walk in and back too much for your room (the stick helps)?
+Is the return's depth right at each level (TUNING > DROPS)? Should a drop
+that floats high over the net count?

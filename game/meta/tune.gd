@@ -10,7 +10,7 @@ class_name Tune
 extends RefCounted
 
 static var path := "user://tuning.cfg"   ## tests point it elsewhere
-const GROUPS := ["TARGETS", "KITCHEN", "DINKS", "HANDS", "RESETS", "VOLLEYS", "ATTACK", "PADDLE", "ZEN"]
+const GROUPS := ["TARGETS", "KITCHEN", "DINKS", "HANDS", "RESETS", "VOLLEYS", "ATTACK", "DROPS", "PADDLE", "ZEN"]
 const LEVELS := ["EASY", "MEDIUM", "HARD"]
 ## Units: how a raw value reads.
 const M := "m"                       ## um, as metres
@@ -51,6 +51,12 @@ const ALL := [
 	["float_medium", "VOLLEYS", "PACE MEDIUM", "res://sim/drill.gd", "FLOAT_PACE", 1, MPS, 1000, 15000, 90000],
 	["float_hard", "VOLLEYS", "PACE HARD", "res://sim/drill.gd", "FLOAT_PACE", 2, MPS, 1000, 15000, 90000],
 	["high", "ATTACK", "HIGH BALLS", "res://sim/drill.gd", "ATTACK_HIGH_PCT", -1, PCT, 5, 0, 100],
+	["drop_depth_easy", "DROPS", "DEPTH EASY", "res://sim/drill.gd", "DROP_DEPTH", 0, M, 100000, 300000, 4000000],
+	["drop_depth_medium", "DROPS", "DEPTH MEDIUM", "res://sim/drill.gd", "DROP_DEPTH", 1, M, 100000, 300000, 4000000],
+	["drop_depth_hard", "DROPS", "DEPTH HARD", "res://sim/drill.gd", "DROP_DEPTH", 2, M, 100000, 300000, 4000000],
+	["drop_pace_easy", "DROPS", "PACE EASY", "res://sim/drill.gd", "DROP_PACE", 0, MPS, 2000, 30000, 150000],
+	["drop_pace_medium", "DROPS", "PACE MEDIUM", "res://sim/drill.gd", "DROP_PACE", 1, MPS, 2000, 30000, 150000],
+	["drop_pace_hard", "DROPS", "PACE HARD", "res://sim/drill.gd", "DROP_PACE", 2, MPS, 2000, 30000, 150000],
 	["block", "PADDLE", "BLOCK KEEPS PACE", "res://sim/k.gd", "BLOCK_E_256", -1, PCT, 3, 0, 256],
 	["buzz", "PADDLE", "HIT VIBRATION", "res://view/match_view.gd", "HAPTIC_BASE", -1, PCT, 5, 0, 100],
 	["buzz_gain", "PADDLE", "VIBRATION PER 10 M/S", "res://view/match_view.gd", "HAPTIC_GAIN", -1, PCT, 5, 0, 100],

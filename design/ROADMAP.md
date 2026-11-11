@@ -171,7 +171,7 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
 | VR-84 | BRICK BREAK: breakout on the court, five levels, three balls (ADR-030) | `feature/cld-vr-brick-break` | Ready to test: the bot clears levels; a human in the headset next |
 | VR-85 | BRICK BREAK tuned in the headset | [#2](https://github.com/austinthedeveloper/pickleball-vr/issues/2) | Planned (v0.10) |
 | VR-86 | Coach and watch BRICK BREAK | [#3](https://github.com/austinthedeveloper/pickleball-vr/issues/3) | Planned (v0.10) |
-| VR-87 | THIRD SHOT DROPS drill | [#4](https://github.com/austinthedeveloper/pickleball-vr/issues/4) | Planned (v0.10) |
+| VR-87 | THIRD SHOT DROPS drill (ADR-032) | `feature/cld-vr-third-shot` ([#4](https://github.com/austinthedeveloper/pickleball-vr/issues/4)) | Ready to test: the bot plays every level; a human in the headset next |
 | VR-88 | Online: a third player is refused | `feature/cld-vr-online-fixes` ([#5](https://github.com/austinthedeveloper/pickleball-vr/issues/5)) | Done (test) |
 | VR-89 | Flat mode's FRIENDLY DINK help line says SHIFT DRIVE | `feature/cld-vr-online-fixes` ([#6](https://github.com/austinthedeveloper/pickleball-vr/issues/6)) | Done (test) |
 | VR-90 | Release builds on Meta's ALPHA channel | [#7](https://github.com/austinthedeveloper/pickleball-vr/issues/7) | Planned (v0.10) |
@@ -257,8 +257,8 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
   return (pace, depth) and the assist on what you find.
 - **VR-65:** friends on Meta's ALPHA channel. It waits on your Meta
   developer account (`design/TEST_CHANNEL.md`).
-- **THIRD SHOT DROPS (VR-87):** the one kitchen drill not built yet
-  (`design/KITCHEN_DRILLS.md`).
+- **THIRD SHOT DROPS (VR-87):** built; your session in the headset (the
+  walk in and back, the return's depth).
 - **The rest of M1 (v0.10):** coaching BRICK BREAK (VR-86), saved
   replays (VR-94), SAVE AS DEFAULT (VR-95), Windows checked (VR-96).
 - **VR-17:** more venues (DINOSAUR, UNDERSEA, TIME of day), now VR-97..99

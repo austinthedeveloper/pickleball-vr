@@ -14,7 +14,7 @@ const CHALLENGES := {"streak": "%d / %d IN A ROW", "board": "%d / %d IN A ROW ON
 ## The TUNING groups a drill's sliders come from (C-11).
 const SLIDERS := {Drill.KIND_DINKS: ["DINKS"], Drill.KIND_HANDS: ["HANDS"], Drill.KIND_RESETS: ["RESETS"],
 	Drill.KIND_SPOTS: ["DINKS", "TARGETS"], Drill.KIND_LANES: ["DINKS"], Drill.KIND_VOLLEYS: ["VOLLEYS", "TARGETS"],
-	Drill.KIND_ATTACK: ["ATTACK", "DINKS"]}
+	Drill.KIND_ATTACK: ["ATTACK", "DINKS"], Drill.KIND_DROPS: ["DROPS"]}
 const LEVEL_IDS := ["_easy", "_medium", "_hard"]
 
 var main: Node                       ## scenes/main.gd: settings, view, _start, _on_pause, _on_pressed

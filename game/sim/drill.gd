@@ -87,9 +87,10 @@ const KIND_SPOTS := 3                ## CALL THE SPOT: dink to the spot that lig
 const KIND_LANES := 4                ## LINE AND CROSS: only one half of their kitchen counts
 const KIND_VOLLEYS := 5              ## VOLLEY DINKS: take floaters out of the air, to a spot
 const KIND_ATTACK := 6               ## ATTACK OR DINK: speed up the high ones, dink the rest
+const KIND_DROPS := 7                ## THIRD SHOT DROPS: from your baseline into their kitchen (ADR-032)
 const KIND_NAMES := ["DINKS", "HANDS", "RESETS", "CALL THE SPOT", "LINE AND CROSS", "VOLLEY DINKS",
-	"ATTACK OR DINK"]
-const KIND_COUNTS := ["DINKS", "HANDS", "RESETS", "SPOTS", "LANES", "VOLLEYS", "GOOD CALLS"]
+	"ATTACK OR DINK", "THIRD SHOT DROPS"]
+const KIND_COUNTS := ["DINKS", "HANDS", "RESETS", "SPOTS", "LANES", "VOLLEYS", "GOOD CALLS", "DROPS"]
 ## CALL THE SPOT: the spot is a dartboard (ADR-019) this big, and when it
 ## lights: EASY as they hit, MEDIUM as the ball crosses the net, HARD as it
 ## bounces on your side.
@@ -161,6 +162,18 @@ const RESET_SPOT_Z := K.KITCHEN_DEPTH + 1800000   ## mid-court, about 3.9 m from
 static var RESET_PACE := [75000, 92000, 108000]
 const RESET_HEIGHT := 550000         ## at you: shins to hips, give or take 20 cm
 static var POPUP_OVER := [600000, 450000, 300000]
+## THIRD SHOT DROPS (ADR-032): you at your baseline, the partner at their
+## kitchen line feeding a deep return. Drop it into their dink zone and
+## follow it in: they dink one ball back to wherever you've got to, a
+## point more if you're at your kitchen line by then. That ball doesn't
+## count either way; the next deep one comes once you're back.
+## DIFFICULTY is the return's depth (in from your baseline: 2, 1.4, 0.9 m)
+## and pace (7.4, 8.6, 9.8 m/s).
+const DROP_SPOT_Z := K.COURT_HALF_LENGTH - 300000
+static var DROP_DEPTH := [2000000, 1400000, 900000]
+static var DROP_PACE := [62000, 72000, 82000]
+const DROP_LINE := K.KITCHEN_DEPTH + 900000   ## this close to your kitchen line: you made it in
+const DROP_BACK := K.COURT_HALF_LENGTH - 1500000   ## the next return waits till you're back this far
 ## A dink's difficulty is how low it skims the tape: EASY floats 60 cm
 ## over it (slow, a big bounce), HARD skims 12 cm (fast and low).
 const PARTNER_CLEAR := [600000, 300000, K.NET_CLEAR]
@@ -207,6 +220,8 @@ var lanes: bool:
 	get: return kind == KIND_LANES
 var attack: bool:
 	get: return kind == KIND_ATTACK
+var drops: bool:
+	get: return kind == KIND_DROPS
 var spread := 1
 var targets := false                 ## floor targets on
 var goal := 0                        ## good returns to finish; 0 runs forever
@@ -268,6 +283,8 @@ var lane_cross := false              ## LINE AND CROSS: this ball's lane is the 
 var high_ball := false               ## ATTACK OR DINK: this one is up to put away
 var you_fast := false                ## ATTACK OR DINK: your last ball was a speed-up
 var rally := 0                       ## DINK PARTNER: your hits back this rally
+var following := false               ## THIRD SHOT DROPS: the dink back after a good drop (it doesn't count)
+var at_line := 0                     ## THIRD SHOT DROPS: times you'd reached your line for it
 var best_rally := 0
 
 
@@ -361,6 +378,8 @@ func update(sim: Sim, tossed: bool) -> void:
 			_partner_home(sim)
 	match stage:
 		WAIT:
+			if drops and p.z < DROP_BACK and sim.tick >= next_feed:
+				next_feed = sim.tick + 1         # walk back to your baseline for the next one
 			if sim.tick >= next_feed:
 				if shot == SHOT_SERVE:
 					_serve_ready(sim)
@@ -478,8 +497,8 @@ func _fly(sim: Sim, p: SimTypes.Player) -> void:
 	sim.emit(K.EVENT_HIT, 0, sim.ball.speed(), 1 if volley else 0)
 	sim.last_hitter = 0
 	sim.bounce_count = 0
-	if volley and rules & RULE_NO_VOLLEY:
-		_result(sim, RESULT_VOLLEY)
+	if volley and (rules & RULE_NO_VOLLEY or drops and not following):
+		_result(sim, RESULT_VOLLEY)      # THIRD SHOT DROPS: the return must bounce first
 	elif not volley and rules & RULE_VOLLEY:
 		_result(sim, RESULT_BOUNCE)
 	elif volley and rules & RULE_KITCHEN and in_kitchen(p):
@@ -534,7 +553,7 @@ func _return(sim: Sim) -> void:
 		r = RESULT_ZONE
 	elif rules & RULE_TOPSPIN and not _topspin(sim.ball):
 		r = RESULT_SPIN
-	if resets or attack and you_fast:
+	if resets or attack and you_fast or drops and (following or r != RESULT_GOOD):
 		_result(sim, r)                  # a fresh ball: a reset's a feed loop, a speed-up ends it
 		return
 	if partner:
@@ -621,6 +640,14 @@ func _serving(sim: Sim, p: SimTypes.Player, tossed: bool) -> void:
 
 
 func _result(sim: Sim, r: int, rally_on := false) -> void:
+	if following:
+		# THIRD SHOT DROPS: the dink back is only to come in on; whatever
+		# you do with it, the next deep return (from your baseline).
+		following = false
+		rally = 0
+		stage = WAIT
+		next_feed = sim.tick + MIN_GAP * 2
+		return
 	last_result = r
 	if targets and last_ring == 0 and hit_at > fed_at:
 		_new_target(sim)                 # missed it: somewhere new to try (ADR-019)
@@ -704,6 +731,12 @@ func _partner_dink(sim: Sim, x: int, y: int, z: int) -> void:
 		return
 	if resets:
 		_partner_drive(sim, x, y, z)
+		return
+	if drops:
+		if stage == PARTNER:
+			_partner_follow(sim, x, y, z)
+		else:
+			_partner_deep(sim, x, y, z)
 		return
 	var level := clampi(partner_pace, 0, 2)
 	var clear: int = PARTNER_CLEAR[level]
@@ -945,6 +978,69 @@ func _partner_drive(sim: Sim, x: int, y: int, z: int) -> void:
 	sim.emit(K.EVENT_HIT, 2, b.speed(), 0)
 
 
+## THIRD SHOT DROPS: a deep return to your baseline, to your forehand,
+## backhand or body as SPREAD has it.
+func _partner_deep(sim: Sim, x: int, y: int, z: int) -> void:
+	var p := sim.players[0]
+	var level := clampi(partner_pace, 0, 2)
+	var r: Array = SPREADS[clampi(spread, 0, SPREADS.size() - 1)]
+	var off: int = r[0] + sim.random(r[1] - r[0] + 1)
+	if sim.random(100) < 30:
+		off = sim.random(150001)
+	var tx := clampi(p.x + (off if sim.random(2) == 0 else -off), -K.COURT_HALF_WIDTH + 300000,
+		K.COURT_HALF_WIDTH - 300000)
+	var tz: int = K.COURT_HALF_LENGTH - DROP_DEPTH[level] + sim.scatter(200000)
+	following = false
+	_launch(sim, x, y, z, tx, tz, DROP_PACE[level], 250000, 600000)
+	sim.required_bounce = K.REQUIRED_BOUNCE_SERVE   # the two-bounce rule: let the return bounce
+	sim.serving_team = 1                 # ...judged as a serve from their side, as the machine's are
+
+
+## THIRD SHOT DROPS: your drop was good: the partner dinks one back about a
+## metre in front of wherever you are, and if you've reached your line, a
+## point (a board-like +1).
+func _partner_follow(sim: Sim, x: int, y: int, z: int) -> void:
+	var p := sim.players[0]
+	following = true
+	if p.z <= DROP_LINE:
+		at_line += 1
+		points += 1
+		sim.emit(K.EVENT_TARGET, p.x, p.z, 1)
+	var tz := clampi(p.z - 1000000 + sim.scatter(200000), 600000, K.COURT_HALF_LENGTH - 800000)
+	_launch(sim, x, y, z, p.x + sim.scatter(300000), tz, PARTNER_PACE[clampi(partner_pace, 0, 2)], -150000,
+		PARTNER_CLEAR[clampi(partner_pace, 0, 2)])
+
+
+## The partner's shot from (x, y, z), landing at (tx, tz) on your side.
+func _launch(sim: Sim, x: int, y: int, z: int, tx: int, tz: int, pace: int, spin: int, clear: int) -> void:
+	var q := sim.players[2]
+	tx = clampi(tx, -K.COURT_HALF_WIDTH + 300000, K.COURT_HALF_WIDTH - 300000)
+	var w := Aim.topspin(tx - x, tz - z, spin)
+	var v := Aim.shot(x, maxi(y, K.BALL_RADIUS), z, tx, tz, pace, w, clear)
+	var b := sim.ball
+	b.place(x, maxi(y, K.BALL_RADIUS), z)
+	b.launch(v[0], v[1], v[2])
+	b.set_spin(w[0], w[1], w[2])
+	aim_x = tx
+	sim.required_bounce = K.REQUIRED_BOUNCE_NONE
+	sim.last_hitter = 2
+	sim.bounce_count = 0
+	bounces = 0
+	feeds += 1
+	fed_at = sim.tick
+	q.swing_tick = sim.tick
+	stage = FLY
+	sim.emit(K.EVENT_HIT, 2, b.speed(), 0)
+
+
+## Where you play this drill from now: your spot, or (THIRD SHOT DROPS,
+## once your drop is away) your kitchen line. The bot goes there.
+func home_z() -> int:
+	if drops and (stage == RETURN and not following or stage == PARTNER or following):
+		return K.KITCHEN_DEPTH + 300000
+	return spot_z
+
+
 ## VOLLEY DINKS: a soft floater that passes you about waist high at your
 ## kitchen line (it would land behind you): take it out of the air.
 func _partner_floater(sim: Sim, x: int, y: int, z: int) -> void:
@@ -1171,4 +1267,5 @@ func snapshot() -> Array:
 		1 if partner else 0, kind, lane, toss_at, 1 if spot_lit else 0, spot_i, 1 if lane_cross else 0,
 		1 if high_ball else 0, 1 if you_fast else 0, points, last_ring, last_off, target_side, time_limit, ends_at,
 		1 if target_pinned else 0, 1 if feed_set else 0, feed_x, feed_z,
-		1 if coach_feed else 0, machine_x, bounce_x, bounce_z, feed_pace, feed_spin, feed_clear, feed_every]
+		1 if coach_feed else 0, machine_x, bounce_x, bounce_z, feed_pace, feed_spin, feed_clear, feed_every,
+		1 if following else 0, at_line]

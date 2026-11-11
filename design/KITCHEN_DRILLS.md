@@ -28,7 +28,7 @@ LINE, CROSS, or ALTERNATE (line, cross, line...).
 - Teaches: changing direction, and the cross-court dink's longer, safer
   path.
 
-## 3. THIRD SHOT DROPS
+## 3. THIRD SHOT DROPS (built: ADR-032)
 
 You start at your baseline. The partner, at their kitchen line, feeds a
 deep return. Drop it into their kitchen, then follow it in. They dink

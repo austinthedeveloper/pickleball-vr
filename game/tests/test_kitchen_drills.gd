@@ -251,3 +251,98 @@ func test_leaning_over_the_kitchen_line_is_not_a_fault() -> void:
 	check(not d.in_kitchen(p), "head 30 cm over the line: leaning, not in")
 	p.z = K.KITCHEN_DEPTH - 600000
 	check(d.in_kitchen(p), "head 60 cm in: you stepped in")
+
+
+# --- THIRD SHOT DROPS (ADR-032) ------------------------------------------------
+
+func test_third_shot_drops_is_playable() -> void:
+	for level in 3:
+		var m := _drill(Drill.KIND_DROPS, level)
+		var sim: Sim = m[0]
+		eq(sim.players[0].z, Drill.DROP_SPOT_Z, "you start at your baseline")
+		_run(m, 12000)
+		var d := sim.drill
+		check(d.good >= 10 and d.best >= 5, "%s: %d good, best %d" % [Drill.PACE_NAMES[level], d.good, d.best])
+		check(d.at_line >= d.good / 2, "the bot gets to its line for the dink back: %d of %d" % [d.at_line, d.good])
+		eq(d.points, d.at_line, "a point for each time at the line")
+
+
+func test_the_deep_return_lands_deeper_each_level() -> void:
+	var depth := []
+	for level in 3:
+		var m := _drill(Drill.KIND_DROPS, level)
+		var sim: Sim = m[0]
+		var bot: Bot = m[1]
+		var deep := 0
+		var n := 0
+		for i in 6000:
+			sim.step([bot.input()])
+			for e in sim.drain_events():
+				# The partner's first bounce on your side, from a deep return.
+				if e[0] == K.EVENT_BOUNCE and e[2] > K.KITCHEN_DEPTH and not sim.drill.following \
+						and sim.last_hitter == 2 and sim.drill.bounces == 1:
+					deep += e[2]
+					n += 1
+		check(n >= 5, "%s: deep returns seen (%d)" % [Drill.PACE_NAMES[level], n])
+		depth.append(deep / maxi(n, 1))
+	check(depth[0] < depth[1] and depth[1] < depth[2], "deeper each level: %s" % str(depth))
+
+
+func test_the_dink_back_never_counts() -> void:
+	var m := _drill(Drill.KIND_DROPS, 1)
+	var sim: Sim = m[0]
+	var bot: Bot = m[1]
+	var results := 0
+	var deep := 0
+	var follows := 0
+	for i in 9000:
+		sim.step([bot.input()])
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_HIT and e[1] == 2:
+				if sim.drill.following:
+					follows += 1
+				else:
+					deep += 1
+			if e[0] == K.EVENT_DRILL:
+				results += 1
+	check(follows >= 5, "the partner dinks back after good drops (%d)" % follows)
+	check(results == deep or results == deep - 1, "a result for each deep return (%d of %d), none for the %d dinks back" % [results, deep, follows])
+
+
+func test_a_volleyed_return_is_called() -> void:
+	var m := _drill(Drill.KIND_DROPS, 1)
+	var sim: Sim = m[0]
+	var bot: Bot = m[1]
+	var deep := 0
+	for i in 3000:
+		sim.step([bot.input()])
+		for e in sim.drain_events():
+			if e[0] == K.EVENT_DRILL:
+				check(e[1] != Drill.RESULT_VOLLEY, "the bot lets the return bounce")
+	eq(sim.required_bounce == K.REQUIRED_BOUNCE_SERVE or sim.drill.following or sim.drill.stage != Drill.FLY, true,
+		"a deep return in the air wants its bounce")
+
+
+func test_the_next_return_waits_till_youre_back() -> void:
+	var m := _drill(Drill.KIND_DROPS, 1)
+	var sim: Sim = m[0]
+	sim.players[0].z = K.KITCHEN_DEPTH + 300000          # stood at the kitchen line
+	var h := SimTypes.HumanInput.new()
+	h.head_x = 0
+	h.head_z = sim.players[0].z
+	h.paddle_y = -1000000                               # paddle down: never hits
+	for i in Drill.FIRST_FEED + 300:
+		sim.step([h])
+	eq(sim.drill.feeds, 0, "no return while you're at the net")
+	h.head_z = Drill.DROP_SPOT_Z
+	for i in 400:
+		sim.step([h])
+	check(sim.drill.feeds >= 1, "back at the baseline: here it comes")
+
+
+func test_third_shot_drops_is_deterministic() -> void:
+	var a := _drill(Drill.KIND_DROPS, 2)
+	var b := _drill(Drill.KIND_DROPS, 2)
+	_run(a, 3000)
+	_run(b, 3000)
+	eq((a[0] as Sim).snapshot(), (b[0] as Sim).snapshot(), "same run")
