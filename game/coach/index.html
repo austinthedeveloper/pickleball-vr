@@ -235,8 +235,9 @@
   </div>
 
   <div class="card">
-    <div class="bar" style="margin-bottom:4px"><h2 style="margin:0">Pace and size, live</h2><button class="small" id="bTuneReset">RESET</button></div>
+    <div class="bar" style="margin-bottom:4px"><h2 style="margin:0">Pace and size, live</h2><span><button class="small go" id="bTuneSave">SAVE AS DEFAULT</button> <button class="small" id="bTuneReset">RESET</button></span></div>
     <div id="sliders" class="muted">—</div>
+    <div class="muted" style="font-size:12px;margin-top:6px">Live for this session. SAVE AS DEFAULT keeps them for every session; RESET puts them all back.</div>
   </div>
 
   <div class="card">
@@ -663,7 +664,7 @@ function drawSliders(list) {
   list.forEach((t) => {
     const inp = $("tr_" + t.id);
     if (document.activeElement !== inp) inp.value = t.value;
-    $("tv_" + t.id).textContent = title(t.text) + (t.value !== t.default ? " *" : "");
+    $("tv_" + t.id).textContent = title(t.text) + (t.saved ? " (saved)" : t.value !== t.default ? " *" : "");
   });
 }
 
@@ -1160,6 +1161,7 @@ $("cueText").addEventListener("keydown", (e) => { if (e.key === "Enter") $("bCue
 $("bChallenge").onclick = () => send({ type: "challenge", kind: $("chKind").value, n: parseInt($("chN").value, 10) || 5 });
 $("bChallengeClear").onclick = () => send({ type: "challenge_clear" });
 $("bTuneReset").onclick = () => send({ type: "tune_reset" });
+$("bTuneSave").onclick = () => send({ type: "tune_save" });
 $("bAddStep").onclick = () => {
   if (!state) return;
   const u = state.setup;

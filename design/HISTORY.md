@@ -254,3 +254,10 @@ debug builds)? Any hitch at 15 or 20 in a row?
 Look for: is the walk in and back too much for your room (the stick helps)?
 Is the return's depth right at each level (TUNING > DROPS)? Should a drop
 that floats high over the net count?
+
+**VR-95, ready to test: SAVE AS DEFAULT (ADR-024 amended).**
+1. COACH MODE on, the phone connected, a PRACTICE PARTNER drill running.
+2. Move a slider under "Pace and size, live", then SAVE AS DEFAULT. It
+   reads "(saved)".
+3. Quit the game and start it again: the drill plays at the saved value.
+4. RESET: everything back to the game's own values.

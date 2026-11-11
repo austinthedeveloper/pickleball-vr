@@ -439,6 +439,18 @@ func handle(msg: Dictionary) -> void:
 				v.command(machine_command(s.coach_machine))
 		"tune_reset":
 			Tune.reset()
+			s.coach_defaults = {}            # RESET forgets the saved ones too (VR-95)
+			s.save()
+		"tune_save":
+			# SAVE AS DEFAULT (VR-95): this drill's sliders at their level, kept
+			# for every session; one back at the source's value is forgotten.
+			for t in _sliders():
+				var id: String = t["id"]
+				if int(t["value"]) == int(t["default"]):
+					s.coach_defaults.erase(id)
+				else:
+					s.coach_defaults[id] = int(t["value"])
+			s.save()
 		"challenge":
 			var kind := String(msg.get("kind", ""))
 			if CHALLENGES.has(kind):
@@ -640,5 +652,6 @@ func _sliders() -> Array:
 			if id in ["inner", "bull", "hold"]:
 				continue                     # not for a live slider
 			out.append({"id": id, "label": e[2], "value": Tune.value(id), "min": e[8], "max": e[9], "step": e[7],
-				"text": Tune.text(id, Tune.value(id)), "default": Tune.default_of(id)})
+				"text": Tune.text(id, Tune.value(id)), "default": Tune.default_of(id),
+				"saved": s.coach_defaults.has(id) and int(s.coach_defaults[id]) == Tune.value(id)})
 	return out
