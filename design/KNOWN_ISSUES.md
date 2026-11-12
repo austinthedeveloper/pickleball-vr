@@ -57,3 +57,6 @@
     a few draws more than the PARK (UNDERSEA: kelp's vertex shader, four
     bubble emitters, the light over the court). They want a PERF check,
     as VR-104 plans for every venue.
+17. **NIGHT is unseen in the headset** (ADR-033). The floodlights' strength
+    and angle, the cool fill and whether your paddle's face reads at night
+    are tuned on Mac screenshots only.

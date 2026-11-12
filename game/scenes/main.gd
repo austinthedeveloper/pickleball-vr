@@ -109,6 +109,7 @@ func _page(id: String) -> Menu3D:
 			m.add_row("mode", "MODE", MODES, 1 if settings.doubles else 0)
 			m.add_row("vs", "VS", Opponents.names(), settings.opponent)
 			m.add_row("venue", "VENUE", ["HOME"] + Venues.NAMES, settings.venue)
+			m.add_row("tod", "TIME", World.TIMES, settings.time_of_day)
 			m.add_row("difficulty", "DIFFICULTY", DIFFICULTIES, settings.difficulty)
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
 			m.add_row("points", "POINTS", POINTS, settings.points)
@@ -123,6 +124,7 @@ func _page(id: String) -> Menu3D:
 			m.add_row("target", "TARGET", Drill.TARGET_NAMES, settings.machine_target)
 			m.add_row("machine_at", "MACHINE AT", Drill.AT_NAMES, settings.machine_at)
 			m.add_row("rate", "RATE", Drill.RATE_NAMES, settings.machine_rate)
+			m.add_row("tod", "TIME", World.TIMES, settings.time_of_day)
 			m.add_row("zone", "RETURN TO", Drill.ZONE_NAMES, settings.machine_zone)
 			m.add_row("targets", "TARGETS", OFF_ON, 1 if settings.machine_targets else 0)
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
@@ -142,6 +144,7 @@ func _page(id: String) -> Menu3D:
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
 			m.add_row("ptime", "MODE", Drill.TIME_NAMES, settings.partner_time)
 			m.add_row("plook", "PARTNER LOOK", Settings.PARTNER_LOOKS, settings.partner_look)
+			m.add_row("tod", "TIME", World.TIMES, settings.time_of_day)
 			m.add_row("pstart", "START")
 			m.add_row("to_records", "RECORDS")
 			m.add_row("back", "BACK")
@@ -243,6 +246,7 @@ func _on_changed(id: String, index: int) -> void:
 		"mode": settings.doubles = index == 1
 		"vs": settings.opponent = index
 		"venue": settings.venue = index
+		"tod": settings.time_of_day = index
 		"difficulty": settings.difficulty = index
 		"assist": settings.assist = index
 		"points": settings.points = index
@@ -293,7 +297,7 @@ func _on_changed(id: String, index: int) -> void:
 		"blevel": settings.breakout_level = index
 	settings.save()
 	if id in ["mode", "vs", "venue", "hand", "passthrough", "angle", "profile", "twist", "turn", "reach", "shot", "target", "zone", "machine_at", "speed",
-			"targets", "level", "ptargets", "side", "spread", "drill", "lane", "plook", "blevel"]:
+			"targets", "level", "ptargets", "side", "spread", "drill", "lane", "plook", "blevel", "tod"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
 

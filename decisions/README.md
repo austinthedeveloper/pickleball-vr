@@ -38,5 +38,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [030](ADR-030-brick-break.md) | BRICK BREAK: breakout on the court |
 | [031](ADR-031-zen.md) | ZEN: a long rally goes deeper (HUSH and DRIFT) |
 | [032](ADR-032-third-shot-drops.md) | THIRD SHOT DROPS: the transition drill |
+| [033](ADR-033-time-of-day.md) | TIME OF DAY, and the court under lights at night |
 
-Next: ADR-033.
+Next: ADR-034.
