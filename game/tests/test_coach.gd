@@ -274,7 +274,7 @@ func test_sessions_and_players() -> void:
 	main.desk.session.save()
 	var full := Sessions.read(String(list[0]["id"]))
 	eq((full["shots"] as Array).size(), 7, "all of them")
-	check(not (full["shots"][0] as Dictionary).has("path"), "replay paths stay live")
+	eq(full["shots"][0]["path"], [[0.0, 1.0, 0.0]], "the replay comes back (VR-94)")
 	main._on_coach({"type": "player", "name": "ann"})
 	eq(main.settings.player, "ANN", "a new player")
 	check(main.settings.players.has("PLAYER 1") and main.settings.players.has("ANN"), "both kept")
@@ -287,6 +287,38 @@ func test_sessions_and_players() -> void:
 	check(not main.settings.records.has("X 1 MIN"), "records are each player's own")
 	main.queue_free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
+
+
+## A shot as the view sends it: the ball to you and back, a point every 3 ticks.
+func _flight_shot(i: int) -> Dictionary:
+	var into: Array = []
+	var out: Array = []
+	for k in 40:
+		into.append([snappedf(0.3 + k * 0.01, 0.01), snappedf(0.5 + sin(k * 0.1) * 0.6, 0.01), snappedf(-2.0 + k * 0.12, 0.01)])
+	for k in 45:
+		out.append([snappedf(0.7 - k * 0.02, 0.01), snappedf(0.8 + sin(k * 0.08) * 0.5, 0.01), snappedf(2.8 - k * 0.13, 0.01)])
+	return {"type": "shot", "good": i % 3 != 0, "result": "GOOD!", "mode": "DINKS MEDIUM", "speed": 4.2,
+		"height": 0.62, "clear": 0.24, "side": "FH", "in_path": into, "path": out, "me": [0.3, 2.4]}
+
+
+func test_a_saved_shot_replays() -> void:
+	var shot := _flight_shot(1)
+	var back := Sessions.unpack(JSON.parse_string(JSON.stringify(Sessions.pack(shot))))
+	eq(back["every"], 6, "6 ticks a point once saved")
+	eq((back["in_path"] as Array).size(), 21, "every other point to you (and the last)")
+	eq((back["path"] as Array).size(), 23, "...and from you")
+	eq(back["path"][-1], shot["path"][-1], "the last point kept exactly")
+	eq(back["in_path"][3], shot["in_path"][6], "points in cm, as they were")
+	eq(back["speed"], shot["speed"], "the numbers untouched")
+	check(not back.has("rp"), "unpacked")
+
+
+func test_saved_replays_stay_small() -> void:
+	var s := Sessions.start("SIZE")
+	for i in 300:
+		s.shots.append(Sessions.pack(_flight_shot(i)))
+	var size := JSON.stringify({"summary": s.summary(), "shots": s.shots}).length()
+	check(size < 300000, "300 shots with replays: %d KB (60 sessions: %d MB)" % [size / 1024, size * Sessions.KEEP / 1048576])
 
 
 func test_old_records_go_to_the_first_player() -> void:

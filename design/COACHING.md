@@ -30,7 +30,7 @@ deterministic: a rally can be re-run exactly.
 | C-14 | Draw on the court | Built | Zones and lines, glowing cyan on the floor; kept across drills until cleared |
 | C-15 | Automatic insights | Built | From the shots: clearance, the weak side, low contact, hard hands, paddle up, standing back, distance off the board |
 | C-16 | Shareable session report | Built | Print / save as PDF (placement, breakdown, insights), or copy a text summary |
-| C-17 | Rally replay | Built | Tap a shot: the ball in and out, from above and the side, about real time. Live session only |
+| C-17 | Rally replay | Built | Tap a shot: the ball in and out, from above and the side, about real time. A past session's shots too (VR-94) |
 | C-18 | Player profiles | Built | Each player's own records and sessions; records from before go to PLAYER 1 |
 | C-19 | Two coaches or a parent watching | Built | Several phones can connect at once already |
 | C-20 | Remote coaching over the internet | Built | COACH FROM ANYWHERE: the headset opens a room on the relay shared with the port kit (Azure Container Apps, about $0 a month) and sends it the page; the coach opens the relay, types the room, then the code. HTTPS there makes HOLD TO TALK work on iPhones. ADR-026; `../pickleball-port-kit/design/RELAY.md` |
@@ -47,8 +47,8 @@ step, a replay, history, and a past session opened. `test_coach` covers
 them.
 
 Known limits:
-- Replays are only for the session open on the phone. The saved
-  sessions keep the numbers, not the ball paths.
+- Saved sessions keep each shot's replay (VR-94), at half the points
+  (6 ticks apart), so a 300-shot session stays under 300 KB.
 - Sliders change values for this session; SAVE AS DEFAULT keeps them for
   every session, in any build (VR-95). RESET forgets them.
 - A workout's steps are PRACTICE PARTNER drills, each timed.
