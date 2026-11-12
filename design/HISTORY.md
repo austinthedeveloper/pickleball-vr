@@ -275,3 +275,11 @@ that floats high over the net count?
 3. Pause: the tablet shows the same numbers, nothing to tap.
 4. On the Mac, WATCH A PLAYER: you see the wall and the bricks fall as
    they do in the headset. A silly ball from the phone shows up.
+
+**VR-97, VR-98, ready to test: DINOSAUR and UNDERSEA (ADR-008 amended).**
+1. MATCH SETUP, VENUE DINOSAUR (or play the GYM BROS on HOME): the jungle,
+   the volcano, the dinosaur past the fence on your right.
+2. VENUE UNDERSEA (or the SURF CREW): the seabed, kelp, bubbles, light
+   rippling over the court, the water closing in past it.
+Look for: is the kelp's sway comfortable? Is the court easy to read
+against the sand? Any stutter (known issue 16)?

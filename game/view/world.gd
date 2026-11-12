@@ -7,9 +7,9 @@ extends Node3D
 
 ## The port kit's presets (court_colors.json), 0-255.
 const SURFACES := {"BLUE": [38, 92, 168], "NAVY": [34, 52, 112], "GREEN": [46, 122, 72],
-	"PURPLE": [96, 64, 140], "CLAY": [176, 84, 52], "AQUA": [20, 130, 140]}
+	"PURPLE": [96, 64, 140], "CLAY": [176, 84, 52], "AQUA": [20, 130, 140], "ORANGE": [196, 92, 28]}
 const SURROUNDS := {"GRASS": [86, 150, 70], "BRICK": [150, 70, 50], "ASPHALT": [70, 72, 78],
-	"MAPLE": [216, 168, 104], "PARK": [51, 115, 77]}
+	"MAPLE": [216, 168, 104], "PARK": [51, 115, 77], "SAND": [226, 204, 150]}
 const LINES := {"WHITE": [245, 245, 240], "CYAN": [120, 240, 255]}
 
 ## Each venue: its court (the port kit's venues.json grounds), the ground
@@ -25,7 +25,15 @@ const VENUES := [
 		"ground": [200, 156, 98], "sky": "indoor", "ambience": "gym"},
 	{"surface": "NAVY", "kitchen": "PURPLE", "surround": "ASPHALT", "lines": "CYAN",
 		"ground": [88, 88, 96], "sky": "space", "ambience": "space"},
+	{"surface": "GREEN", "kitchen": "ORANGE", "surround": "GRASS", "lines": "WHITE",
+		"ground": [58, 98, 40], "sky": "jungle", "ambience": "dinosaur"},
+	{"surface": "AQUA", "kitchen": "NAVY", "surround": "SAND", "lines": "WHITE",
+		"ground": [176, 160, 116], "sky": "undersea", "ambience": "undersea"},
 ]
+## UNDERSEA's water: the haze it fades into, from FOG_NEAR to solid at FOG_FAR.
+const WATER := Color(0.05, 0.27, 0.36)
+const WATER_NEAR := 16.0
+const WATER_FAR := 70.0
 
 const FENCE := Color(0.10, 0.16, 0.12, 0.18)
 
@@ -51,6 +59,11 @@ var _line_base: Array[Color] = []
 var _focus_k := 1.0
 var _drift := 0.0
 var _void := Color.BLACK
+## The venue's own fog (UNDERSEA's water), which ZEN's void takes over from.
+var _fog_begin := 1000.0
+var _fog_end := 2000.0
+var _fog_color := Color.BLACK
+var _shaders: Array[ShaderMaterial] = []   ## scenery shaders that dim with FOCUS ("dim")
 
 
 ## um to metres, in Godot's axes (the sim's are the same).
@@ -118,6 +131,13 @@ func _ready() -> void:
 		Venues.SPACE:
 			_fences(hw + 3, hl + 4, Color(0.4, 0.95, 1.0, 0.12))
 			_stars()
+		Venues.DINOSAUR:
+			_fences(hw + 3, hl + 4, Color(0.3, 0.2, 0.1, 0.25))
+			_trees(26, 15.0, 27.0, true)
+			_jungle()
+		Venues.UNDERSEA:
+			_glass_fences(hw + 3, hl + 4, Color(0.6, 0.95, 1.0, 0.1))
+			_seabed(hw, hl)
 		_:
 			_fences(hw + 3, hl + 4, FENCE)
 			_trees(28, 16.0, 26.0, false)
@@ -146,7 +166,7 @@ func _sky(kind: String) -> void:
 		e.ambient_light_energy = 0.6
 		sun.rotation_degrees = Vector3(-70, -20, 0)
 		sun.light_energy = 0.75
-	elif kind == "indoor" or kind == "space":
+	elif kind == "indoor" or kind == "space" or kind == "undersea":
 		e.background_mode = Environment.BG_COLOR
 		e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 		if kind == "indoor":
@@ -155,6 +175,14 @@ func _sky(kind: String) -> void:
 			e.ambient_light_energy = 0.55
 			sun.rotation_degrees = Vector3(-88, 0, 0)    # the hall's lights, straight down
 			sun.light_energy = 0.8
+		elif kind == "undersea":
+			# Under water: the light from above, blue-green and soft.
+			e.background_color = WATER
+			e.ambient_light_color = Color(0.45, 0.75, 0.85)
+			e.ambient_light_energy = 0.45
+			sun.rotation_degrees = Vector3(-80, 20, 0)
+			sun.light_color = Color(0.62, 0.88, 1.0)
+			sun.light_energy = 0.62
 		else:
 			e.background_color = Color(0.0, 0.0, 0.02)
 			e.ambient_light_color = Color(0.55, 0.6, 0.85)
@@ -172,6 +200,12 @@ func _sky(kind: String) -> void:
 		if kind == "lake":
 			mat.sky_top_color = Color(0.22, 0.48, 0.88)
 			mat.sky_horizon_color = Color(0.74, 0.86, 0.95)
+		elif kind == "jungle":
+			# Humid and hazy, a warm sun through it.
+			mat.sky_top_color = Color(0.34, 0.55, 0.6)
+			mat.sky_horizon_color = Color(0.8, 0.84, 0.7)
+			mat.ground_horizon_color = Color(0.4, 0.5, 0.3)
+			sun.light_color = Color(1.0, 0.94, 0.8)
 		elif kind == "sunset":
 			mat.sky_top_color = Color(0.32, 0.22, 0.5)
 			mat.sky_horizon_color = Color(1.0, 0.55, 0.3)
@@ -192,10 +226,15 @@ func _sky(kind: String) -> void:
 	# ZEN's void (ADR-031) is depth fog past the court. It's on from the
 	# start, pushed out of sight, so DRIFT never compiles a shader mid-rally.
 	if kind != "passthrough":
+		if kind == "undersea":
+			_fog_begin = WATER_NEAR          # the water closes in past the court
+			_fog_end = WATER_FAR
+			_fog_color = WATER
 		e.fog_enabled = true
 		e.fog_mode = Environment.FOG_MODE_DEPTH
-		e.fog_depth_begin = 1000.0
-		e.fog_depth_end = 2000.0
+		e.fog_light_color = _fog_color
+		e.fog_depth_begin = _fog_begin
+		e.fog_depth_end = _fog_end
 		e.fog_sky_affect = 0.0
 	env.environment = e
 	add_child(env)
@@ -352,6 +391,8 @@ func set_focus(a: float) -> void:
 		_sky_mat.sky_horizon_color = _sky_base[1] * k
 		_sky_mat.ground_horizon_color = _sky_base[2] * k
 		_sky_mat.ground_bottom_color = _sky_base[3] * k
+	for sm in _shaders:
+		sm.set_shader_parameter("dim", k)
 	_focus_k = k
 	_background()
 
@@ -364,10 +405,10 @@ func set_drift(a: float, void_color: Color, begin: float, end: float, fog := tru
 	_drift = a
 	_void = void_color
 	if fog and _env and _env.fog_enabled:
-		_env.fog_light_color = void_color
+		_env.fog_light_color = _fog_color.lerp(void_color, a)
 		_env.fog_light_energy = 1.0
-		_env.fog_depth_begin = lerpf(1000.0, begin, a)
-		_env.fog_depth_end = lerpf(2000.0, end, a)
+		_env.fog_depth_begin = lerpf(_fog_begin, minf(begin, _fog_begin), a)
+		_env.fog_depth_end = lerpf(_fog_end, minf(end, _fog_end), a)
 		_env.fog_sky_affect = a
 	for pair in _paint:
 		var c: Color = pair[1]
@@ -727,3 +768,217 @@ func _stars() -> void:
 	for i in 14:
 		var a := TAU * i / 14.0
 		_sphere(Vector3(cos(a) * 22.0, -0.6, sin(a) * 26.0), rng.randf_range(2.0, 4.0), 0.4, Color(0.4, 0.4, 0.44))
+
+
+# --- DINOSAUR (VR-97) and UNDERSEA (VR-98) ----------------------------------------------
+
+## DINOSAUR: a jungle clearing. Ferns round the fence, a volcano smoking
+## on the horizon, and a long-necked dinosaur standing off in the trees.
+## The Gym Bros' home court (canon bible 5.4).
+func _jungle() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 65
+	# Ferns and bushes in a ring past the fence: one draw.
+	var ferns: Array[Transform3D] = []
+	var fern_c: Array[Color] = []
+	for i in 90:
+		var a := rng.randf_range(0.0, TAU)
+		var r := rng.randf_range(10.5, 22.0)
+		var at := Vector3(cos(a) * r, 0.0, sin(a) * r * 1.25)
+		var s := rng.randf_range(0.8, 1.9)
+		ferns.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * 0.45, s)), at + Vector3(0, s * 0.2, 0)))
+		fern_c.append(Color(0.14, 0.36, 0.12).lightened(rng.randf() * 0.15))
+	var bush := SphereMesh.new()
+	bush.radius = 1.0
+	bush.height = 2.0
+	bush.radial_segments = 8
+	bush.rings = 4
+	_multi(bush, ferns, fern_c, 0.95)
+	# The volcano: a dark cone, a glowing crater, smoke over it.
+	var cone := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 5.0
+	cm.bottom_radius = 30.0
+	cm.height = 24.0
+	cm.radial_segments = 16
+	cone.mesh = cm
+	cone.material_override = _track(material(Color(0.28, 0.22, 0.2)))
+	cone.position = Vector3(-38, 12.0, -88)
+	cone.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(cone)
+	var crater := _cylinder(Vector3(-38, 23.9, -88), 4.6, 0.3, Color(1.0, 0.45, 0.12))
+	var cmat := crater.material_override as StandardMaterial3D
+	cmat.emission_enabled = true
+	cmat.emission = Color(1.0, 0.4, 0.1)
+	cmat.emission_energy_multiplier = 1.6
+	for k in 5:
+		var smoke := _sphere(Vector3(-38 + k * 2.5, 28.0 + k * 4.0, -88 - k), 4.0 + k * 1.5, 0.8, Color(0.55, 0.55, 0.55, 0.55))
+		smoke.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# A sauropod among the trees, side on, looking at the court.
+	var hide := Color(0.42, 0.48, 0.34)
+	var dino := Node3D.new()
+	dino.position = Vector3(31, 0, -48)
+	dino.rotation_degrees = Vector3(0, 35, 0)
+	add_child(dino)
+	var parts := [
+		[Vector3(0, 4.6, 0), Vector3(3.2, 1.9, 1.7), 0.0],         # the body
+		[Vector3(-3.6, 6.8, 0), Vector3(0.55, 3.2, 0.55), 0.6],    # the neck, raised
+		[Vector3(-5.6, 9.4, 0), Vector3(0.9, 0.55, 0.6), 0.0],     # the head
+		[Vector3(4.6, 3.8, 0), Vector3(2.6, 0.45, 0.45), -0.25],   # the tail
+		[Vector3(-1.6, 1.6, 0.9), Vector3(0.55, 1.6, 0.55), 0.0],  # legs
+		[Vector3(-1.6, 1.6, -0.9), Vector3(0.55, 1.6, 0.55), 0.0],
+		[Vector3(1.6, 1.6, 0.9), Vector3(0.55, 1.6, 0.55), 0.0],
+		[Vector3(1.6, 1.6, -0.9), Vector3(0.55, 1.6, 0.55), 0.0]]
+	for p in parts:
+		var mi := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = 1.0
+		sm.height = 2.0
+		sm.radial_segments = 12
+		sm.rings = 6
+		mi.mesh = sm
+		mi.material_override = _track(material(hide))
+		mi.position = p[0]
+		mi.scale = p[1]
+		mi.rotation = Vector3(0, 0, p[2])
+		dino.add_child(mi)
+
+
+## UNDERSEA: a sandy seabed under blue-green water. Kelp sways in a ring
+## well past the court (slow, and nothing near you moves), coral and rocks,
+## bubbles rising from vents, light rippling over the court from above.
+## The Surf Crew's home court (canon bible 5.4).
+func _seabed(hw: float, hl: float) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 66
+	# Kelp: tall thin blades, one draw, swaying in a shader (more at the tip).
+	var kelp: Array[Transform3D] = []
+	var kelp_c: Array[Color] = []
+	for i in 70:
+		var a := rng.randf_range(0.0, TAU)
+		var r := rng.randf_range(11.0, 26.0)
+		var h := rng.randf_range(3.0, 7.5)
+		var at := Vector3(cos(a) * r, h / 2, sin(a) * r * 1.2)
+		kelp.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(0.35, h, 0.05)), at))
+		kelp_c.append(Color(0.22, 0.42, 0.16).lerp(Color(0.45, 0.4, 0.12), rng.randf() * 0.5))
+	var blade := BoxMesh.new()
+	blade.size = Vector3.ONE
+	blade.subdivide_height = 6
+	var sway := Shader.new()
+	sway.code = """shader_type spatial;
+render_mode cull_disabled;
+uniform float dim = 1.0;
+void vertex() {
+	// The blade's own height in 0..1 (the mesh runs -0.5..0.5): the tip sways most.
+	float up = VERTEX.y + 0.5;
+	float phase = float(INSTANCE_ID) * 1.7;
+	VERTEX.x += sin(TIME * 0.6 + phase) * up * up * 1.6;
+	VERTEX.z += cos(TIME * 0.45 + phase) * up * up * 6.0;   // the blade is thin in z: this is about 30 cm
+}
+void fragment() {
+	ALBEDO = COLOR.rgb * dim;
+	ROUGHNESS = 0.8;
+}
+"""
+	var km := ShaderMaterial.new()
+	km.shader = sway
+	_shaders.append(km)
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = blade
+	mm.instance_count = kelp.size()
+	for i in kelp.size():
+		mm.set_instance_transform(i, kelp[i])
+		mm.set_instance_color(i, kelp_c[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.material_override = km
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mmi)
+	# Coral and rocks round the court's edge: one draw.
+	var coral: Array[Transform3D] = []
+	var coral_c: Array[Color] = []
+	const CORALS := [Color(0.9, 0.42, 0.45), Color(0.95, 0.62, 0.3), Color(0.62, 0.38, 0.75), Color(0.5, 0.48, 0.46)]
+	for i in 60:
+		var a := rng.randf_range(0.0, TAU)
+		var r := rng.randf_range(9.0, 18.0)
+		var s := rng.randf_range(0.4, 1.4)
+		coral.append(Transform3D(Basis().scaled(Vector3(s, s * rng.randf_range(0.5, 1.2), s)), Vector3(cos(a) * r, s * 0.3, sin(a) * r * 1.2)))
+		coral_c.append(CORALS[rng.randi() % CORALS.size()].darkened(rng.randf() * 0.2))
+	var lump := SphereMesh.new()
+	lump.radius = 1.0
+	lump.height = 2.0
+	lump.radial_segments = 8
+	lump.rings = 4
+	_multi(lump, coral, coral_c, 0.9)
+	# Bubbles rising from four vents out in the sand.
+	for v in [Vector3(-14, 0, -20), Vector3(16, 0, -16), Vector3(-18, 0, 14), Vector3(15, 0, 21)]:
+		add_child(_bubbles(v))
+	# Light from the surface rippling over the court and around it.
+	var ca := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(hw * 2 + 8, hl * 2 + 10)
+	ca.mesh = pm
+	ca.position = Vector3(0, 0.024, 0)
+	var cs := Shader.new()
+	cs.code = """shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled;
+uniform float dim = 1.0;
+float cell(vec2 p) {
+	vec2 i = floor(p), f = fract(p);
+	float d = 1.0;
+	for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+		vec2 o = vec2(float(x), float(y));
+		vec2 h = fract(sin(vec2(dot(i + o, vec2(127.1, 311.7)), dot(i + o, vec2(269.5, 183.3)))) * 43758.5453);
+		h = 0.5 + 0.4 * sin(TIME * 0.7 + 6.2831 * h);
+		d = min(d, length(o + h - f));
+	}
+	return d;
+}
+void fragment() {
+	vec2 p = UV * vec2(9.0, 12.0);
+	float c = pow(1.0 - cell(p), 6.0) + 0.5 * pow(1.0 - cell(p * 1.7 + 3.1), 8.0);
+	ALBEDO = vec3(0.55, 0.9, 1.0) * c * 0.22 * dim;
+	ALPHA = 1.0;
+}
+"""
+	var cmat := ShaderMaterial.new()
+	cmat.shader = cs
+	_shaders.append(cmat)
+	ca.material_override = cmat
+	ca.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(ca)
+
+
+func _bubbles(at: Vector3) -> GPUParticles3D:
+	var p := GPUParticles3D.new()
+	p.amount = 24
+	p.lifetime = 6.0
+	p.preprocess = 6.0
+	p.position = at
+	p.visibility_aabb = AABB(Vector3(-2, -1, -2), Vector3(4, 14, 4))
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	pm.emission_sphere_radius = 0.4
+	pm.direction = Vector3.UP
+	pm.spread = 8.0
+	pm.initial_velocity_min = 1.2
+	pm.initial_velocity_max = 2.0
+	pm.gravity = Vector3.ZERO
+	pm.scale_min = 0.5
+	pm.scale_max = 1.4
+	p.process_material = pm
+	var s := SphereMesh.new()
+	s.radius = 0.07
+	s.height = 0.14
+	s.radial_segments = 6
+	s.rings = 3
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.85, 0.97, 1.0, 0.55)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	s.material = m
+	p.draw_pass_1 = s
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return p

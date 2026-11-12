@@ -8,9 +8,11 @@ const LAKESIDE := 1
 const SUNSET := 2
 const GYM := 3
 const SPACE := 4
-const NAMES := ["PARK", "LAKESIDE", "SUNSET", "GYM", "SPACE"]
+const DINOSAUR := 5                  ## the GYM BROS' home (VR-97)
+const UNDERSEA := 6                  ## the SURF CREW's (VR-98)
+const NAMES := ["PARK", "LAKESIDE", "SUNSET", "GYM", "SPACE", "DINOSAUR", "UNDERSEA"]
 ## Port kit venues not built yet stand in with the nearest one built.
-const STAND_INS := {"DINOSAUR": "GYM", "UNDERSEA": "LAKESIDE"}
+const STAND_INS := {}
 
 
 ## A port kit venue name to one of ours.
