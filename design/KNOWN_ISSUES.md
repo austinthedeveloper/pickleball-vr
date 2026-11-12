@@ -42,9 +42,10 @@
     play on. The relay still holds 3 guest places for `pb94-vr`.
 12. ~~Flat mode's help line said SHIFT SOFT in FRIENDLY DINK~~. Fixed
     (VR-89): it says SHIFT DRIVE.
-13. **BRICK BREAK isn't coached or watched** (ADR-030). The coach's phone,
-    the tablet and COACH VIEW know matches and drills, not BRICK BREAK. A
-    watcher can't follow it, and the coach's controls do nothing in it.
+13. ~~BRICK BREAK wasn't coached or watched~~ (ADR-030). Fixed (VR-86):
+    the phone and the tablet show its level, balls, bricks and score with
+    the drill's controls hidden, COACH VIEW replays it from the stream,
+    and pranks work in it.
 14. **BRICK BREAK's wall is tuned on the bot only** (ADR-030). The return's
     pace and depth, the glass's give and the assist toward the wall are
     first guesses. They want a human in the headset.

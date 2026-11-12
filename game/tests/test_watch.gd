@@ -366,3 +366,37 @@ func test_the_view_replays_the_last_shot() -> void:
 	v.end_replay()
 	check(v.replay == null and v.sim == w.sim, "back to live")
 	v.queue_free()
+
+
+func test_brick_break_replays_exactly_from_its_stream() -> void:
+	# VR-86: BRICK BREAK's settings travel in the "W" too.
+	var s := Settings.new()
+	s.breakout_level = 2
+	var sim := Sim.new(s.breakout_config())
+	var bot := Bot.new(sim, 0)
+	for i in 600:
+		_tick(sim, bot)
+	var feed := Watch.Feed.new()
+	var w := Watch.new()
+	w.on_message(bytes_to_var(var_to_bytes(feed.start(sim, {"player": "ALEX", "mode": "BRICK BREAK"}))))
+	check(w.sim != null and w.sim.breakout != null, "the wall is built on the watcher's side")
+	eq(w.sim.breakout.start_level, 2, "from the level the player chose")
+	eq(w.sim.state_hash(), sim.state_hash(), "the same game, as it is now")
+	var at_tick := {}
+	for i in 1800:
+		feed.add(_tick(sim, bot))
+		at_tick[sim.tick] = sim.state_hash()
+		var m := feed.take()
+		if not m.is_empty():
+			w.on_message(bytes_to_var(var_to_bytes(m)))
+		for k in w.due():
+			w.step()
+	while w.buffered() > 0:
+		w.step()
+	eq(w.sim.state_hash(), at_tick.get(w.sim.tick, 0), "brick for brick")
+	eq(w.resyncs, 0, "no hash ever differed")
+	var v := MatchView.new()
+	runner.root.add_child(v)
+	v.setup(null, false, false, false, null, w)
+	check(v.brick_wall != null, "COACH VIEW draws the wall")
+	v.queue_free()

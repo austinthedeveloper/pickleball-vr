@@ -104,6 +104,31 @@ func test_it_shows_the_drills_own_controls() -> void:
 	main.queue_free()
 
 
+func test_brick_break_on_the_tablet() -> void:
+	# VR-86: beside PAUSED in BRICK BREAK too, its numbers, no drill controls.
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	runner.root.add_child(main)
+	main._start(main.settings.breakout_config(), false)
+	main._on_pause()
+	var t: CoachTablet = main.view.tablet
+	check(t != null and t.visible, "the tablet beside PAUSED")
+	t.refresh()
+	check(String(t._labels["run"].text).begins_with("BRICK BREAK"), "its name and level: %s" % t._labels["run"].text)
+	eq(t._labels["time_l"].text, "BALLS", "balls left where the time was")
+	eq(t._labels["time"].text, str(Breakout.LIVES), "three balls")
+	eq(t._labels["good_l"].text, "BRICKS LEFT", "and the bricks")
+	check(not t._partner_box.visible and not t._machine_box.visible and not t._court.visible,
+		"no sliders, machine or court to tap: hidden, not dead")
+	check(t._mode_buttons.values().all(func(b: Button) -> bool: return not b.visible), "no tap modes")
+	main._start(main.settings.partner_config(), false)
+	main._on_pause()
+	t = main.view.tablet
+	t.refresh()
+	eq(t._labels["time_l"].text, "TIME LEFT", "a drill again: its own boxes")
+	check(t._court.visible and t._partner_box.visible, "and its controls")
+	main.queue_free()
+
+
 ## The lead switched drills and "the court was all marked up from the
 ## previous drill"; and tapping TARGET and FEED while paused showed nothing.
 func test_a_new_drill_starts_clean_and_taps_show_at_once() -> void:

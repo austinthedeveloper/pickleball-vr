@@ -267,3 +267,11 @@ that floats high over the net count?
 2. Quit the game, start it again, and on the phone open HISTORY, then
    that session.
 3. Under "Last shots", tap one: it replays as it did live.
+
+**VR-86, ready to test: BRICK BREAK coached and watched (ADR-030 amended).**
+1. COACH MODE on, the phone connected; start BRICK BREAK.
+2. The phone's top card reads Brick Break, the level, score, balls, best
+   and bricks left; the court, machine, sliders and challenge cards hide.
+3. Pause: the tablet shows the same numbers, nothing to tap.
+4. On the Mac, WATCH A PLAYER: you see the wall and the bricks fall as
+   they do in the headset. A silly ball from the phone shows up.

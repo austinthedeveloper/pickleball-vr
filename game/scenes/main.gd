@@ -596,8 +596,8 @@ func _on_pause() -> void:
 		m.add_row("mercy", "MERCY: NO PRANKS FOR A MINUTE")
 	m.pressed.connect(_on_pressed)
 	view.show_menu(m)
-	if view.sim.drill and view.sim.drill.goal == 0:
-		view.show_tablet(desk)           # the coach tablet, beside it (C-22)
+	if view.sim.drill and view.sim.drill.goal == 0 or view.sim.breakout:
+		view.show_tablet(desk)           # the coach tablet, beside it (C-22); BRICK BREAK too (VR-86)
 
 
 # --- Developer tuning (ADR-020) --------------------------------------------------------

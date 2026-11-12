@@ -103,3 +103,16 @@ So DEMO, flat mode and the tests play it unchanged.
   `design/KNOWN_ISSUES.md`.
 - The return's depth and pace and the glass's give are first guesses.
   They want a session in the headset.
+
+## Amendment (2026-11-11): coached and watched (VR-86)
+
+- **The coach's state** has a `breakout` block: level, balls, score,
+  best, bricks left, over.
+- **The phone** shows it on the run card and hides the drill-only cards
+  (court, ball machine, sliders, challenge).
+- **The tablet** stands beside PAUSED in BRICK BREAK as in a drill, with
+  the same numbers in its boxes and no court, sliders or machine. So does
+  a watching Mac's panel, which is the same tablet.
+- **COACH VIEW:** the watch stream's config carries `breakout`, so a
+  coach's game builds the wall and replays it tick for tick.
+- **PRANKS** go through as in any mode.

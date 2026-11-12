@@ -695,6 +695,23 @@ func refresh() -> void:
 		(_labels["s_restart"] as Button).disabled = where == "lobby"
 		var v: MatchView = desk.current_view()
 		(_labels["s_replay"] as Button).text = "LIVE" if v and v.replay else "REPLAY"
+	for k in [["time_l", "TIME LEFT"], ["good_l", "GOOD"], ["clear_l", "NET +CM"]]:
+		(_labels[k[0]] as Label).text = k[1]
+	var bk: Dictionary = _state.get("breakout", {})
+	if not bk.is_empty():
+		# BRICK BREAK (VR-86): its numbers in the same boxes.
+		(_labels["run"] as Label).text = "BRICK BREAK   LEVEL %d/%d" % [int(bk["level"]), int(bk["levels"])] \
+			+ ("   GAME OVER" if bk.get("over", false) else "")
+		(_labels["score"] as Label).text = str(int(bk["score"]))
+		(_labels["score_l"] as Label).text = "SCORE"
+		(_labels["time"] as Label).text = str(int(bk["balls"]))
+		(_labels["time_l"] as Label).text = "BALLS"
+		(_labels["good"] as Label).text = str(int(bk["bricks"]))
+		(_labels["good_l"] as Label).text = "BRICKS LEFT"
+		(_labels["clear"] as Label).text = str(int(bk["best"]))
+		(_labels["clear_l"] as Label).text = "BEST"
+		(_labels["insights"] as Label).text = ""
+		(_labels["split"] as Label).text = ""
 	if _prank_page:
 		_show_pranks()
 	_show_context()
@@ -705,11 +722,16 @@ func refresh() -> void:
 func _show_context() -> void:
 	var v: MatchView = desk.current_view()
 	_machine = v != null and v.sim != null and v.sim.drill != null and not v.sim.drill.partner
-	_machine_box.visible = _machine
-	_partner_box.visible = not _machine
+	# BRICK BREAK (VR-86): no court to tap, no machine, no sliders: hidden, not dead.
+	var bricks := _state.has("breakout")
+	_machine_box.visible = _machine and not bricks
+	_partner_box.visible = not _machine and not bricks
+	_court.visible = not bricks
+	for k in ["h_tap", "hint", "h_ins", "insights", "split"]:
+		(_labels[k] as Label).visible = not bricks
 	var allowed: Array = MACHINE_MODES if _machine else PARTNER_MODES
 	for k in _mode_buttons:
-		(_mode_buttons[k] as Button).visible = allowed.has(k)
+		(_mode_buttons[k] as Button).visible = allowed.has(k) and not bricks
 	if not allowed.has(mode):
 		_set_mode(allowed[0])
 	var tunes: Array = _state.get("tunes", [])
