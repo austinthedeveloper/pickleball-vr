@@ -37,7 +37,8 @@ plugin-free). Godot's version and SHA-512s are pinned in
 `design/COACHING.md` tracks every coaching idea (C-1..C-23) and its
 status. `design/ROADMAP.md` is the milestone sheet (phases, releases,
 every task's status, next, "For you"): keep it current with each branch.
-What to try for each task goes in `design/HISTORY.md`. `design/KNOWN_ISSUES.md` lists the defects, and
+What to try for each task goes in `design/HISTORY.md`, and
+`design/PLAYTEST.md` is the card of everything waiting on the headset. `design/KNOWN_ISSUES.md` lists the defects, and
 `decisions/README.md` the ADRs (next: ADR-033). `design/QUEST_SETUP.md`
 covers the headset build. `design/TEST_CHANNEL.md` is the plan for
 sharing builds with friends on Meta's ALPHA channel.
