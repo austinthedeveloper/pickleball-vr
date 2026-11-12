@@ -24,7 +24,7 @@ game/tools/quest_build.sh [--check]                   # build + install + launch
 game/tools/swings.sh > s.log                          # the headset's swing log (debug builds)
 python3 game/tools/swings_report.py s.log [--since HH:MM]   # that log summed up per mode (ADR-017)
 game/tools/tune.sh show | sync | clear   # the headset's TUNING overrides; sync makes them the defaults (ADR-020)
-python3 game/tools/make_pranks.py                     # the prank sounds, synthesized (ADR-025; make_ding.py: the target ding; make_zen.py: ZEN's, ADR-031)
+python3 game/tools/make_pranks.py                     # the prank sounds, synthesized (ADR-025; make_ding.py: the target ding; make_zen.py: ZEN's, ADR-031; make_night.py: the night's crickets, ADR-034)
 ```
 
 Releases are semver with tags `vX.Y.Z`, `CHANGELOG.md` and an APK on the
@@ -39,7 +39,7 @@ status. `design/ROADMAP.md` is the milestone sheet (phases, releases,
 every task's status, next, "For you"): keep it current with each branch.
 What to try for each task goes in `design/HISTORY.md`, and
 `design/PLAYTEST.md` is the card of everything waiting on the headset. `design/KNOWN_ISSUES.md` lists the defects, and
-`decisions/README.md` the ADRs (next: ADR-034). `design/QUEST_SETUP.md`
+`decisions/README.md` the ADRs (next: ADR-035). `design/QUEST_SETUP.md`
 covers the headset build. `design/TEST_CHANNEL.md` is the plan for
 sharing builds with friends on Meta's ALPHA channel.
 

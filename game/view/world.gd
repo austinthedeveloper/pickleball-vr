@@ -90,8 +90,14 @@ static func c8(rgb: Array) -> Color:
 	return Color8(int(rgb[0]), int(rgb[1]), int(rgb[2]))
 
 
-static func ambience(v: int) -> String:
+## The venue's ambience; at NIGHT outdoors, crickets (VR-100).
+static func ambience(v: int, at := DAY) -> String:
+	if at == NIGHT and not v in [Venues.GYM, Venues.SPACE, Venues.UNDERSEA]:
+		return NIGHT_AMBIENCE
 	return "res://assets/audio/ambience_%s.ogg" % VENUES[clampi(v, 0, VENUES.size() - 1)]["ambience"]
+
+
+const NIGHT_AMBIENCE := "res://assets/audio/ambience_night.wav"
 
 
 func _ready() -> void:

@@ -45,6 +45,8 @@ func _init() -> void:
 		families[fam].append(id)
 	_player = AudioStreamPlayer.new()
 	_player.volume_db = 1.0
+	Sound.bus(Sound.ANNOUNCER)
+	_player.bus = Sound.ANNOUNCER        # SOUND's ANNOUNCER level (VR-100)
 	add_child(_player)
 
 

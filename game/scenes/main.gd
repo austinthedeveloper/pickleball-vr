@@ -28,6 +28,7 @@ func _ready() -> void:
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 		use_xr = true
 	settings.load_settings()
+	Sound.apply(settings)                # SOUND's levels (VR-100)
 	settings.apply_coach_defaults()      # the coach's SAVE AS DEFAULT (VR-95); TUNING on top
 	if Settings.dev_tools():
 		Tune.load_saved()
@@ -157,6 +158,13 @@ func _page(id: String) -> Menu3D:
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
 			m.add_row("bstart", "START")
 			m.add_row("back", "BACK")
+		"sound":
+			# SOUND (VR-100): the ambience, the crowd and the announcer, each its own level.
+			m.title = "SOUND"
+			m.add_row("amb_level", "AMBIENCE", Sound.LEVELS, settings.ambience_level)
+			m.add_row("crowd_level", "CROWD", Sound.LEVELS, settings.crowd_level)
+			m.add_row("ann_level", "ANNOUNCER", Sound.LEVELS, settings.announcer_level)
+			m.add_row("back", "BACK")
 		"paddle":
 			# Paddle profiles (ADR-015): DEFAULT is the angle you had; the
 			# others fit an accessory, live in your hand as you change them.
@@ -223,6 +231,7 @@ func _page(id: String) -> Menu3D:
 			m.add_row("to_lessons", "HOW TO PLAY")
 			m.add_row("to_breakout", "BRICK BREAK")
 			m.add_row("to_paddle", "PADDLE")
+			m.add_row("to_sound", "SOUND")
 			m.add_row("passthrough", "PASSTHROUGH", OFF_ON, 1 if settings.passthrough else 0)
 			m.add_row("to_coach", "COACH")
 			if Settings.dev_tools():
@@ -247,6 +256,9 @@ func _on_changed(id: String, index: int) -> void:
 		"vs": settings.opponent = index
 		"venue": settings.venue = index
 		"tod": settings.time_of_day = index
+		"amb_level": settings.ambience_level = index
+		"crowd_level": settings.crowd_level = index
+		"ann_level": settings.announcer_level = index
 		"difficulty": settings.difficulty = index
 		"assist": settings.assist = index
 		"points": settings.points = index
@@ -296,6 +308,8 @@ func _on_changed(id: String, index: int) -> void:
 		"mtime": settings.machine_time = index
 		"blevel": settings.breakout_level = index
 	settings.save()
+	if id.ends_with("_level"):
+		Sound.apply(settings)            # heard at once
 	if id in ["mode", "vs", "venue", "hand", "passthrough", "angle", "profile", "twist", "turn", "reach", "shot", "target", "zone", "machine_at", "speed",
 			"targets", "level", "ptargets", "side", "spread", "drill", "lane", "plook", "blevel", "tod"]:
 		lobby.call_deferred()        # the demo shows the new setup
@@ -339,6 +353,7 @@ func _on_pressed(id: String) -> void:
 		"to_breakout": lobby.call_deferred("breakout")
 		"bstart": _start.call_deferred(settings.breakout_config(), false)
 		"to_paddle": lobby.call_deferred("paddle")
+		"to_sound": lobby.call_deferred("sound")
 		"to_coach": lobby.call_deferred("coach")
 		"check":
 			var c := _paddle_check_text()
