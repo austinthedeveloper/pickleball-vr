@@ -190,7 +190,7 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
 | VR-103 | Passthrough: the court anchored to your room | [#20](https://github.com/austinthedeveloper/pickleball-vr/issues/20) | Planned (v0.11) |
 | VR-104 | Venue performance budget | [#21](https://github.com/austinthedeveloper/pickleball-vr/issues/21) | Planned (v0.11) |
 | VR-105 | Screenshots of every venue | `feature/cld-vr-venue-shots` ([#22](https://github.com/austinthedeveloper/pickleball-vr/issues/22)) | Done: `shots.sh venues` and `tools/contact_sheet.gd` |
-| VR-106 | Close-up of a ball's bounce at night | [#23](https://github.com/austinthedeveloper/pickleball-vr/issues/23) | Planned (v0.11) |
+| VR-106 | Close-up of a ball's bounce at night (ADR-033) | `feature/cld-vr-bounce-marks` ([#23](https://github.com/austinthedeveloper/pickleball-vr/issues/23)) | Ready to test: tests, screenshots by day and night |
 | VR-107 | Career: three save slots and a name | [#24](https://github.com/austinthedeveloper/pickleball-vr/issues/24) | Planned (v0.12) |
 | VR-108 | Your look, in a mirror | [#25](https://github.com/austinthedeveloper/pickleball-vr/issues/25) | Planned (v0.12) |
 | VR-109 | The four paddles: Wood, Blue, Red, Gold | [#26](https://github.com/austinthedeveloper/pickleball-vr/issues/26) | Planned (v0.12) |

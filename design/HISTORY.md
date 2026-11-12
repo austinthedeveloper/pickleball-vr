@@ -310,3 +310,8 @@ Look for: do they catch your eye too much, or not enough?
 MAIN > COURT: VENUE, TIME, SURFACE, KITCHEN (or SAME), GROUND and LINES.
 Change one: the court in the lobby changes as you do. Every match and
 drill then plays on it. VENUE'S puts a colour back to the venue's own.
+
+**VR-106, ready to test: bounce marks and close calls (ADR-033 amended).**
+Play a match, by day and at NIGHT. Each bounce leaves a pale scuff that
+fades. A ball landing right by a sideline or baseline glows gold at its
+mark. Look for: do the marks read from your end? Is the glow too much?

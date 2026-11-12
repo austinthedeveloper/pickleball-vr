@@ -47,3 +47,14 @@ reads it, so golden traces are unchanged. `World.time` builds it.
   issue 17).
 - The crowd isn't dimmed at night: it sits beside the court, under the
   lights.
+
+## Amendment (2026-11-12): bounce marks and close calls (VR-106)
+
+Each bounce leaves a pale scuff on the court (`view/bounce_marks.gd`).
+- **The scuff** is 18 cm across and unshaded, so it reads the same by day,
+  at dusk and under the lights. It fades over 2.6 s; four are kept at once.
+- **Close calls:** a ball that lands within 10 cm of a sideline's or
+  baseline's outside edge, in or out, glows gold and pulses at its mark
+  for 1.4 s. You can see how close it was.
+- `screenshot.gd marks` lays three down, one a close call. Display only:
+  the sim's own bounce is drawn, never written back.

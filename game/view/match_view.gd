@@ -114,6 +114,7 @@ var paused := false                  ## the sim isn't stepped while a pause menu
 var focus := 0.0                     ## FOCUS (ADR-013): how dim the world is now
 var zen: Zen                         ## ...and past it, HUSH and DRIFT (ADR-031)
 var ambience_player: AudioStreamPlayer
+var marks_on_court: BounceMarks     ## each bounce's scuff; close calls glow (VR-106)
 var critters: Critters               ## a gull, a pterosaur, a satellite or a fish, between points (VR-101)
 var _placed := false                 ## XR: turned to the court and moved to the start, once tracked
 var _inherited := false              ## XR: the play space came over from the last view
@@ -229,6 +230,8 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	zen.world = world
 	zen.passthrough = passthrough
 	add_child(zen)
+	marks_on_court = BounceMarks.new()
+	add_child(marks_on_court)
 	critters = Critters.new()
 	critters.kind = "" if passthrough or spectate else Critters.for_venue(world.venue, world.time)
 	add_child(critters)
@@ -1097,6 +1100,7 @@ func _on_event(e: Array) -> void:
 		K.EVENT_BOUNCE:
 			_play("1_bounce", World.m(e[1], 0, e[2]), 1.0, -4.0 + zen.hit_cut())
 			zen.on_bounce(World.m(e[1], 0, e[2]))
+			marks_on_court.add(e[1], e[2])
 			pranks.on_bounce(World.m(e[1], 0, e[2]))
 			if not _shot.is_empty() and not _shot.has("x") and e[2] * K.side_sign(me >> 1) < 0:
 				_shot["x"] = snappedf(e[1] / 1e6, 0.01)       # where your ball landed on their side
