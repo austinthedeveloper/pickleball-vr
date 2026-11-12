@@ -53,3 +53,7 @@
     the drone and the void are first guesses from the Mac. The depth fog
     now runs in every venue (out of sight until DRIFT) and wants a PERF
     check on the Quest.
+16. **DINOSAUR and UNDERSEA are unmeasured on the Quest** (ADR-008). Each is
+    a few draws more than the PARK (UNDERSEA: kelp's vertex shader, four
+    bubble emitters, the light over the court). They want a PERF check,
+    as VR-104 plans for every venue.

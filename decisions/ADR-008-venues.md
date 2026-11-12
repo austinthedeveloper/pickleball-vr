@@ -36,3 +36,29 @@ has to be a place.
 - Next candidates: DINOSAUR and UNDERSEA (so the stand-ins can go), then
   the painted ones (WESTERN, ROOFTOP, ...), and TIME (DUSK, NIGHT) from
   port ADR-045.
+
+## Amendment (2026-11-11): DINOSAUR and UNDERSEA (VR-97, VR-98)
+
+The canon's six venues are all here now (bible 5.6), and every ladder
+home is a real venue, so the stand-ins are gone (`Venues.STAND_INS` is
+empty). The GYM stays as a seventh. Indexes 5 and 6 are new, so saved
+VENUE settings keep their meaning.
+
+- **DINOSAUR** (the Gym Bros' home): a jungle clearing under a hazy sky.
+  It has palms, a ring of ferns and bushes in one draw, a volcano on the
+  horizon with a glowing crater and smoke, and a long-necked dinosaur
+  standing among the trees past the fence. The court is the port kit's
+  (GREEN, ORANGE kitchen, GRASS round it).
+- **UNDERSEA** (the Surf Crew's home): a sandy seabed in blue-green water.
+  - **The water** is the environment's depth fog, from 16 m to solid at
+    70 m, and ZEN's DRIFT takes over from it (`World._fog_begin`).
+  - **Kelp** sways in a ring 11 to 26 m out, more at the tip, slowly. It
+    is one draw with a vertex shader, and nothing near you moves.
+  - **Coral and rocks** are one draw. **Bubbles** rise from four vents,
+    and **light** ripples over the court from a cheap animated cell shader.
+  - Glass fences. The court is the port kit's (AQUA, NAVY kitchen, SAND
+    round it).
+- The ambience is the port kit's own `ambience_dinosaur.ogg` and
+  `ambience_undersea.ogg`, as for the other five.
+- **FOCUS:** scenery shaders take a `dim` uniform (`World._shaders`), so
+  the kelp and the light dim with the rest.
