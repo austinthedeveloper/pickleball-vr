@@ -150,3 +150,63 @@ func test_the_time_row() -> void:
 	eq(main.settings.time_of_day, World.DUSK, "changing it sets it")
 	main.queue_free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
+
+
+# --- COURT (VR-102) --------------------------------------------------------------
+
+func test_court_colours_over_the_venues() -> void:
+	var w := World.new()
+	w.venue = Venues.PARK
+	var own := w.colours()
+	eq(own["surface"], World.c8(World.SURFACES["BLUE"]), "the venue's own surface")
+	w.court = "CLAY,SAME,SNOW,YELLOW"
+	var c := w.colours()
+	eq(c["surface"], World.c8(World.SURFACES["CLAY"]), "SURFACE")
+	eq(c["kitchen"], c["surface"], "KITCHEN SAME follows the surface")
+	eq(c["surround"], World.c8(World.SURROUNDS["SNOW"]), "GROUND")
+	eq(c["lines"], World.c8(World.LINES["YELLOW"]), "LINES")
+	w.court = ",PURPLE,,"
+	eq(w.colours()["surface"], own["surface"], "\"\": the venue's own")
+	eq(w.colours()["kitchen"], World.c8(World.SURFACES["PURPLE"]), "with a kitchen of its own")
+	w.free()
+
+
+func test_the_lines_always_read() -> void:
+	# Any surface with any lines: at least the port kit's 2.5:1, a fallback if not.
+	var w := World.new()
+	for s in World.SURFACES:
+		for l in World.LINES:
+			w.court = "%s,,,%s" % [s, l]
+			var c := w.colours()
+			check(World.contrast(c["lines"], c["surface"]) >= World.MIN_LINE_CONTRAST or c["line_name"] != l,
+				"%s lines on %s: %.1f" % [l, s, World.contrast(c["lines"], c["surface"])])
+	near(roundi(World.contrast(Color.WHITE, Color.BLACK)), 21, 0, "white on black is 21:1")
+	w.free()
+
+
+func test_court_reaches_the_view_and_the_page() -> void:
+	var s := Settings.new()
+	s.court_surface = "PINK"
+	s.court_lines = "LIME"
+	s.save()
+	var t := Settings.new()
+	t.load_settings()
+	eq(t.match_config().court, "PINK,,,LIME", "saved, in the config")
+	var v := MatchView.new()
+	runner.root.add_child(v)
+	v.setup(t.match_config(), false, true)
+	eq(v.world.line_color, World.c8(World.LINES["LIME"]), "the court is built in it")
+	v.queue_free()
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	runner.root.add_child(main)
+	var m: Menu3D = main._page("court")
+	for id in ["venue", "tod", "c_surface", "c_kitchen", "c_ground", "c_lines"]:
+		check(not m.row(id).is_empty(), "COURT has %s" % id)
+	m.free()
+	var names: Array = main.COURT_ROWS["c_kitchen"][1]
+	main._on_changed("c_kitchen", names.find("SAME"))
+	eq(main.settings.court_kitchen, "SAME", "KITCHEN SAME")
+	main._on_changed("c_surface", 0)
+	eq(main.settings.court_surface, "", "back to the venue's own")
+	main.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))

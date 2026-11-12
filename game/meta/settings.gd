@@ -62,6 +62,11 @@ var paddle_profile := 0              ## index into PROFILE_NAMES
 var profiles: Array = [new_profile(), new_profile(), new_profile()]
 var venue := 0                       ## 0 is HOME (the team's); then Venues.NAMES
 var time_of_day := 0                 ## TIME (VR-99): World.TIMES
+## COURT (VR-102): preset names, "" for the venue's own (kitchen: or "SAME").
+var court_surface := ""
+var court_kitchen := ""
+var court_ground := ""
+var court_lines := ""
 ## SOUND (VR-100): indexes into Sound.LEVELS, FULL to start.
 var ambience_level := 3
 var crowd_level := 3
@@ -146,6 +151,10 @@ func load_settings() -> void:
 		profiles[i] = d
 	venue = c.get_value("match", "venue", venue)
 	time_of_day = c.get_value("match", "time", time_of_day)
+	court_surface = c.get_value("court", "surface", court_surface)
+	court_kitchen = c.get_value("court", "kitchen", court_kitchen)
+	court_ground = c.get_value("court", "ground", court_ground)
+	court_lines = c.get_value("court", "lines", court_lines)
 	ambience_level = c.get_value("sound", "ambience", ambience_level)
 	crowd_level = c.get_value("sound", "crowd", crowd_level)
 	announcer_level = c.get_value("sound", "announcer", announcer_level)
@@ -200,6 +209,10 @@ func save() -> void:
 	c.set_value("paddle", "profiles", profiles)
 	c.set_value("match", "venue", venue)
 	c.set_value("match", "time", time_of_day)
+	c.set_value("court", "surface", court_surface)
+	c.set_value("court", "kitchen", court_kitchen)
+	c.set_value("court", "ground", court_ground)
+	c.set_value("court", "lines", court_lines)
 	c.set_value("sound", "ambience", ambience_level)
 	c.set_value("sound", "crowd", crowd_level)
 	c.set_value("sound", "announcer", announcer_level)
@@ -267,6 +280,7 @@ func match_config() -> SimTypes.MatchConfig:
 	Opponents.apply(cfg, opponent)
 	cfg.venue = Venues.resolve(venue, opponent)
 	cfg.time = clampi(time_of_day, 0, World.TIMES.size() - 1)
+	cfg.court = ",".join([court_surface, court_kitchen, court_ground, court_lines])
 	return cfg
 
 

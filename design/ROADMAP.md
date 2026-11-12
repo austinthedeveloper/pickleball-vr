@@ -186,7 +186,7 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
 | VR-99 | TIME OF DAY: DAY, DUSK, NIGHT (ADR-033) | `feature/cld-vr-time-of-day` ([#16](https://github.com/austinthedeveloper/pickleball-vr/issues/16)) | Ready to test: screenshots; play a night match |
 | VR-100 | Each venue's ambience (ADR-034) | `feature/cld-vr-ambience` ([#17](https://github.com/austinthedeveloper/pickleball-vr/issues/17)) | Ready to test: tests; a listen at night |
 | VR-101 | Critters cross the sky (ADR-008) | `feature/cld-vr-critters` ([#18](https://github.com/austinthedeveloper/pickleball-vr/issues/18)) | Ready to test: tests, screenshots; watch for one between points |
-| VR-102 | COURT page: four court colours | [#19](https://github.com/austinthedeveloper/pickleball-vr/issues/19) | Planned (v0.11) |
+| VR-102 | COURT page: four court colours (ADR-008) | `feature/cld-vr-court-colours` ([#19](https://github.com/austinthedeveloper/pickleball-vr/issues/19)) | Ready to test: tests, screenshots; make a court your own |
 | VR-103 | Passthrough: the court anchored to your room | [#20](https://github.com/austinthedeveloper/pickleball-vr/issues/20) | Planned (v0.11) |
 | VR-104 | Venue performance budget | [#21](https://github.com/austinthedeveloper/pickleball-vr/issues/21) | Planned (v0.11) |
 | VR-105 | Screenshots of every venue | [#22](https://github.com/austinthedeveloper/pickleball-vr/issues/22) | Planned (v0.11) |

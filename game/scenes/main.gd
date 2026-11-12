@@ -158,6 +158,16 @@ func _page(id: String) -> Menu3D:
 			m.add_row("assist", "SHOT ASSIST", ASSISTS, settings.assist)
 			m.add_row("bstart", "START")
 			m.add_row("back", "BACK")
+		"court":
+			# COURT (VR-102, canon bible 5.2): where, when, and the court's four
+			# colours, each the venue's own or a preset; the demo shows it live.
+			m.title = "COURT"
+			m.add_row("venue", "VENUE", ["HOME"] + Venues.NAMES, settings.venue)
+			m.add_row("tod", "TIME", World.TIMES, settings.time_of_day)
+			for k in COURT_ROWS:
+				var names: Array = COURT_ROWS[k][1]
+				m.add_row(k, COURT_ROWS[k][0], names, maxi(names.find(_court_value(k)), 0))
+			m.add_row("back", "BACK")
 		"sound":
 			# SOUND (VR-100): the ambience, the crowd and the announcer, each its own level.
 			m.title = "SOUND"
@@ -231,6 +241,7 @@ func _page(id: String) -> Menu3D:
 			m.add_row("to_lessons", "HOW TO PLAY")
 			m.add_row("to_breakout", "BRICK BREAK")
 			m.add_row("to_paddle", "PADDLE")
+			m.add_row("to_court", "COURT")
 			m.add_row("to_sound", "SOUND")
 			m.add_row("passthrough", "PASSTHROUGH", OFF_ON, 1 if settings.passthrough else 0)
 			m.add_row("to_coach", "COACH")
@@ -239,6 +250,31 @@ func _page(id: String) -> Menu3D:
 			if not use_xr:
 				m.add_row("quit", "QUIT")
 	return m
+
+
+## COURT's rows (VR-102): id -> [label, the names it steps through]; the
+## first is the venue's own.
+const VENUES_OWN := "VENUE'S"
+static var COURT_ROWS := {
+	"c_surface": ["SURFACE", [VENUES_OWN] + World.SURFACES.keys()],
+	"c_kitchen": ["KITCHEN", [VENUES_OWN, "SAME"] + World.SURFACES.keys()],
+	"c_ground": ["GROUND", [VENUES_OWN] + World.SURROUNDS.keys()],
+	"c_lines": ["LINES", [VENUES_OWN] + World.LINES.keys()]}
+
+
+func _court_value(id: String) -> String:
+	var v: String = {"c_surface": settings.court_surface, "c_kitchen": settings.court_kitchen,
+		"c_ground": settings.court_ground, "c_lines": settings.court_lines}[id]
+	return VENUES_OWN if v == "" else v
+
+
+func _court_set(id: String, name: String) -> void:
+	var v := "" if name == VENUES_OWN else name
+	match id:
+		"c_surface": settings.court_surface = v
+		"c_kitchen": settings.court_kitchen = v
+		"c_ground": settings.court_ground = v
+		"c_lines": settings.court_lines = v
 
 
 func _on_changed(id: String, index: int) -> void:
@@ -256,6 +292,8 @@ func _on_changed(id: String, index: int) -> void:
 		"vs": settings.opponent = index
 		"venue": settings.venue = index
 		"tod": settings.time_of_day = index
+		"c_surface", "c_kitchen", "c_ground", "c_lines":
+			_court_set(id, String(COURT_ROWS[id][1][index]))
 		"amb_level": settings.ambience_level = index
 		"crowd_level": settings.crowd_level = index
 		"ann_level": settings.announcer_level = index
@@ -311,7 +349,8 @@ func _on_changed(id: String, index: int) -> void:
 	if id.ends_with("_level"):
 		Sound.apply(settings)            # heard at once
 	if id in ["mode", "vs", "venue", "hand", "passthrough", "angle", "profile", "twist", "turn", "reach", "shot", "target", "zone", "machine_at", "speed",
-			"targets", "level", "ptargets", "side", "spread", "drill", "lane", "plook", "blevel", "tod"]:
+			"targets", "level", "ptargets", "side", "spread", "drill", "lane", "plook", "blevel", "tod",
+			"c_surface", "c_kitchen", "c_ground", "c_lines"]:
 		lobby.call_deferred()        # the demo shows the new setup
 
 
@@ -354,6 +393,7 @@ func _on_pressed(id: String) -> void:
 		"bstart": _start.call_deferred(settings.breakout_config(), false)
 		"to_paddle": lobby.call_deferred("paddle")
 		"to_sound": lobby.call_deferred("sound")
+		"to_court": lobby.call_deferred("court")
 		"to_coach": lobby.call_deferred("coach")
 		"check":
 			var c := _paddle_check_text()

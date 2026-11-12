@@ -143,6 +143,7 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	world = World.new()
 	world.venue = cfg.venue
 	world.time = cfg.time                # TIME OF DAY (VR-99)
+	world.court = cfg.court              # COURT's colours (VR-102)
 	world.passthrough = passthrough
 	add_child(world)
 	set_passthrough(passthrough and use_xr)

@@ -24,6 +24,7 @@ there). Keep this card current: a row leaves it when it's marked Done.
 - [ ] **VR-100** SOUND: set AMBIENCE, CROWD and ANNOUNCER to taste; at NIGHT, do the crickets loop cleanly?
 - [ ] **VR-15** Pause and the menu pages mid-match.
 - [ ] **VR-16** Venues: PARK, LAKESIDE, SUNSET, GYM, SPACE. Any that's uncomfortable or slow?
+- [ ] **VR-102** COURT: make a court your own colours. Do the lines always read?
 - [ ] **VR-99** TIME: a DUSK match and a NIGHT match. Is the ball easy to see under the lights? Your paddle's face?
 - [ ] **VR-101** Critters: a gull, a pterosaur, a satellite, a fish, between points. Too much, or not enough?
 - [ ] **VR-97, VR-98** DINOSAUR and UNDERSEA: does the kelp's sway feel fine? Does the court read against the sand?

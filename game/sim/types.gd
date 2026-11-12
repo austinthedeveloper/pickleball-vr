@@ -101,6 +101,8 @@ class MatchConfig:
 	var venue := 0
 	## TIME OF DAY, for the view only (VR-99): World.DAY, DUSK or NIGHT.
 	var time := 0
+	## COURT's colours, for the view only (VR-102): World.court's form.
+	var court := ""
 
 
 class Player:
