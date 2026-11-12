@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|breakout|online|online_guest|watch> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT... | level=N (breakout)] [venue=NAME] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [zen=0..1] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti] [panel [pranks] (watch)]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|breakout|online|online_guest|watch> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT... | level=N (breakout)] [venue=NAME] [tod=DAY|DUSK|NIGHT] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [zen=0..1] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti] [panel [pranks] (watch)]
 extends SceneTree
 
 var frames := 240
@@ -46,6 +46,8 @@ func _initialize() -> void:
 	for a in args:
 		if a.begins_with("venue="):
 			cfg.venue = Venues.NAMES.find(a.trim_prefix("venue="))
+		if a.begins_with("tod="):
+			cfg.time = World.TIMES.find(a.trim_prefix("tod="))
 	if mode == "partner":
 		var st := Settings.new()
 		st.partner_targets = true

@@ -99,6 +99,8 @@ class MatchConfig:
 	var breakout: Breakout = null
 	## The venue, for the view only (ADR-008).
 	var venue := 0
+	## TIME OF DAY, for the view only (VR-99): World.DAY, DUSK or NIGHT.
+	var time := 0
 
 
 class Player:

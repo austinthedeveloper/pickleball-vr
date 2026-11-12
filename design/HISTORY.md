@@ -283,3 +283,11 @@ that floats high over the net count?
    rippling over the court, the water closing in past it.
 Look for: is the kelp's sway comfortable? Is the court easy to read
 against the sand? Any stutter (known issue 16)?
+
+**VR-99, ready to test: TIME OF DAY (ADR-033).**
+1. MATCH SETUP, TIME DUSK: a low orange sun, a violet sky.
+2. TIME NIGHT: stars, four floodlights on poles, the court lit and the
+   park around it dark. Play a few points.
+3. Try PRACTICE PARTNER at NIGHT too (its page has TIME).
+Look for: is the ball easy to pick up at night? Can you see your paddle's
+face? Are the lights too strong or too flat?

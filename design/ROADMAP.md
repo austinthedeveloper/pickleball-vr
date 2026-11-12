@@ -101,7 +101,7 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
 | VR-14 | HOW TO PLAY: seven lessons (ADR-007) | `feature/cld-vr-practice` | Ready to test |
 | VR-15 | Menu pages and pause (ADR-007) | `feature/cld-vr-practice` | Ready to test |
 | VR-16 | Venues: PARK, LAKESIDE, SUNSET, GYM, SPACE (ADR-008) | `feature/cld-vr-practice` | Ready to test |
-| VR-17 | More venues: DINOSAUR, UNDERSEA, TIME of day | | Split into VR-97..99 (M2): the venues built |
+| VR-17 | More venues: DINOSAUR, UNDERSEA, TIME of day | | Done: split into VR-97..99 (M2) |
 | VR-18 | Quest performance: CPU spikes fixed, PERF timing (ADR-009) | `feature/cld-vr-quest-device` | Done (measured on the Quest 3) |
 | VR-19 | Ball machine 2: volley feeds, SPEED, MACHINE AT, real dinks (ADR-007) | `feature/cld-vr-machine-2` | Done (played) |
 | VR-20 | DINK PARTNER: a cooperative dinking CPU (ADR-010) | `feature/cld-vr-dink-partner` | Done (played) |
@@ -183,7 +183,7 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
 | VR-96 | The Windows game checked on Windows | [#13](https://github.com/austinthedeveloper/pickleball-vr/issues/13) | Planned (v0.10) |
 | VR-97 | DINOSAUR venue (ADR-008) | `feature/cld-vr-venues-2` ([#14](https://github.com/austinthedeveloper/pickleball-vr/issues/14)) | Ready to test: screenshots; play a match there |
 | VR-98 | UNDERSEA venue (ADR-008) | `feature/cld-vr-venues-2` ([#15](https://github.com/austinthedeveloper/pickleball-vr/issues/15)) | Ready to test: screenshots; is the kelp comfortable? |
-| VR-99 | TIME OF DAY: DAY, DUSK, NIGHT | [#16](https://github.com/austinthedeveloper/pickleball-vr/issues/16) | Planned (v0.11) |
+| VR-99 | TIME OF DAY: DAY, DUSK, NIGHT (ADR-033) | `feature/cld-vr-time-of-day` ([#16](https://github.com/austinthedeveloper/pickleball-vr/issues/16)) | Ready to test: screenshots; play a night match |
 | VR-100 | Each venue's ambience | [#17](https://github.com/austinthedeveloper/pickleball-vr/issues/17) | Planned (v0.11) |
 | VR-101 | Critters cross the sky | [#18](https://github.com/austinthedeveloper/pickleball-vr/issues/18) | Planned (v0.11) |
 | VR-102 | COURT page: four court colours | [#19](https://github.com/austinthedeveloper/pickleball-vr/issues/19) | Planned (v0.11) |

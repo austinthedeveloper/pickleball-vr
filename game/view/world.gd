@@ -32,6 +32,16 @@ const VENUES := [
 ]
 ## UNDERSEA's water: the haze it fades into, from FOG_NEAR to solid at FOG_FAR.
 const WATER := Color(0.05, 0.27, 0.36)
+## TIME OF DAY (VR-99, canon bible 5.6): outdoors and UNDERSEA; the GYM and
+## SPACE are as they are. At NIGHT the court plays under floodlights: the
+## sun turns into a light straight down, lamps on four poles glow, and the
+## scenery past the court falls into the dark.
+const DAY := 0
+const DUSK := 1
+const NIGHT := 2
+const TIMES := ["DAY", "DUSK", "NIGHT"]
+const SCENERY_AT := [1.0, 0.72, 0.3]     ## how lit the surroundings are, by TIME
+var time := DAY
 const WATER_NEAR := 16.0
 const WATER_FAR := 70.0
 
@@ -64,6 +74,7 @@ var _fog_begin := 1000.0
 var _fog_end := 2000.0
 var _fog_color := Color.BLACK
 var _shaders: Array[ShaderMaterial] = []   ## scenery shaders that dim with FOCUS ("dim")
+var _scenery_k := 1.0                ## TIME OF DAY's light on the scenery shaders
 
 
 ## um to metres, in Godot's axes (the sim's are the same).
@@ -117,6 +128,8 @@ func _ready() -> void:
 	_scenery = true
 	if passthrough:
 		return
+	if timed() and time == NIGHT:
+		_floodlights(hw, hl)
 	match venue:
 		Venues.LAKESIDE:
 			_fences(hw + 3, hl + 4, FENCE)
@@ -141,6 +154,23 @@ func _ready() -> void:
 		_:
 			_fences(hw + 3, hl + 4, FENCE)
 			_trees(28, 16.0, 26.0, false)
+	if timed() and time != DAY:
+		if time == NIGHT and venue != Venues.UNDERSEA:
+			_star_field(260, 0.08)
+		# The surroundings fall into the dusk or the dark; FOCUS dims from there.
+		var k: float = SCENERY_AT[time]
+		for pair in _dim:
+			var c: Color = pair[1]
+			pair[1] = Color(c.r * k, c.g * k, c.b * k, c.a)
+			(pair[0] as StandardMaterial3D).albedo_color = pair[1]
+		for sm in _shaders:
+			sm.set_shader_parameter("dim", k)
+		_scenery_k = k
+
+
+## TIME OF DAY applies here: outdoors and UNDERSEA, not the GYM or SPACE.
+func timed() -> bool:
+	return not passthrough and venue != Venues.GYM and venue != Venues.SPACE
 
 
 func _sky(kind: String) -> void:
@@ -236,6 +266,7 @@ func _sky(kind: String) -> void:
 		e.fog_depth_begin = _fog_begin
 		e.fog_depth_end = _fog_end
 		e.fog_sky_affect = 0.0
+	_time_light(kind, e, sun)
 	env.environment = e
 	add_child(env)
 	_env = e
@@ -392,7 +423,7 @@ func set_focus(a: float) -> void:
 		_sky_mat.ground_horizon_color = _sky_base[2] * k
 		_sky_mat.ground_bottom_color = _sky_base[3] * k
 	for sm in _shaders:
-		sm.set_shader_parameter("dim", k)
+		sm.set_shader_parameter("dim", k * _scenery_k)
 	_focus_k = k
 	_background()
 
@@ -731,28 +762,9 @@ func _gym(hx: float, hz: float) -> void:
 
 ## SPACE: stars all round, a ringed planet, the moon underfoot.
 func _stars() -> void:
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	var sm := SphereMesh.new()
-	sm.radius = 0.12
-	sm.height = 0.24
-	sm.radial_segments = 4
-	sm.rings = 2
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = Color(1, 1, 1)
-	sm.material = mat
-	mm.mesh = sm
-	mm.instance_count = 400
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 42
-	for i in mm.instance_count:
-		var d := Vector3(rng.randf_range(-1, 1), rng.randf_range(0.05, 1), rng.randf_range(-1, 1)).normalized()
-		mm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3.ONE * rng.randf_range(0.5, 1.6)), d * 90.0))
-	var stars := MultiMeshInstance3D.new()
-	stars.multimesh = mm
-	stars.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(stars)
+	_star_field(400, 0.05)
 	var planet := _sphere(Vector3(-40, 28, -70), 14.0, 1.0, Color(0.85, 0.55, 0.35))
 	planet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var ring := MeshInstance3D.new()
@@ -982,3 +994,98 @@ func _bubbles(at: Vector3) -> GPUParticles3D:
 	p.draw_pass_1 = s
 	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return p
+
+
+# --- TIME OF DAY (VR-99) ---------------------------------------------------------------
+
+## DUSK and NIGHT on the sky, the sun and the ambient light (and UNDERSEA's
+## water), after the venue's own day.
+func _time_light(kind: String, e: Environment, sun: DirectionalLight3D) -> void:
+	if time == DAY or kind in ["passthrough", "indoor", "space"]:
+		return
+	if kind == "undersea":
+		var water := WATER * (0.65 if time == DUSK else 0.45)
+		water.a = 1.0
+		e.background_color = water
+		_fog_color = water
+		e.fog_light_color = water
+		e.ambient_light_energy *= 0.75 if time == DUSK else 0.55
+		if time == NIGHT:
+			_floodlight(sun, e)
+		else:
+			sun.light_energy *= 0.7
+		return
+	var mat := e.sky.sky_material as ProceduralSkyMaterial
+	if time == DUSK:
+		if kind != "sunset":             # SUNSET is dusk already
+			mat.sky_top_color = mat.sky_top_color.lerp(Color(0.22, 0.2, 0.42), 0.7)
+			mat.sky_horizon_color = mat.sky_horizon_color.lerp(Color(1.0, 0.58, 0.36), 0.75)
+			mat.ground_horizon_color = mat.ground_horizon_color.lerp(Color(0.45, 0.32, 0.3), 0.6)
+			sun.rotation_degrees = Vector3(-14, 160, 0)
+			sun.light_color = Color(1.0, 0.7, 0.48)
+			sun.light_energy = 0.85
+			e.ambient_light_color = (mat.sky_top_color + mat.sky_horizon_color * 2.0 + mat.ground_horizon_color) / 4.0
+		return
+	mat.sky_top_color = Color(0.015, 0.02, 0.06)
+	mat.sky_horizon_color = Color(0.06, 0.08, 0.15)
+	mat.ground_horizon_color = Color(0.04, 0.05, 0.07)
+	mat.ground_bottom_color = Color(0.02, 0.02, 0.03)
+	mat.sun_angle_max = 0.0
+	_floodlight(sun, e)
+
+
+## NIGHT: the sun becomes the floodlights, high over the court from the poles, white;
+## a cool, low ambient keeps the shadows readable.
+func _floodlight(sun: DirectionalLight3D, e: Environment) -> void:
+	sun.rotation_degrees = Vector3(-66, 25, 0)   # in from the poles, so a paddle's face catches it
+	sun.light_color = Color(1.0, 0.97, 0.9)
+	sun.light_energy = 1.05
+	e.ambient_light_color = Color(0.4, 0.44, 0.56)
+	e.ambient_light_energy = 0.5
+
+
+## NIGHT: four light poles past the court's corners, their lamps glowing.
+func _floodlights(hw: float, hl: float) -> void:
+	var metal := material(Color(0.32, 0.33, 0.35))
+	metal.metallic = 0.6
+	for sx in [-1, 1]:
+		for sz in [-1, 1]:
+			var at := Vector3(sx * (hw + 2.4), 0, sz * (hl + 2.6))
+			var pole := _cylinder(at, 0.09, 8.0, Color.WHITE)
+			pole.material_override = metal
+			var head := _box(at + Vector3(-sx * 0.3, 8.1, -sz * 0.3), Vector3(1.3, 0.35, 0.5), Color(1, 1, 0.95))
+			head.rotation = Vector3(0, atan2(-sx, -sz), 0)
+			head.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var hm := head.material_override as StandardMaterial3D
+			hm.emission_enabled = true
+			hm.emission = Color(1.0, 0.97, 0.88)
+			hm.emission_energy_multiplier = 3.0
+
+
+
+## Stars all round, one draw: SPACE's, and an outdoor NIGHT's (above
+## `low`, a fraction of straight up, so none sit in the trees).
+func _star_field(count: int, low: float) -> void:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	var sm := SphereMesh.new()
+	sm.radius = 0.12
+	sm.height = 0.24
+	sm.radial_segments = 4
+	sm.rings = 2
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(1, 1, 1)
+	mat.disable_fog = true
+	sm.material = mat
+	mm.mesh = sm
+	mm.instance_count = count
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 42
+	for i in mm.instance_count:
+		var d := Vector3(rng.randf_range(-1, 1), rng.randf_range(low, 1), rng.randf_range(-1, 1)).normalized()
+		mm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3.ONE * rng.randf_range(0.5, 1.6)), d * 90.0))
+	var stars := MultiMeshInstance3D.new()
+	stars.multimesh = mm
+	stars.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(stars)

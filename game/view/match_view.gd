@@ -140,6 +140,7 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 		them = String(Opponents.team(cfg.opponent)["team"])
 	world = World.new()
 	world.venue = cfg.venue
+	world.time = cfg.time                # TIME OF DAY (VR-99)
 	world.passthrough = passthrough
 	add_child(world)
 	set_passthrough(passthrough and use_xr)

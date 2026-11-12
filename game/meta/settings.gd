@@ -61,6 +61,7 @@ var paddle_profile := 0              ## index into PROFILE_NAMES
 ## The three custom profiles: {angle, twist, reach} in degrees and cm.
 var profiles: Array = [new_profile(), new_profile(), new_profile()]
 var venue := 0                       ## 0 is HOME (the team's); then Venues.NAMES
+var time_of_day := 0                 ## TIME (VR-99): World.TIMES
 ## BALL MACHINE (ADR-007)
 var machine_shot := Drill.SHOT_DRIVE
 var machine_target := Drill.TARGET_AT_YOU
@@ -140,6 +141,7 @@ func load_settings() -> void:
 		d["reach"] = clampi(int(d["reach"]), PROFILE_REACHES[0], PROFILE_REACHES[-1])
 		profiles[i] = d
 	venue = c.get_value("match", "venue", venue)
+	time_of_day = c.get_value("match", "time", time_of_day)
 	machine_shot = c.get_value("machine", "shot", machine_shot)
 	machine_target = c.get_value("machine", "target", machine_target)
 	machine_rate = c.get_value("machine", "rate", machine_rate)
@@ -190,6 +192,7 @@ func save() -> void:
 	c.set_value("paddle", "profile", paddle_profile)
 	c.set_value("paddle", "profiles", profiles)
 	c.set_value("match", "venue", venue)
+	c.set_value("match", "time", time_of_day)
 	c.set_value("machine", "shot", machine_shot)
 	c.set_value("machine", "target", machine_target)
 	c.set_value("machine", "rate", machine_rate)
@@ -253,6 +256,7 @@ func match_config() -> SimTypes.MatchConfig:
 	cfg.seed = seed_override if seed_override >= 0 else int(Time.get_unix_time_from_system()) & 0x7fffffff
 	Opponents.apply(cfg, opponent)
 	cfg.venue = Venues.resolve(venue, opponent)
+	cfg.time = clampi(time_of_day, 0, World.TIMES.size() - 1)
 	return cfg
 
 
