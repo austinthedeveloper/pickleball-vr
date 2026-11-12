@@ -61,3 +61,8 @@
 17. **NIGHT is unseen in the headset** (ADR-033). The floodlights' strength
     and angle, the cool fill and whether your paddle's face reads at night
     are tuned on Mac screenshots only.
+18. **SUNSET's court reads dark by day and at dusk.** The low sun sits
+    behind the far baseline, so from your end the court is backlit and
+    its BLUE surface looks nearly black (`shots.sh venues` shows it next to
+    the others). At NIGHT it reads fine. A fill light or a sun off to the
+    side would fix it; it wants a look in the headset first.
