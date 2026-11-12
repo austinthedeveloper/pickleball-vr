@@ -298,3 +298,10 @@ face? Are the lights too strong or too flat?
 2. A NIGHT match at the PARK: crickets and a breeze instead of birds.
 Look for: are the levels sensible at FULL? Do the crickets loop without
 a click?
+
+**VR-101, ready to test: critters between points (ADR-008 amended).**
+At LAKESIDE (a gull), DINOSAUR (a pterosaur), SPACE (a satellite) or
+UNDERSEA (a fish), play a while: every half minute or so, between points,
+one crosses the sky (the fish swims past the far fence). Start a rally as
+one crosses: it fades away.
+Look for: do they catch your eye too much, or not enough?

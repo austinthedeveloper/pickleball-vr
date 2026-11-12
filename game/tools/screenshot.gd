@@ -1,5 +1,5 @@
 ## A screenshot of the game, as it renders:
-##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|breakout|online|online_guest|watch> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT... | level=N (breakout)] [venue=NAME] [tod=DAY|DUSK|NIGHT] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [zen=0..1] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti] [panel [pranks] (watch)]
+##   godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|breakout|online|online_guest|watch> <frames> <out.png> [doubles | lesson number | cross | hands | resets | drill=CALL_THE_SPOT... | level=N (breakout)] [venue=NAME] [tod=DAY|DUSK|NIGHT] [passthrough] [time=60] [cam=x,y,z look=x,y,z] [focus=0..0.88] [zen=0..1] [critter] [page=NAME (lobby)] [tick=N] [prank=ball:duck,paddle:pan,weather:snow,antic:dance,face,confetti] [panel [pranks] (watch)]
 extends SceneTree
 
 var frames := 240
@@ -216,6 +216,9 @@ func _process(_delta: float) -> bool:
 	if n == 5 and _focus >= 0.0 and _view:
 		_view.world.set_focus(_focus)       # once the scene is built
 		_view.crowd.set_focus(_focus)
+	if n == 5 and _view and OS.get_cmdline_user_args().has("critter"):
+		_view.critters.launch()              # VR-101: one on its way, half across
+		_view.critters._t = 0.45
 	if n == 5 and _zen >= 0.0 and _view:
 		_view.zen.forced = _zen              # and a few rings, as if bounces had just landed
 		for r in [[0.6, -2.4, 0.15], [-1.2, -3.2, 0.45], [0.4, 2.2, 0.3], [-0.8, 1.6, 0.7]]:
