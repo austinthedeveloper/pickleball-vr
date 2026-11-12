@@ -177,7 +177,7 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
 | VR-90 | Release builds on Meta's ALPHA channel | [#7](https://github.com/austinthedeveloper/pickleball-vr/issues/7) | Planned (v0.10) |
 | VR-91 | Playtest from two houses: PLAY A FRIEND and COACH VIEW | [#8](https://github.com/austinthedeveloper/pickleball-vr/issues/8) | Planned (v0.10) |
 | VR-92 | A matches session in the headset | [#9](https://github.com/austinthedeveloper/pickleball-vr/issues/9) | Planned (v0.10) |
-| VR-93 | Ready-to-test sweep | [#10](https://github.com/austinthedeveloper/pickleball-vr/issues/10) | Planned (v0.10) |
+| VR-93 | Ready-to-test sweep | `feature/cld-vr-playtest-card` ([#10](https://github.com/austinthedeveloper/pickleball-vr/issues/10)) | Done: `design/PLAYTEST.md`; the sitting is yours |
 | VR-94 | Saved sessions keep their replays (ADR-024) | `feature/cld-vr-saved-replays` ([#11](https://github.com/austinthedeveloper/pickleball-vr/issues/11)) | Ready to test: tests; open a past session on a phone |
 | VR-95 | Coach sliders: SAVE AS DEFAULT (ADR-024) | `feature/cld-vr-coach-defaults` ([#12](https://github.com/austinthedeveloper/pickleball-vr/issues/12)) | Ready to test: tests; try it from a phone |
 | VR-96 | The Windows game checked on Windows | [#13](https://github.com/austinthedeveloper/pickleball-vr/issues/13) | Planned (v0.10) |
@@ -283,3 +283,5 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
 
   They're marked Ready to test. Say a word on any you've formed a view
   of, and I'll mark it.
+- **The playtest card:** `design/PLAYTEST.md` has every Ready to test row
+  in play order, a sitting at a time (VR-93).
