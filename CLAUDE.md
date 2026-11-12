@@ -12,7 +12,7 @@ game/tools/test.sh                                   # all tests, headless (must
 godot --path game                                    # play (flat mode without a headset)
 godot --path game -- demo                            # DEMO: bot vs CPU
 godot --headless --path game -s res://tests/golden.gd   # regenerate golden traces (play changes only)
-godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|breakout> <frames> <out.png> [doubles | lesson | level=N] [drill=CALL_THE_SPOT...] [venue=NAME] [tod=DAY|DUSK|NIGHT] [court=SURFACE,KITCHEN,GROUND,LINES] [focus=0..0.88] [zen=0..1] [critter] [tick=N] [cam=x,y,z look=x,y,z] [prank=ball:duck,antic:dance,face...]
+godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|demo|play|machine|lesson|partner|breakout> <frames> <out.png> [doubles | lesson | level=N] [drill=CALL_THE_SPOT...] [venue=NAME] [tod=DAY|DUSK|NIGHT] [court=SURFACE,KITCHEN,GROUND,LINES] [focus=0..0.88] [zen=0..1] [critter] [marks] [tick=N] [cam=x,y,z look=x,y,z] [prank=ball:duck,antic:dance,face...]
 python3 game/tools/version.py [set X.Y.Z]            # the version, everywhere (design/RELEASING.md)
 python3 game/tools/release.py X.Y.Z --dry-run         # cut a release: checks, bump, tests, tag, APK (--push: GitHub release)
 python3 game/tools/test_release.py                    # the release tools' self-test
