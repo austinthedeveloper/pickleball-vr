@@ -16,7 +16,7 @@ godot --path game --resolution 1280x720 -s res://tools/screenshot.gd -- <lobby|d
 python3 game/tools/version.py [set X.Y.Z]            # the version, everywhere (design/RELEASING.md)
 python3 game/tools/release.py X.Y.Z --dry-run         # cut a release: checks, bump, tests, tag, APK (--push: GitHub release)
 python3 game/tools/test_release.py                    # the release tools' self-test
-game/tools/shots.sh [filter]                          # the standard screenshots into shots/ (git-ignored, for looking)
+game/tools/shots.sh [filter | venues]                 # the standard screenshots into shots/ (git-ignored); venues: every venue x time and shots/venues.png
 godot --headless --path game -s res://tools/rally_stats.gd -- <matches> <difficulty> [doubles]
 python3 game/tools/import_opponents.py                # the ladder, from the port kit
 game/tools/fetch_openxr_vendors.sh                    # Meta's OpenXR loader into game/addons (pinned, git-ignored)
