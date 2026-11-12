@@ -204,6 +204,31 @@ func test_cues_challenges_marks_in_the_headset() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
 
 
+func test_save_as_default() -> void:
+	var main := _main()
+	main.settings.partner_drill = Drill.KIND_DINKS
+	main.settings.partner_level = 1
+	var was := Tune.value("dink_medium")
+	main._on_coach({"type": "tune", "id": "dink_medium", "value": was + 4000})
+	main._on_coach({"type": "tune_save"})
+	eq(main.settings.coach_defaults.get("dink_medium", -1), was + 4000, "saved")
+	var tune: Dictionary = main.coach_state()["tunes"].filter(func(x: Dictionary) -> bool: return x["id"] == "dink_medium")[0]
+	check(tune["saved"], "the page shows it saved")
+	Tune.reset()                                      # a new session: the source's values...
+	var next := Settings.new()
+	next.load_settings()
+	next.apply_coach_defaults()
+	eq(Tune.value("dink_medium"), was + 4000, "...then the saved one, in any build")
+	main._on_coach({"type": "tune_reset"})
+	eq(Tune.value("dink_medium"), was, "RESET puts it back")
+	check(main.settings.coach_defaults.is_empty(), "and forgets the saved ones")
+	var again := Settings.new()
+	again.load_settings()
+	check(again.coach_defaults.is_empty(), "for good")
+	main.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
+
+
 func test_sliders_and_workouts() -> void:
 	var main := _main()
 	main.settings.partner_drill = Drill.KIND_SPOTS

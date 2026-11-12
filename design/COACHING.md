@@ -49,6 +49,6 @@ them.
 Known limits:
 - Replays are only for the session open on the phone. The saved
   sessions keep the numbers, not the ball paths.
-- Sliders change values for this session only. Saving them as defaults
-  goes through TUNING and `tune.sh sync`.
+- Sliders change values for this session; SAVE AS DEFAULT keeps them for
+  every session, in any build (VR-95). RESET forgets them.
 - A workout's steps are PRACTICE PARTNER drills, each timed.

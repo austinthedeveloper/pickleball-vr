@@ -28,6 +28,7 @@ func _ready() -> void:
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 		use_xr = true
 	settings.load_settings()
+	settings.apply_coach_defaults()      # the coach's SAVE AS DEFAULT (VR-95); TUNING on top
 	if Settings.dev_tools():
 		Tune.load_saved()
 	if OS.get_cmdline_user_args().has("coach"):

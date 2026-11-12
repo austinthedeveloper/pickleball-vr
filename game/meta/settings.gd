@@ -34,6 +34,13 @@ static var dev := OS.is_debug_build()
 static func dev_tools() -> bool:
 	return dev
 
+
+## The coach's saved slider values, on the live tunables (VR-95).
+func apply_coach_defaults() -> void:
+	for id in coach_defaults:
+		if not Tune.entry(String(id)).is_empty():
+			Tune.set_value(String(id), int(coach_defaults[id]))
+
 var path := default_path
 var doubles := false
 var opponent := 0
@@ -98,6 +105,9 @@ var records: Dictionary:
 ## A coach's saved workouts (C-13): [{name, steps: [{drill, level, time,
 ## targets}]}].
 var workouts: Array = []
+## The coach's SAVE AS DEFAULT (VR-95): slider values (Tune ids -> raw
+## values) kept for every session, in release builds too.
+var coach_defaults := {}
 ## The coach's ball machine (C-21), in the page's units: machine and bounce
 ## spots (m), speed (m/s), spin (-100 backspin .. 100 topspin, %), height
 ## over the net (m), seconds between balls.
@@ -157,6 +167,7 @@ func load_settings() -> void:
 	if records_by.is_empty() and c.has_section_key("records", "runs"):
 		records_by[player] = c.get_value("records", "runs")   # before profiles: the first player's
 	workouts = c.get_value("coach", "workouts", workouts)
+	coach_defaults = c.get_value("coach", "defaults", {})
 	coach_machine.merge(c.get_value("coach", "machine", {}), true)
 
 
@@ -197,6 +208,7 @@ func save() -> void:
 	c.set_value("player", "names", players)
 	c.set_value("records", "by_player", records_by)
 	c.set_value("coach", "workouts", workouts)
+	c.set_value("coach", "defaults", coach_defaults)
 	c.set_value("coach", "machine", coach_machine)
 	c.set_value("partner", "targets", partner_targets)
 	c.set_value("partner", "best", partner_best)

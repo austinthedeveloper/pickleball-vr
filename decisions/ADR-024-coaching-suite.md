@@ -154,3 +154,14 @@ From the headset:
 
   The buttons sit under "PICK ONE, THEN TAP THE COURT TO PLACE IT" and
   read TARGET, NEXT BALL, MACHINE and BOUNCE.
+
+## Amendment (2026-11-11): SAVE AS DEFAULT (VR-95)
+
+The live sliders (C-11) were for one session only, and saving them meant
+TUNING and `tune.sh sync` in a debug build. Now the page's SAVE AS DEFAULT
+keeps the drill's sliders at their level in `Settings.coach_defaults`
+(`user://settings.cfg`, any build), applied at startup before a debug
+build's TUNING overrides. A slider back at the source's value is
+forgotten; RESET puts every value back and forgets them all. In a debug
+build, TUNING sees the saved values as overrides, so `tune.sh sync`
+would make them the source's defaults too.
