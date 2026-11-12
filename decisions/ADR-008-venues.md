@@ -62,3 +62,19 @@ VENUE settings keep their meaning.
   `ambience_undersea.ogg`, as for the other five.
 - **FOCUS:** scenery shaders take a `dim` uniform (`World._shaders`), so
   the kelp and the light dim with the rest.
+
+## Amendment (2026-11-12): critters between points (VR-101)
+
+Now and then a critter crosses the sky (bible 5.6): a gull at LAKESIDE, a
+pterosaur at DINOSAUR (both by day and dusk only), a satellite in SPACE,
+and a fish UNDERSEA, swimming past the far fence (`view/critters.gd`).
+
+- **When:** one sets off only between points: in a match off the live
+  ball, in a drill while waiting or holding the next feed. One under way
+  fades out in 0.6 s when a rally starts. Every 20 to 45 s, on the view's
+  own generator.
+- **Where:** far off and slow (9 to 22 s across, 24 m or more away; the
+  fish 12 to 15 m, behind the far fence), and scaled up so it still
+  reads. Nothing near you moves.
+- Never in the lobby's demo, when watching, or in passthrough.
+  `screenshot.gd critter` sends one across halfway. Display only.

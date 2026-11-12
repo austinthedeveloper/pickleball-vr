@@ -25,6 +25,7 @@ there). Keep this card current: a row leaves it when it's marked Done.
 - [ ] **VR-15** Pause and the menu pages mid-match.
 - [ ] **VR-16** Venues: PARK, LAKESIDE, SUNSET, GYM, SPACE. Any that's uncomfortable or slow?
 - [ ] **VR-99** TIME: a DUSK match and a NIGHT match. Is the ball easy to see under the lights? Your paddle's face?
+- [ ] **VR-101** Critters: a gull, a pterosaur, a satellite, a fish, between points. Too much, or not enough?
 - [ ] **VR-97, VR-98** DINOSAUR and UNDERSEA: does the kelp's sway feel fine? Does the court read against the sand?
 - [ ] **VR-68, 69, 72, 73** The net, the paddle, the court and fence, the crowd: do they look right up close?
 - [ ] **VR-70** PARTNER LOOK: CLASSIC against NEW MAN and NEW WOMAN. Which stays?

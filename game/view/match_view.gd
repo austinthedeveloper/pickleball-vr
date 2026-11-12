@@ -114,6 +114,7 @@ var paused := false                  ## the sim isn't stepped while a pause menu
 var focus := 0.0                     ## FOCUS (ADR-013): how dim the world is now
 var zen: Zen                         ## ...and past it, HUSH and DRIFT (ADR-031)
 var ambience_player: AudioStreamPlayer
+var critters: Critters               ## a gull, a pterosaur, a satellite or a fish, between points (VR-101)
 var _placed := false                 ## XR: turned to the court and moved to the start, once tracked
 var _inherited := false              ## XR: the play space came over from the last view
 var _stay := false                   ## ...and you're on the same spot (the lobby, rebuilt)
@@ -227,6 +228,9 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	zen.world = world
 	zen.passthrough = passthrough
 	add_child(zen)
+	critters = Critters.new()
+	critters.kind = "" if passthrough or spectate else Critters.for_venue(world.venue, world.time)
+	add_child(critters)
 	Sound.bus(Sound.CROWD)
 	sound["4_applause"].bus = Sound.CROWD   # SOUND's CROWD level; it hushes with the world
 	if sim.drill:
@@ -1377,6 +1381,7 @@ func _where(l: Array[int]) -> String:
 func _focus(delta: float) -> void:
 	var shots := 0 if spectate else Focus.shots_of(sim)
 	zen.update(shots, delta)
+	critters.update(sim, delta)
 	var want := Focus.amount(shots)
 	var rate := Focus.EASE_IN if want > focus else Focus.EASE_OUT
 	var was := focus
