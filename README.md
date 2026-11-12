@@ -68,8 +68,35 @@ default.
 
 ## Coaching
 
-MAIN > COACH > COACH MODE ON, then open the address it shows on a phone
-on the same Wi-Fi and type the code (ADR-023).
+The coach companion is a web page the game serves: no app to install, any
+phone, tablet or computer browser will do (ADR-023).
+
+### Coach from a phone
+
+**On the same Wi-Fi as the headset:**
+1. In the headset: MAIN > COACH > COACH MODE ON.
+2. The page shows ON A PHONE ON THIS WI-FI, OPEN, an address like
+   `http://192.168.1.20:8094`, and a four-digit CODE. The code is new each
+   time the game starts.
+3. On the phone, open that address and type the code.
+
+**From anywhere** (ADR-026: a coach in another house, or on mobile data):
+1. In the headset: MAIN > COACH > COACH MODE ON, then COACH FROM ANYWHERE
+   ON. The page shows ANYWHERE   ROOM and four letters, such as BXKM.
+2. On the phone, open the relay and type the room:
+   **https://pb94-relay.wonderfulground-3bc64e4e.eastus.azurecontainerapps.io**
+   (bookmark it; the room opens at `/c/BXKM`). There is no code: the room
+   is the key.
+3. This address is HTTPS, so HOLD TO TALK works from an iPhone here. Over
+   the Wi-Fi address it can't, and the phone's recorder stands in
+   (known issue 8).
+
+If the headset sleeps, its room closes, and it opens a new one when it
+wakes: type the new four letters. Anyone with the room can coach while
+it's open, so share it only with your coach. A Mac running the game can
+watch and coach too: MAIN > WATCH A PLAYER (ADR-028).
+
+### What the page does
 - **COACH:** run the drills, place the target and the next feed, cues,
   challenges, workouts, the coach's ball machine, every shot's numbers,
   replays and saved sessions (ADR-024, `design/COACHING.md`).
