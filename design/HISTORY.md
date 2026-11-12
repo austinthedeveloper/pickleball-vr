@@ -291,3 +291,10 @@ against the sand? Any stutter (known issue 16)?
 3. Try PRACTICE PARTNER at NIGHT too (its page has TIME).
 Look for: is the ball easy to pick up at night? Can you see your paddle's
 face? Are the lights too strong or too flat?
+
+**VR-100, ready to test: SOUND and the night (ADR-034).**
+1. MAIN > SOUND: AMBIENCE, CROWD, ANNOUNCER, each OFF to FULL. Change one
+   during the lobby's demo: you hear it at once.
+2. A NIGHT match at the PARK: crickets and a breeze instead of birds.
+Look for: are the levels sensible at FULL? Do the crickets loop without
+a click?

@@ -113,6 +113,7 @@ var _ball_z_was := 0                 ## the ball's z last tick, to catch it cros
 var paused := false                  ## the sim isn't stepped while a pause menu is up
 var focus := 0.0                     ## FOCUS (ADR-013): how dim the world is now
 var zen: Zen                         ## ...and past it, HUSH and DRIFT (ADR-031)
+var ambience_player: AudioStreamPlayer
 var _placed := false                 ## XR: turned to the court and moved to the start, once tracked
 var _inherited := false              ## XR: the play space came over from the last view
 var _stay := false                   ## ...and you're on the same spot (the lobby, rebuilt)
@@ -226,7 +227,8 @@ func setup(cfg: SimTypes.MatchConfig, use_xr: bool, demo_mode := false, spectati
 	zen.world = world
 	zen.passthrough = passthrough
 	add_child(zen)
-	sound["4_applause"].bus = Zen.BUS    # the crowd hushes with the world
+	Sound.bus(Sound.CROWD)
+	sound["4_applause"].bus = Sound.CROWD   # SOUND's CROWD level; it hushes with the world
 	if sim.drill:
 		_practice_court()
 	if sim.breakout:
@@ -568,11 +570,18 @@ func _sounds() -> void:
 		add_child(p)
 		sound[n] = p
 	var amb := AudioStreamPlayer.new()
-	var stream: AudioStreamOggVorbis = load(World.ambience(world.venue))
-	stream.loop = true
+	var stream: AudioStream = load(World.ambience(world.venue, world.time))
+	if stream is AudioStreamOggVorbis:
+		(stream as AudioStreamOggVorbis).loop = true
+	elif stream is AudioStreamWAV:
+		var wav := stream as AudioStreamWAV  # the NIGHT crickets (VR-100)
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		wav.loop_end = int(wav.get_length() * wav.mix_rate)
 	amb.stream = stream
 	amb.volume_db = -10.0
-	amb.bus = Zen.BUS                    # HUSH muffles and fades it (ADR-031)
+	amb.bus = Sound.AMBIENCE             # SOUND's AMBIENCE level; HUSH muffles it after (ADR-031)
+	Sound.bus(Sound.AMBIENCE)
+	ambience_player = amb
 	add_child(amb)
 	if not DisplayServer.get_name() == "headless":
 		amb.play.call_deferred()

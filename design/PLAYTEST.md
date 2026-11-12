@@ -21,6 +21,7 @@ there). Keep this card current: a row leaves it when it's marked Done.
 - [ ] **VR-03, VR-08** The CPU and the ladder: is each team a bit harder than the last, and does each play like itself?
 - [ ] **VR-07** Doubles: does your partner cover their half, and does doubles serving work?
 - [ ] **VR-12** The crowd and the announcer: volumes and timing (known issue 7).
+- [ ] **VR-100** SOUND: set AMBIENCE, CROWD and ANNOUNCER to taste; at NIGHT, do the crickets loop cleanly?
 - [ ] **VR-15** Pause and the menu pages mid-match.
 - [ ] **VR-16** Venues: PARK, LAKESIDE, SUNSET, GYM, SPACE. Any that's uncomfortable or slow?
 - [ ] **VR-99** TIME: a DUSK match and a NIGHT match. Is the ball easy to see under the lights? Your paddle's face?

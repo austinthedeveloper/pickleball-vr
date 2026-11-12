@@ -39,5 +39,6 @@ This repo's own ADRs, numbered from 001. The port kit's are cited as
 | [031](ADR-031-zen.md) | ZEN: a long rally goes deeper (HUSH and DRIFT) |
 | [032](ADR-032-third-shot-drops.md) | THIRD SHOT DROPS: the transition drill |
 | [033](ADR-033-time-of-day.md) | TIME OF DAY, and the court under lights at night |
+| [034](ADR-034-sound-levels.md) | SOUND: levels for the ambience, crowd and announcer; the night's crickets |
 
-Next: ADR-034.
+Next: ADR-035.

@@ -62,6 +62,10 @@ var paddle_profile := 0              ## index into PROFILE_NAMES
 var profiles: Array = [new_profile(), new_profile(), new_profile()]
 var venue := 0                       ## 0 is HOME (the team's); then Venues.NAMES
 var time_of_day := 0                 ## TIME (VR-99): World.TIMES
+## SOUND (VR-100): indexes into Sound.LEVELS, FULL to start.
+var ambience_level := 3
+var crowd_level := 3
+var announcer_level := 3
 ## BALL MACHINE (ADR-007)
 var machine_shot := Drill.SHOT_DRIVE
 var machine_target := Drill.TARGET_AT_YOU
@@ -142,6 +146,9 @@ func load_settings() -> void:
 		profiles[i] = d
 	venue = c.get_value("match", "venue", venue)
 	time_of_day = c.get_value("match", "time", time_of_day)
+	ambience_level = c.get_value("sound", "ambience", ambience_level)
+	crowd_level = c.get_value("sound", "crowd", crowd_level)
+	announcer_level = c.get_value("sound", "announcer", announcer_level)
 	machine_shot = c.get_value("machine", "shot", machine_shot)
 	machine_target = c.get_value("machine", "target", machine_target)
 	machine_rate = c.get_value("machine", "rate", machine_rate)
@@ -193,6 +200,9 @@ func save() -> void:
 	c.set_value("paddle", "profiles", profiles)
 	c.set_value("match", "venue", venue)
 	c.set_value("match", "time", time_of_day)
+	c.set_value("sound", "ambience", ambience_level)
+	c.set_value("sound", "crowd", crowd_level)
+	c.set_value("sound", "announcer", announcer_level)
 	c.set_value("machine", "shot", machine_shot)
 	c.set_value("machine", "target", machine_target)
 	c.set_value("machine", "rate", machine_rate)

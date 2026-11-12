@@ -89,3 +89,55 @@ func test_the_target_ding() -> void:
 	near(int(p.pitch_scale * 100), 150, 0, "a bullseye: a fifth up")
 	check(not Tune.entry("buzz").is_empty(), "hit vibration on the TUNING page")
 	v.queue_free()
+
+
+# --- SOUND and the night (VR-100) ---------------------------------------------------
+
+func test_every_venue_and_time_has_its_ambience() -> void:
+	for v in Venues.NAMES.size():
+		for at in World.TIMES.size():
+			check(ResourceLoader.exists(World.ambience(v, at)), "%s at %s" % [Venues.NAMES[v], World.TIMES[at]])
+	eq(World.ambience(Venues.PARK, World.NIGHT), World.NIGHT_AMBIENCE, "crickets in the park at night")
+	check(World.ambience(Venues.SPACE, World.NIGHT) != World.NIGHT_AMBIENCE, "no crickets in space")
+
+
+func test_the_sound_levels() -> void:
+	var s := Settings.new()
+	s.ambience_level = 0
+	s.crowd_level = 1
+	s.announcer_level = 3
+	Sound.apply(s)
+	check(AudioServer.is_bus_mute(Sound.bus(Sound.AMBIENCE)), "AMBIENCE OFF: silent")
+	near(roundi(db_to_linear(AudioServer.get_bus_volume_db(Sound.bus(Sound.CROWD))) * 100), 30, 1, "CROWD LOW")
+	check(not AudioServer.is_bus_mute(Sound.bus(Sound.ANNOUNCER)), "the announcer at FULL")
+	eq(AudioServer.get_bus_send(Sound.bus(Sound.AMBIENCE)), StringName(Zen.BUS), "the ambience still hushes with ZEN")
+	eq(AudioServer.get_bus_send(Sound.bus(Sound.ANNOUNCER)), &"Master", "the announcer straight out")
+	var v := MatchView.new()
+	runner.root.add_child(v)
+	var cfg := Settings.new().match_config()
+	cfg.time = World.NIGHT
+	v.setup(cfg, false, true)
+	eq(v.ambience_player.bus, StringName(Sound.AMBIENCE), "the ambience on its bus")
+	check(v.ambience_player.stream is AudioStreamWAV, "the night's crickets")
+	eq(v.sound["4_applause"].bus, StringName(Sound.CROWD), "the crowd on its own")
+	eq(v.announcer._player.bus, StringName(Sound.ANNOUNCER), "and the announcer")
+	v.queue_free()
+	Sound.apply(Settings.new())          # back to FULL for the other tests
+
+
+func test_the_sound_page() -> void:
+	var main: Node = load("res://scenes/main.tscn").instantiate()
+	runner.root.add_child(main)
+	var m: Menu3D = main._page("")
+	check(not m.row("to_sound").is_empty(), "SOUND on MAIN")
+	m.free()
+	m = main._page("sound")
+	for id in ["amb_level", "crowd_level", "ann_level"]:
+		check(not m.row(id).is_empty(), id)
+	m.free()
+	main._on_changed("amb_level", 1)
+	eq(main.settings.ambience_level, 1, "set")
+	near(roundi(db_to_linear(AudioServer.get_bus_volume_db(Sound.bus(Sound.AMBIENCE))) * 100), 30, 1, "and heard at once")
+	main._on_changed("amb_level", 3)
+	main.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
