@@ -305,3 +305,8 @@ UNDERSEA (a fish), play a while: every half minute or so, between points,
 one crosses the sky (the fish swims past the far fence). Start a rally as
 one crosses: it fades away.
 Look for: do they catch your eye too much, or not enough?
+
+**VR-102, ready to test: the COURT page (ADR-008 amended).**
+MAIN > COURT: VENUE, TIME, SURFACE, KITCHEN (or SAME), GROUND and LINES.
+Change one: the court in the lobby changes as you do. Every match and
+drill then plays on it. VENUE'S puts a colour back to the venue's own.

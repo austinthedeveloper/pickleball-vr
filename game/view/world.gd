@@ -7,10 +7,16 @@ extends Node3D
 
 ## The port kit's presets (court_colors.json), 0-255.
 const SURFACES := {"BLUE": [38, 92, 168], "NAVY": [34, 52, 112], "GREEN": [46, 122, 72],
-	"PURPLE": [96, 64, 140], "CLAY": [176, 84, 52], "AQUA": [20, 130, 140], "ORANGE": [196, 92, 28]}
+	"PURPLE": [96, 64, 140], "CLAY": [176, 84, 52], "AQUA": [20, 130, 140], "ORANGE": [196, 92, 28],
+	"SLATE": [78, 86, 98], "RED": [150, 44, 52], "PINK": [200, 64, 130], "BLACK": [28, 28, 36],
+	"LIME": [92, 150, 60], "TEAL": [49, 140, 132]}
 const SURROUNDS := {"GRASS": [86, 150, 70], "BRICK": [150, 70, 50], "ASPHALT": [70, 72, 78],
-	"MAPLE": [216, 168, 104], "PARK": [51, 115, 77], "SAND": [226, 204, 150]}
-const LINES := {"WHITE": [245, 245, 240], "CYAN": [120, 240, 255]}
+	"MAPLE": [216, 168, 104], "PARK": [51, 115, 77], "SAND": [226, 204, 150], "CONCRETE": [160, 160, 152],
+	"SKY": [110, 170, 210], "SNOW": [236, 240, 246], "CANDY": [230, 150, 190], "AUTUMN": [200, 110, 40]}
+const LINES := {"WHITE": [245, 245, 240], "CYAN": [120, 240, 255], "YELLOW": [250, 222, 70], "LIME": [190, 255, 90]}
+## COURT (VR-102, canon bible 5.2): lines must stand out from the surface
+## this much (the port kit's court_colors.json min_line_contrast).
+const MIN_LINE_CONTRAST := 2.5
 
 ## Each venue: its court (the port kit's venues.json grounds), the ground
 ## around it, its sky and its sound.
@@ -42,6 +48,9 @@ const NIGHT := 2
 const TIMES := ["DAY", "DUSK", "NIGHT"]
 const SCENERY_AT := [1.0, 0.72, 0.3]     ## how lit the surroundings are, by TIME
 var time := DAY
+## COURT's colours (VR-102): "SURFACE,KITCHEN,GROUND,LINES", each a preset's
+## name, "" for the venue's own, and KITCHEN may be "SAME" (the surface's).
+var court := ""
 const WATER_NEAR := 16.0
 const WATER_FAR := 70.0
 
@@ -107,16 +116,17 @@ func _ready() -> void:
 	var hl := K.COURT_HALF_LENGTH / float(K.M)
 	var kd := K.KITCHEN_DEPTH / float(K.M)
 	var lw := K.LINE_WIDTH / float(K.M)
-	line_color = c8(LINES[d["lines"]])
+	var cc := colours()
+	line_color = cc["lines"]
 	var indoor := venue == Venues.GYM or venue == Venues.SPACE
 	if not passthrough:
 		_grain(_box(Vector3(0, -0.05, 0), Vector3(80, 0.1, 80), c8(d["ground"])), grass_texture() if not indoor else grain_texture(), 0.25)
-		_grain(_box(Vector3(0, 0.0, 0), Vector3(hw * 2 + 6, 0.02, hl * 2 + 8), c8(SURROUNDS[d["surround"]])), grain_texture(), 0.6)
+		_grain(_box(Vector3(0, 0.0, 0), Vector3(hw * 2 + 6, 0.02, hl * 2 + 8), cc["surround"]), grain_texture(), 0.6)
 	_scenery = false                     # the court stays bright under FOCUS
 	# The court: acrylic over the slab, its sand grain in the paint.
-	_paint_of(_grain(_box(Vector3(0, 0.012, 0), Vector3(hw * 2, 0.004, hl * 2), c8(SURFACES[d["surface"]])), grain_texture(), 0.6))
+	_paint_of(_grain(_box(Vector3(0, 0.012, 0), Vector3(hw * 2, 0.004, hl * 2), cc["surface"]), grain_texture(), 0.6))
 	for s in [-1, 1]:
-		_paint_of(_grain(_box(Vector3(0, 0.014, s * kd / 2), Vector3(hw * 2, 0.004, kd), c8(SURFACES[d["kitchen"]])), grain_texture(), 0.6))
+		_paint_of(_grain(_box(Vector3(0, 0.014, s * kd / 2), Vector3(hw * 2, 0.004, kd), cc["kitchen"]), grain_texture(), 0.6))
 	# Lines (measured to their outside edges, so inset half a width).
 	var y := 0.017
 	for s in [-1, 1]:
@@ -172,6 +182,44 @@ func _ready() -> void:
 		for sm in _shaders:
 			sm.set_shader_parameter("dim", k)
 		_scenery_k = k
+
+
+## The court's colours: the venue's, with COURT's choices over them. Lines
+## too close to the surface give way to the line colour that stands out
+## most, so the court always reads.
+func colours() -> Dictionary:
+	var d: Dictionary = VENUES[clampi(venue, 0, VENUES.size() - 1)]
+	var pick := court.split(",")
+	var at := func(i: int) -> String: return pick[i] if i < pick.size() else ""
+	var surface: String = at.call(0) if SURFACES.has(at.call(0)) else String(d["surface"])
+	var kitchen: String = at.call(1)
+	if kitchen == "SAME":
+		kitchen = surface
+	elif not SURFACES.has(kitchen):
+		kitchen = String(d["kitchen"])
+	var ground: String = at.call(2) if SURROUNDS.has(at.call(2)) else String(d["surround"])
+	var lines: String = at.call(3) if LINES.has(at.call(3)) else String(d["lines"])
+	var s := c8(SURFACES[surface])
+	var l := c8(LINES[lines])
+	if contrast(l, s) < MIN_LINE_CONTRAST:
+		for k in LINES:
+			if contrast(c8(LINES[k]), s) > contrast(l, s):
+				l = c8(LINES[k])
+				lines = k
+	return {"surface": s, "kitchen": c8(SURFACES[kitchen]), "surround": c8(SURROUNDS[ground]), "lines": l,
+		"line_name": lines}
+
+
+## The contrast of two colours (WCAG's, from relative luminance).
+static func contrast(a: Color, b: Color) -> float:
+	var la := _luminance(a)
+	var lb := _luminance(b)
+	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
+
+
+static func _luminance(c: Color) -> float:
+	var f := func(v: float) -> float: return v / 12.92 if v <= 0.03928 else pow((v + 0.055) / 1.055, 2.4)
+	return 0.2126 * f.call(c.r) + 0.7152 * f.call(c.g) + 0.0722 * f.call(c.b)
 
 
 ## TIME OF DAY applies here: outdoors and UNDERSEA, not the GYM or SPACE.

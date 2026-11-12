@@ -78,3 +78,18 @@ and a fish UNDERSEA, swimming past the far fence (`view/critters.gd`).
   reads. Nothing near you moves.
 - Never in the lobby's demo, when watching, or in passthrough.
   `screenshot.gd critter` sends one across halfway. Display only.
+
+## Amendment (2026-11-12): the COURT page (VR-102)
+
+The canon's COURT page (bible 5.2) is off MAIN.
+- **Rows:** VENUE and TIME, then the court's four colours: SURFACE,
+  KITCHEN, GROUND (the surround) and LINES.
+- **Choices:** each colour is VENUE'S (the venue's own, the default) or one
+  of the port kit's `court_colors.json` presets. KITCHEN may also be SAME,
+  the surface's.
+- **Saved** in `Settings`, carried in `MatchConfig.court` for the view only,
+  and built by `World.colours()`. The lobby's demo shows a change at once.
+- **The lines always read:** lines under the port kit's 2.5:1 contrast
+  against the surface give way to the preset that stands out most
+  (`test_the_lines_always_read` checks every pairing).
+- Display only: golden traces unchanged.
