@@ -187,13 +187,15 @@ static func config_save(cfg: SimTypes.MatchConfig) -> Dictionary:
 	d["styles"] = cfg.styles.map(func(s): return _style(s) if s else {})
 	if cfg.drill:
 		d["drill"] = Sim.object_vars(cfg.drill)
+	if cfg.breakout:
+		d["breakout"] = Sim.object_vars(cfg.breakout)   # BRICK BREAK is watched too (VR-86)
 	return d
 
 
 static func config_load(d: Dictionary) -> SimTypes.MatchConfig:
 	var cfg := SimTypes.MatchConfig.new()
 	for k in d:
-		if k in ["style", "styles", "drill"]:
+		if k in ["style", "styles", "drill", "breakout"]:
 			continue
 		cfg.set(k, d[k])
 	cfg.style = SimTypes.CpuStyle.from_dict(d.get("style", {}))
@@ -201,6 +203,9 @@ static func config_load(d: Dictionary) -> SimTypes.MatchConfig:
 	if d.has("drill"):
 		cfg.drill = Drill.new()
 		Sim.set_object_vars(cfg.drill, d["drill"])
+	if d.has("breakout"):
+		cfg.breakout = Breakout.new()
+		Sim.set_object_vars(cfg.breakout, d["breakout"])
 	return cfg
 
 

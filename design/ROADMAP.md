@@ -170,7 +170,7 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
 | VR-83 | Releases: the Mac and Windows games beside the APK, built by release.py (design/RELEASING.md) | `feature/cld-vr-desktop-builds` | Ready to test: the Mac app boots; Windows unchecked on Windows |
 | VR-84 | BRICK BREAK: breakout on the court, five levels, three balls (ADR-030) | `feature/cld-vr-brick-break` | Ready to test: the bot clears levels; a human in the headset next |
 | VR-85 | BRICK BREAK tuned in the headset | [#2](https://github.com/austinthedeveloper/pickleball-vr/issues/2) | Planned (v0.10) |
-| VR-86 | Coach and watch BRICK BREAK | [#3](https://github.com/austinthedeveloper/pickleball-vr/issues/3) | Planned (v0.10) |
+| VR-86 | Coach and watch BRICK BREAK (ADR-030) | `feature/cld-vr-coach-breakout` ([#3](https://github.com/austinthedeveloper/pickleball-vr/issues/3)) | Ready to test: tests, the tablet's picture; watch it from a Mac |
 | VR-87 | THIRD SHOT DROPS drill (ADR-032) | `feature/cld-vr-third-shot` ([#4](https://github.com/austinthedeveloper/pickleball-vr/issues/4)) | Ready to test: the bot plays every level; a human in the headset next |
 | VR-88 | Online: a third player is refused | `feature/cld-vr-online-fixes` ([#5](https://github.com/austinthedeveloper/pickleball-vr/issues/5)) | Done (test) |
 | VR-89 | Flat mode's FRIENDLY DINK help line says SHIFT DRIVE | `feature/cld-vr-online-fixes` ([#6](https://github.com/austinthedeveloper/pickleball-vr/issues/6)) | Done (test) |
@@ -259,8 +259,8 @@ Labels: `area:*`, `headset` (needs you), `needs-adr`, `golden`, `canon`, `blocke
   developer account (`design/TEST_CHANNEL.md`).
 - **THIRD SHOT DROPS (VR-87):** built; your session in the headset (the
   walk in and back, the return's depth).
-- **The rest of M1 (v0.10):** coaching BRICK BREAK (VR-86), saved
-  replays (VR-94), SAVE AS DEFAULT (VR-95), Windows checked (VR-96).
+- **The rest of M1 (v0.10):** Windows checked (VR-96), the ALPHA channel
+  (VR-90, waiting on Meta), and the headset sessions (VR-85, 91, 92).
 - **VR-17:** more venues (DINOSAUR, UNDERSEA, TIME of day), now VR-97..99
   in M2.
 - **Dinking online with a friend (ADR-027):** a playtest from two houses, with a friend in a headset or on a Mac.

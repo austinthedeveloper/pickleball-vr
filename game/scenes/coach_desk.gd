@@ -615,6 +615,12 @@ func state() -> Dictionary:
 		"tunes": _sliders(),
 		"machine": s.coach_machine.merged({"on": machine_on and _playing()}),
 		"pranks": _prank_state()}
+	var bk: Breakout = v.sim.breakout if v and v.sim and _playing() else null
+	if bk:
+		# BRICK BREAK (VR-86): its own card on the phone; the drill's controls hide.
+		st["breakout"] = {"level": bk.level + 1, "levels": Breakout.LEVELS.size(), "balls": bk.lives,
+			"score": bk.score, "best": maxi(s.breakout_best, bk.score), "bricks": bk.bricks_left,
+			"over": bk.stage == Breakout.OVER}
 	var d: Drill = v.sim.drill if v and v.sim and _playing() else null
 	if d:
 		st["run"] = {"name": Settings.run_name(d) if d.time_limit > 0 else d.mode_name(), "score": d.score(),

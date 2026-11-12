@@ -204,6 +204,23 @@ func test_cues_challenges_marks_in_the_headset() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
 
 
+func test_brick_break_on_the_phone() -> void:
+	# VR-86: BRICK BREAK's numbers on the phone, and a prank lands in it.
+	var main := _main()
+	main.settings.pranks = true
+	main._start(main.settings.breakout_config(), false)
+	var st: Dictionary = main.coach_state()
+	check(st.has("breakout"), "BRICK BREAK's card")
+	eq(st["breakout"]["level"], main.settings.breakout_level + 1, "the level, from 1")
+	eq(st["breakout"]["balls"], Breakout.LIVES, "three balls")
+	eq(st["breakout"]["bricks"], main.view.sim.breakout.bricks_left, "the bricks left")
+	check(not st.has("run"), "no drill run")
+	main._on_coach({"type": "prank", "what": "ball", "id": "duck"})
+	eq(main.view.pranks.ball, "duck", "a silly ball in BRICK BREAK")
+	main.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.default_path))
+
+
 func test_save_as_default() -> void:
 	var main := _main()
 	main.settings.partner_drill = Drill.KIND_DINKS

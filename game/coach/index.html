@@ -494,6 +494,7 @@ function onState(s) {
   const ch = s.challenge || {};
   const kinds = { streak: "in a row", board: "in a row on the board", good: "good", score: "score" };
   $("challengeLine").textContent = ch.kind ? (ch.done ? "Challenge done!" : `Challenge: ${ch.progress} / ${ch.n} ${kinds[ch.kind]}`) : "";
+  drawBreakout(s);
   drawCues(s.cues);
   drawMachine(s.machine);
   drawSliders(s.tunes);
@@ -501,6 +502,23 @@ function onState(s) {
   drawRecords(s.records);
   drawPranks(s.pranks);
   drawCourt();
+}
+
+// BRICK BREAK (VR-86): its numbers on the run card; the drill-only cards hide.
+const drillCards = () => [$("court"), $("machineSliders"), $("chKind"), $("sliders")].map((e) => e.closest(".card"));
+function drawBreakout(s) {
+  const b = s.breakout;
+  drillCards().forEach((c) => c.classList.toggle("hidden", !!b));
+  $("sTime").nextElementSibling.textContent = b ? "Balls" : "Time left";
+  $("sPct").nextElementSibling.textContent = b ? "Bricks left" : "Good";
+  if (!b) return;
+  $("runName").textContent = `Brick Break · level ${b.level} of ${b.levels}` + (b.over ? " · game over" : "");
+  $("sScore").textContent = b.score;
+  $("sScoreLabel").textContent = "Score";
+  $("sTime").textContent = b.balls;
+  $("sStreak").textContent = b.best;
+  $("sStreak").nextElementSibling.textContent = "Best";
+  $("sPct").textContent = b.bricks;
 }
 
 function onShot(m) {
